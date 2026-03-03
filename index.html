@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Color Dept - Batch Queue</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <header>
+        <h1>Color Department - Batch Board</h1>
+        <div class="header-actions">
+            <button id="add-batch-btn" class="btn btn-primary">+ New Batch</button>
+            <button id="clear-completed-btn" class="btn btn-secondary">Clear Completed</button>
+        </div>
+    </header>
+
+    <!-- Modal for adding a new batch -->
+    <div id="modal-overlay" class="modal-overlay hidden">
+        <div class="modal">
+            <h2>Add New Batch</h2>
+            <form id="batch-form">
+                <div class="form-group">
+                    <label for="product-name">Product Name</label>
+                    <input type="text" id="product-name" required placeholder="e.g. Safety Red 2041">
+                </div>
+                <div class="form-group">
+                    <label for="bowl-select">Bowl</label>
+                    <select id="bowl-select" required>
+                        <option value="">-- Select Bowl --</option>
+                        <optgroup label="575 Gallon">
+                            <option value="A">Bowl A (575 gal)</option>
+                            <option value="B">Bowl B (575 gal)</option>
+                        </optgroup>
+                        <optgroup label="250 Gallon">
+                            <option value="E">Bowl E (250 gal)</option>
+                            <option value="F">Bowl F (250 gal)</option>
+                        </optgroup>
+                        <optgroup label="1,010 Gallon">
+                            <option value="C">Bowl C (1,010 gal)</option>
+                            <option value="D">Bowl D (1,010 gal)</option>
+                            <option value="G">Bowl G (1,010 gal)</option>
+                            <option value="H">Bowl H (1,010 gal)</option>
+                            <option value="I">Bowl I (1,010 gal)</option>
+                        </optgroup>
+                        <optgroup label="2,000 Gallon">
+                            <option value="Big Iron">Big Iron (2,000 gal)</option>
+                            <option value="Thors Hammer">Thor's Hammer (2,000 gal)</option>
+                        </optgroup>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="batch-gallons">Gallons</label>
+                    <input type="number" id="batch-gallons" min="1" placeholder="Amount in gallons">
+                </div>
+                <div class="form-group">
+                    <label for="batch-notes">Notes (optional)</label>
+                    <input type="text" id="batch-notes" placeholder="e.g. Rush order for Customer X">
+                </div>
+                <div class="form-actions">
+                    <button type="button" id="cancel-btn" class="btn btn-secondary">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Add to Queue</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Board layout -->
+    <main id="board">
+        <!-- Bowl lanes get rendered by JS -->
+    </main>
+
+    <script src="app.js"></script>
+</body>
+</html>

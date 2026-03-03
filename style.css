@@ -1,0 +1,343 @@
+/* ── Reset & Base ──────────────────────────────────────────────────── */
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: #1a1a2e;
+    color: #e0e0e0;
+    min-height: 100vh;
+}
+
+/* ── Header ────────────────────────────────────────────────────────── */
+header {
+    background: #16213e;
+    padding: 16px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 3px solid #0f3460;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+}
+
+header h1 {
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: #e94560;
+    letter-spacing: 0.5px;
+}
+
+.header-actions {
+    display: flex;
+    gap: 10px;
+}
+
+/* ── Buttons ───────────────────────────────────────────────────────── */
+.btn {
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 0.85rem;
+    transition: background 0.15s, transform 0.1s;
+}
+
+.btn:active {
+    transform: scale(0.97);
+}
+
+.btn-primary {
+    background: #e94560;
+    color: #fff;
+    padding: 10px 20px;
+}
+
+.btn-primary:hover {
+    background: #c73650;
+}
+
+.btn-secondary {
+    background: #0f3460;
+    color: #ccc;
+    padding: 10px 20px;
+}
+
+.btn-secondary:hover {
+    background: #1a4a7a;
+}
+
+.btn-sm {
+    padding: 4px 10px;
+    font-size: 0.75rem;
+    border-radius: 4px;
+}
+
+.btn-mixing {
+    background: #f5a623;
+    color: #1a1a2e;
+}
+
+.btn-mixing:hover {
+    background: #e0951a;
+}
+
+.btn-complete {
+    background: #27ae60;
+    color: #fff;
+}
+
+.btn-complete:hover {
+    background: #1e8c4c;
+}
+
+.btn-delete {
+    background: transparent;
+    color: #777;
+    font-size: 1rem;
+    line-height: 1;
+    padding: 2px 8px;
+}
+
+.btn-delete:hover {
+    color: #e94560;
+}
+
+/* ── Board Layout ──────────────────────────────────────────────────── */
+#board {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 16px;
+    padding: 20px;
+}
+
+/* ── Lane (one per bowl) ───────────────────────────────────────────── */
+.lane {
+    background: #16213e;
+    border-radius: 10px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    min-height: 180px;
+}
+
+.lane-header {
+    background: #0f3460;
+    padding: 12px 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.lane-name {
+    font-weight: 700;
+    font-size: 1.05rem;
+    color: #fff;
+}
+
+.lane-capacity {
+    font-size: 0.8rem;
+    color: #8899aa;
+    background: #1a1a2e;
+    padding: 3px 8px;
+    border-radius: 20px;
+}
+
+/* ── Batch Cards ───────────────────────────────────────────────────── */
+.batch-card {
+    margin: 8px 10px;
+    padding: 12px;
+    border-radius: 8px;
+    border-left: 4px solid transparent;
+}
+
+.batch-card.empty {
+    color: #555;
+    text-align: center;
+    font-style: italic;
+    border: 1px dashed #333;
+    background: transparent;
+    margin-top: auto;
+    margin-bottom: auto;
+}
+
+/* Status colors */
+.batch-card.status-queued {
+    background: #1c2a4a;
+    border-left-color: #3498db;
+}
+
+.batch-card.status-mixing {
+    background: #2a2517;
+    border-left-color: #f5a623;
+    animation: pulse-mix 2s ease-in-out infinite;
+}
+
+.batch-card.status-complete {
+    background: #1a2e1a;
+    border-left-color: #27ae60;
+    opacity: 0.7;
+}
+
+@keyframes pulse-mix {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(245, 166, 35, 0); }
+    50% { box-shadow: 0 0 12px 2px rgba(245, 166, 35, 0.25); }
+}
+
+.card-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 8px;
+    margin-bottom: 6px;
+}
+
+.card-product {
+    font-weight: 700;
+    font-size: 0.95rem;
+    color: #fff;
+    word-break: break-word;
+}
+
+.card-status {
+    font-size: 0.65rem;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    padding: 2px 8px;
+    border-radius: 20px;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+.status-queued .card-status {
+    background: #3498db;
+    color: #fff;
+}
+
+.status-mixing .card-status {
+    background: #f5a623;
+    color: #1a1a2e;
+}
+
+.status-complete .card-status {
+    background: #27ae60;
+    color: #fff;
+}
+
+.card-details {
+    display: flex;
+    gap: 12px;
+    font-size: 0.8rem;
+    color: #8899aa;
+    margin-bottom: 8px;
+    flex-wrap: wrap;
+}
+
+.card-gallons {
+    font-weight: 600;
+    color: #aabbcc;
+}
+
+.card-notes {
+    font-style: italic;
+}
+
+.card-actions {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+}
+
+/* ── Modal ──────────────────────────────────────────────────────────── */
+.modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.7);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+}
+
+.modal-overlay.hidden {
+    display: none;
+}
+
+.modal {
+    background: #16213e;
+    border-radius: 12px;
+    padding: 28px 32px;
+    width: 90%;
+    max-width: 440px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+}
+
+.modal h2 {
+    color: #e94560;
+    margin-bottom: 20px;
+    font-size: 1.2rem;
+}
+
+.form-group {
+    margin-bottom: 14px;
+}
+
+.form-group label {
+    display: block;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: #8899aa;
+    margin-bottom: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.form-group input,
+.form-group select {
+    width: 100%;
+    padding: 10px 12px;
+    border: 2px solid #0f3460;
+    border-radius: 6px;
+    background: #1a1a2e;
+    color: #e0e0e0;
+    font-size: 0.95rem;
+    transition: border-color 0.15s;
+}
+
+.form-group input:focus,
+.form-group select:focus {
+    outline: none;
+    border-color: #e94560;
+}
+
+.form-group select option {
+    background: #1a1a2e;
+    color: #e0e0e0;
+}
+
+.form-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 20px;
+}
+
+/* ── Responsive ────────────────────────────────────────────────────── */
+@media (max-width: 600px) {
+    header {
+        flex-direction: column;
+        gap: 12px;
+        text-align: center;
+    }
+
+    #board {
+        grid-template-columns: 1fr;
+        padding: 12px;
+    }
+}
