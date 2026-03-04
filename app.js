@@ -16,20 +16,51 @@ const BOWLS = {
 // Display order for the lanes
 const BOWL_ORDER = ["A", "B", "C", "D", "E", "F", "G", "H", "I", "Big Iron", "Thors Hammer"];
 
-// ── State ───────────────────────────────────────────────────────────
-let batches = loadBatches();
+// ── Firebase Reference ──────────────────────────────────────────────
+const batchesRef = db.ref("batches");
 
-function loadBatches() {
+// ── State ───────────────────────────────────────────────────────────
+let batches = [];
+
+// Migrate any existing localStorage data into Firebase (one-time)
+function migrateLocalStorage() {
     try {
         const raw = localStorage.getItem("colorDeptBatches");
-        return raw ? JSON.parse(raw) : [];
+        if (raw) {
+            const oldBatches = JSON.parse(raw);
+            if (oldBatches.length > 0) {
+                const updates = {};
+                for (const batch of oldBatches) {
+                    updates[batch.id] = batch;
+                }
+                batchesRef.update(updates);
+                localStorage.removeItem("colorDeptBatches");
+            }
+        }
     } catch {
-        return [];
+        // ignore migration errors
     }
 }
 
+// ── Real-Time Listener ──────────────────────────────────────────────
+// This fires immediately with current data, then again on every change
+// from ANY device/tab connected to this Firebase project.
+batchesRef.on("value", (snapshot) => {
+    const data = snapshot.val();
+    batches = data ? Object.values(data) : [];
+    render();
+});
+
+// Run migration after listener is set up
+migrateLocalStorage();
+
+// ── Save to Firebase ────────────────────────────────────────────────
 function saveBatches() {
-    localStorage.setItem("colorDeptBatches", JSON.stringify(batches));
+    const updates = {};
+    for (const batch of batches) {
+        updates[batch.id] = batch;
+    }
+    batchesRef.set(updates);
 }
 
 // ── Drag & Drop State ───────────────────────────────────────────────
@@ -227,7 +258,6 @@ function handleDrop(e) {
     });
 
     saveBatches();
-    render();
 }
 
 function getDragAfterElement(dropZone, y) {
@@ -352,7 +382,6 @@ board.addEventListener("touchend", (e) => {
     draggedId = null;
     document.querySelectorAll(".drag-over").forEach((el) => el.classList.remove("drag-over"));
     document.querySelectorAll(".drop-indicator").forEach((el) => el.remove());
-    render();
 });
 
 function getDropZoneAt(x, y) {
@@ -387,15 +416,14 @@ function updateStatus(id, newStatus) {
         batch.status = newStatus;
         if (newStatus === "mixing") batch.startedAt = Date.now();
         if (newStatus === "complete") batch.completedAt = Date.now();
-        saveBatches();
-        render();
+        // Update just this batch in Firebase
+        batchesRef.child(id).update(batch);
     }
 }
 
 function deleteBatch(id) {
-    batches = batches.filter((b) => b.id !== id);
-    saveBatches();
-    render();
+    // Remove from Firebase directly
+    batchesRef.child(id).remove();
 }
 
 // ── Modal ───────────────────────────────────────────────────────────
@@ -449,9 +477,8 @@ batchForm.addEventListener("submit", (e) => {
         completedAt: null,
     };
 
-    batches.push(batch);
-    saveBatches();
-    render();
+    // Push directly to Firebase (the listener will update local state & re-render)
+    batchesRef.child(batch.id).set(batch);
 
     batchForm.reset();
     modalOverlay.classList.add("hidden");
@@ -459,15 +486,15 @@ batchForm.addEventListener("submit", (e) => {
 
 // Clear all completed batches
 document.getElementById("clear-completed-btn").addEventListener("click", () => {
-    batches = batches.filter((b) => b.status !== "complete");
-    saveBatches();
-    render();
+    const completedBatches = batches.filter((b) => b.status === "complete");
+    const updates = {};
+    for (const batch of completedBatches) {
+        updates[batch.id] = null; // null removes from Firebase
+    }
+    batchesRef.update(updates);
 });
 
 // ── Helpers ─────────────────────────────────────────────────────────
 function generateId() {
     return Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
 }
-
-// ── Init ────────────────────────────────────────────────────────────
-render();
