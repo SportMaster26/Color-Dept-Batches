@@ -19,6 +19,12 @@ const firebaseConfig = {
     appId: "YOUR_APP_ID",
 };
 
+// ── Admin Password ──────────────────────────────────────────────────
+// Change this to whatever password you want. Only people who know
+// this password can add, edit, move, or delete batches. Everyone
+// else sees a read-only view.
+const ADMIN_PASSWORD = "colordept";
+
 // Initialize Firebase
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
