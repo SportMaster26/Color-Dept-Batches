@@ -84,6 +84,10 @@ function migrateLocalStorage() {
     }
 }
 
+// ── Initial Render ──────────────────────────────────────────────────
+// Render immediately so the board shows even before Firebase connects
+render();
+
 // ── Real-Time Listener ──────────────────────────────────────────────
 // This fires immediately with current data, then again on every change
 // from ANY device/tab connected to this Firebase project.
@@ -91,6 +95,8 @@ batchesRef.on("value", (snapshot) => {
     const data = snapshot.val();
     batches = data ? Object.values(data) : [];
     render();
+}, (error) => {
+    console.error("Firebase connection error:", error);
 });
 
 // Run migration after listener is set up
