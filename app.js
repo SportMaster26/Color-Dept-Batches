@@ -9,12 +9,15 @@ const BOWLS = {
     G: { name: "Bowl G", capacity: 1010, group: "1,010 gal" },
     H: { name: "Bowl H", capacity: 1010, group: "1,010 gal" },
     I: { name: "Bowl I", capacity: 1010, group: "1,010 gal" },
-    "Big Iron": { name: "Big Iron", capacity: 2000, group: "2,000 gal" },
+    "The Hull": { name: "The Hull", capacity: 2000, group: "2,000 gal" },
     "Thors Hammer": { name: "Thor's Hammer", capacity: 2000, group: "2,000 gal" },
+    "TTT": { name: "TTT", capacity: 4300, group: "4,300 gal" },
+    "Stubby": { name: "Stubby", capacity: 30, group: "30 gal" },
+    "Ol Iron Sides": { name: "Ol' Iron Sides", capacity: null, group: "Ribbon Mixer" },
 };
 
 // Display order for the lanes
-const BOWL_ORDER = ["A", "B", "C", "D", "E", "F", "G", "H", "I", "Big Iron", "Thors Hammer"];
+const BOWL_ORDER = ["A", "B", "C", "D", "E", "F", "G", "H", "I", "The Hull", "Thors Hammer", "TTT", "Stubby", "Ol Iron Sides"];
 
 // ── Firebase Reference ──────────────────────────────────────────────
 const batchesRef = db.ref("batches");
@@ -130,7 +133,7 @@ function render() {
         header.className = "lane-header";
         header.innerHTML = `
             <span class="lane-name">${bowl.name}</span>
-            <span class="lane-capacity">${bowl.capacity.toLocaleString()} gal</span>
+            <span class="lane-capacity">${bowl.capacity ? bowl.capacity.toLocaleString() + " gal" : bowl.group}</span>
         `;
         lane.appendChild(header);
 
