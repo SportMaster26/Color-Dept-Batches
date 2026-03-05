@@ -35,6 +35,19 @@ const STATUS_NEXT_ACTION = {
     pouring: { label: "Batch Complete", next: "batch_complete" },
 };
 
+// Packaging sizes in gallons and their unit names
+const PACKAGING = {
+    "Quart Bottles":    { gallons: 0.25, unit: "Bottles" },
+    "24 Oz. Jars":      { gallons: 24 / 128, unit: "Jars" },
+    "1 Gallon Jugs":    { gallons: 1, unit: "Jugs" },
+    "1 Gallon Pails":   { gallons: 1, unit: "Pails" },
+    "4.5 Gallon Pails": { gallons: 4.5, unit: "Pails" },
+    "5 Gallon Pails":   { gallons: 5, unit: "Pails" },
+    "30 Gallon Kegs":   { gallons: 30, unit: "Kegs" },
+    "55 Gallon Drums":  { gallons: 55, unit: "Drums" },
+    "275 Gallon Totes": { gallons: 275, unit: "Totes" },
+};
+
 // ── Firebase Reference ──────────────────────────────────────────────
 const batchesRef = db.ref("batches");
 
@@ -293,11 +306,19 @@ function renderCompleted() {
         const bowlName = bowlInfo ? bowlInfo.name : batch.bowl;
         const completedDate = batch.completedAt ? new Date(batch.completedAt).toLocaleString() : "";
 
-        const packagingDisplay = batch.packaging
-            ? `<span class="card-packaging">${escapeHtml(batch.packaging)}</span>`
-            : batch.gallons
-                ? `<span class="card-packaging">${Number(batch.gallons).toLocaleString()} gal</span>`
-                : "";
+        let packagingDisplay = "";
+        if (batch.packaging) {
+            const pkg = PACKAGING[batch.packaging];
+            const bowlCap = BOWLS[batch.bowl] ? BOWLS[batch.bowl].capacity : null;
+            if (pkg && bowlCap) {
+                const count = Math.floor(bowlCap / pkg.gallons);
+                packagingDisplay = `<span class="card-packaging">${escapeHtml(batch.packaging)} - ${count.toLocaleString()} ${pkg.unit} Approx.</span>`;
+            } else {
+                packagingDisplay = `<span class="card-packaging">${escapeHtml(batch.packaging)}</span>`;
+            }
+        } else if (batch.gallons) {
+            packagingDisplay = `<span class="card-packaging">${Number(batch.gallons).toLocaleString()} gal</span>`;
+        }
 
         let actionsHtml = "";
         if (isAdmin) {
@@ -341,11 +362,19 @@ function createBatchCard(batch) {
     const statusLabel = STATUS_LABELS[batch.status] || batch.status.toUpperCase();
 
     // Support both old "gallons" field and new "packaging" field
-    const packagingDisplay = batch.packaging
-        ? `<span class="card-packaging">${escapeHtml(batch.packaging)}</span>`
-        : batch.gallons
-            ? `<span class="card-packaging">${Number(batch.gallons).toLocaleString()} gal</span>`
-            : "";
+    let packagingDisplay = "";
+    if (batch.packaging) {
+        const pkg = PACKAGING[batch.packaging];
+        const bowlCap = BOWLS[batch.bowl] ? BOWLS[batch.bowl].capacity : null;
+        if (pkg && bowlCap) {
+            const count = Math.floor(bowlCap / pkg.gallons);
+            packagingDisplay = `<span class="card-packaging">${escapeHtml(batch.packaging)} - ${count.toLocaleString()} ${pkg.unit} Approx.</span>`;
+        } else {
+            packagingDisplay = `<span class="card-packaging">${escapeHtml(batch.packaging)}</span>`;
+        }
+    } else if (batch.gallons) {
+        packagingDisplay = `<span class="card-packaging">${Number(batch.gallons).toLocaleString()} gal</span>`;
+    }
 
     // Only show action buttons for admin
     let actionsHtml = "";
