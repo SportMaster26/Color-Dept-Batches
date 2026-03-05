@@ -19,12 +19,31 @@ const BOWLS = {
 // Display order for the lanes
 const BOWL_ORDER = ["A", "B", "C", "D", "E", "F", "G", "H", "I", "The Hull", "Thors Hammer", "TTT", "Stubby", "Ol Iron Sides"];
 
+// Status flow configuration
+const STATUS_FLOW = ["queued", "mixing", "mixing_complete", "pouring", "batch_complete"];
+const STATUS_LABELS = {
+    queued: "QUEUED",
+    mixing: "MIXING",
+    mixing_complete: "MIXING COMPLETE",
+    pouring: "POURING",
+    batch_complete: "BATCH COMPLETE",
+};
+const STATUS_NEXT_ACTION = {
+    queued: { label: "Start Mixing", next: "mixing" },
+    mixing: { label: "Mixing Complete", next: "mixing_complete" },
+    mixing_complete: { label: "Start Pouring", next: "pouring" },
+    pouring: { label: "Batch Complete", next: "batch_complete" },
+};
+
 // ── Firebase Reference ──────────────────────────────────────────────
 const batchesRef = db.ref("batches");
 
 // ── State ───────────────────────────────────────────────────────────
 let batches = [];
+let undoStack = []; // stores { id, prevStatus } for undo
+const MAX_UNDO = 20;
 let isAdmin = sessionStorage.getItem("adminMode") === "true";
+let activeTab = "active"; // "active" or "completed"
 const board = document.getElementById("board");
 
 // ── Admin Mode ──────────────────────────────────────────────────────
@@ -68,6 +87,56 @@ adminToggleBtn.addEventListener("click", () => {
 // Initialize admin UI on load
 updateAdminUI();
 
+// ── Tab Switching ───────────────────────────────────────────────────
+const tabActive = document.getElementById("tab-active");
+const tabCompleted = document.getElementById("tab-completed");
+const completedBoard = document.getElementById("completed-board");
+
+tabActive.addEventListener("click", () => {
+    activeTab = "active";
+    tabActive.classList.add("tab-selected");
+    tabCompleted.classList.remove("tab-selected");
+    board.classList.remove("hidden");
+    completedBoard.classList.add("hidden");
+    updateCompletedCount();
+});
+
+tabCompleted.addEventListener("click", () => {
+    activeTab = "completed";
+    tabCompleted.classList.add("tab-selected");
+    tabActive.classList.remove("tab-selected");
+    board.classList.add("hidden");
+    completedBoard.classList.remove("hidden");
+    renderCompleted();
+});
+
+function updateCompletedCount() {
+    const count = batches.filter((b) => b.status === "batch_complete").length;
+    const badge = document.getElementById("completed-count");
+    badge.textContent = count;
+    badge.classList.toggle("hidden", count === 0);
+}
+
+// ── Undo Button ─────────────────────────────────────────────────────
+const undoBtn = document.getElementById("undo-btn");
+
+function updateUndoBtn() {
+    if (undoBtn) {
+        undoBtn.classList.toggle("hidden", !isAdmin || undoStack.length === 0);
+    }
+}
+
+undoBtn.addEventListener("click", () => {
+    if (!isAdmin || undoStack.length === 0) return;
+    const action = undoStack.pop();
+    const batch = batches.find((b) => b.id === action.id);
+    if (batch) {
+        batch.status = action.prevStatus;
+        batchesRef.child(action.id).update({ status: action.prevStatus });
+    }
+    updateUndoBtn();
+});
+
 // Migrate any existing localStorage data into Firebase (one-time)
 function migrateLocalStorage() {
     try {
@@ -98,7 +167,13 @@ render();
 batchesRef.on("value", (snapshot) => {
     const data = snapshot.val();
     batches = data ? Object.values(data) : [];
+    // Migrate old "complete" status to new name
+    for (const batch of batches) {
+        if (batch.status === "complete") batch.status = "batch_complete";
+    }
     render();
+    updateCompletedCount();
+    if (activeTab === "completed") renderCompleted();
 }, (error) => {
     console.error("Firebase connection error:", error);
 });
@@ -150,9 +225,9 @@ function render() {
             dropZone.addEventListener("dragleave", handleDragLeave);
         }
 
-        // Get batches for this bowl, ordered by sortOrder then createdAt
+        // Get active batches for this bowl (not batch_complete)
         const laneBatches = batches
-            .filter((b) => b.bowl === bowlKey)
+            .filter((b) => b.bowl === bowlKey && b.status !== "batch_complete")
             .sort((a, b) => {
                 const orderA = a.sortOrder != null ? a.sortOrder : a.createdAt;
                 const orderB = b.sortOrder != null ? b.sortOrder : b.createdAt;
@@ -173,6 +248,64 @@ function render() {
         lane.appendChild(dropZone);
         board.appendChild(lane);
     }
+
+    updateUndoBtn();
+}
+
+function renderCompleted() {
+    completedBoard.innerHTML = "";
+
+    const completedBatches = batches
+        .filter((b) => b.status === "batch_complete")
+        .sort((a, b) => (b.completedAt || 0) - (a.completedAt || 0));
+
+    if (completedBatches.length === 0) {
+        const empty = document.createElement("div");
+        empty.className = "completed-empty";
+        empty.textContent = "No completed batches";
+        completedBoard.appendChild(empty);
+        return;
+    }
+
+    for (const batch of completedBatches) {
+        const card = document.createElement("div");
+        card.className = "completed-card";
+
+        const bowlInfo = BOWLS[batch.bowl];
+        const bowlName = bowlInfo ? bowlInfo.name : batch.bowl;
+        const completedDate = batch.completedAt ? new Date(batch.completedAt).toLocaleString() : "";
+
+        const packagingDisplay = batch.packaging
+            ? `<span class="card-packaging">${escapeHtml(batch.packaging)}</span>`
+            : batch.gallons
+                ? `<span class="card-packaging">${Number(batch.gallons).toLocaleString()} gal</span>`
+                : "";
+
+        let actionsHtml = "";
+        if (isAdmin) {
+            actionsHtml = `
+                <div class="card-actions">
+                    <button class="btn btn-sm btn-delete" data-action="delete" data-id="${batch.id}">&times;</button>
+                </div>
+            `;
+        }
+
+        card.innerHTML = `
+            <div class="card-top">
+                <span class="card-product">${escapeHtml(batch.product)}</span>
+                <span class="card-status completed-status">COMPLETE</span>
+            </div>
+            <div class="card-details">
+                <span class="completed-bowl">${escapeHtml(bowlName)}</span>
+                ${packagingDisplay}
+                ${batch.notes ? `<span class="card-notes">${escapeHtml(batch.notes)}</span>` : ""}
+            </div>
+            ${completedDate ? `<div class="completed-time">Completed: ${completedDate}</div>` : ""}
+            ${actionsHtml}
+        `;
+
+        completedBoard.appendChild(card);
+    }
 }
 
 function createBatchCard(batch) {
@@ -187,7 +320,7 @@ function createBatchCard(batch) {
         card.addEventListener("dragend", handleDragEnd);
     }
 
-    const statusLabel = { queued: "QUEUED", mixing: "MIXING", complete: "COMPLETE" }[batch.status];
+    const statusLabel = STATUS_LABELS[batch.status] || batch.status.toUpperCase();
 
     // Support both old "gallons" field and new "packaging" field
     const packagingDisplay = batch.packaging
@@ -199,10 +332,15 @@ function createBatchCard(batch) {
     // Only show action buttons for admin
     let actionsHtml = "";
     if (isAdmin) {
+        const nextAction = STATUS_NEXT_ACTION[batch.status];
+        const nextBtnClass = batch.status === "queued" ? "btn-start-mixing"
+            : batch.status === "mixing" ? "btn-mixing-complete"
+            : batch.status === "mixing_complete" ? "btn-pouring"
+            : batch.status === "pouring" ? "btn-batch-complete"
+            : "";
         actionsHtml = `
             <div class="card-actions">
-                ${batch.status === "queued" ? `<button class="btn btn-sm btn-mixing" data-action="mixing" data-id="${batch.id}">Start Mixing</button>` : ""}
-                ${batch.status === "mixing" ? `<button class="btn btn-sm btn-complete" data-action="complete" data-id="${batch.id}">Mark Complete</button>` : ""}
+                ${nextAction ? `<button class="btn btn-sm ${nextBtnClass}" data-action="advance" data-id="${batch.id}">${nextAction.label}</button>` : ""}
                 <button class="btn btn-sm btn-delete" data-action="delete" data-id="${batch.id}">&times;</button>
             </div>
         `;
@@ -452,29 +590,50 @@ function getDropZoneAt(x, y) {
 }
 
 // ── Actions ─────────────────────────────────────────────────────────
-board.addEventListener("click", (e) => {
+// Handle clicks on both boards
+document.addEventListener("click", (e) => {
     const btn = e.target.closest("[data-action]");
     if (!btn || !isAdmin) return;
 
     const action = btn.dataset.action;
     const id = btn.dataset.id;
 
-    if (action === "mixing") {
-        updateStatus(id, "mixing");
-    } else if (action === "complete") {
-        updateStatus(id, "complete");
+    if (action === "advance") {
+        advanceStatus(id);
     } else if (action === "delete") {
         deleteBatch(id);
     }
 });
 
+function advanceStatus(id) {
+    const batch = batches.find((b) => b.id === id);
+    if (!batch) return;
+
+    const nextAction = STATUS_NEXT_ACTION[batch.status];
+    if (!nextAction) return;
+
+    // Push to undo stack
+    undoStack.push({ id: batch.id, prevStatus: batch.status });
+    if (undoStack.length > MAX_UNDO) undoStack.shift();
+
+    batch.status = nextAction.next;
+    if (nextAction.next === "mixing") batch.startedAt = Date.now();
+    if (nextAction.next === "batch_complete") batch.completedAt = Date.now();
+    batchesRef.child(id).update(batch);
+    updateUndoBtn();
+}
+
 function updateStatus(id, newStatus) {
     const batch = batches.find((b) => b.id === id);
     if (batch) {
+        undoStack.push({ id: batch.id, prevStatus: batch.status });
+        if (undoStack.length > MAX_UNDO) undoStack.shift();
+
         batch.status = newStatus;
         if (newStatus === "mixing") batch.startedAt = Date.now();
-        if (newStatus === "complete") batch.completedAt = Date.now();
+        if (newStatus === "batch_complete") batch.completedAt = Date.now();
         batchesRef.child(id).update(batch);
+        updateUndoBtn();
     }
 }
 
@@ -543,7 +702,7 @@ batchForm.addEventListener("submit", (e) => {
 // Clear all completed batches
 document.getElementById("clear-completed-btn").addEventListener("click", () => {
     if (!isAdmin) return;
-    const completedBatches = batches.filter((b) => b.status === "complete");
+    const completedBatches = batches.filter((b) => b.status === "batch_complete");
     const updates = {};
     for (const batch of completedBatches) {
         updates[batch.id] = null;
@@ -555,3 +714,19 @@ document.getElementById("clear-completed-btn").addEventListener("click", () => {
 function generateId() {
     return Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
 }
+
+// ── Keep Firebase Connected / Auto-Reconnect ────────────────────────
+// Force Firebase to stay connected even when the tab is idle
+firebase.database().goOnline();
+
+// Re-connect whenever the browser comes back online
+window.addEventListener("online", () => {
+    firebase.database().goOnline();
+});
+
+// Re-connect when the tab becomes visible again
+document.addEventListener("visibilitychange", () => {
+    if (!document.hidden) {
+        firebase.database().goOnline();
+    }
+});
