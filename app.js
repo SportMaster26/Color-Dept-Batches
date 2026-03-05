@@ -22,6 +22,7 @@ const batchesRef = db.ref("batches");
 // ── State ───────────────────────────────────────────────────────────
 let batches = [];
 let isAdmin = sessionStorage.getItem("adminMode") === "true";
+const board = document.getElementById("board");
 
 // ── Admin Mode ──────────────────────────────────────────────────────
 const adminToggleBtn = document.getElementById("admin-toggle-btn");
@@ -115,8 +116,6 @@ function saveBatches() {
 let draggedId = null;
 
 // ── Rendering ───────────────────────────────────────────────────────
-const board = document.getElementById("board");
-
 function render() {
     board.innerHTML = "";
 
