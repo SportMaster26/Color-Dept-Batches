@@ -158,6 +158,14 @@ function migrateLocalStorage() {
 }
 
 // ── Initial Render ──────────────────────────────────────────────────
+// Warn if opened as a local file (Firebase won't work)
+if (window.location.protocol === "file:") {
+    const warn = document.createElement("div");
+    warn.style.cssText = "background:#fff3cd;color:#856404;padding:16px 24px;font-weight:600;text-align:center;border-bottom:2px solid #ffc107;";
+    warn.textContent = "This app must be served over HTTP (not file://). Use a local server or deploy to GitHub Pages.";
+    document.body.prepend(warn);
+}
+
 // Render immediately so the board shows even before Firebase connects
 render();
 
@@ -183,6 +191,11 @@ batchesRef.on("value", (snapshot) => {
     if (activeTab === "completed") renderCompleted();
 }, (error) => {
     console.error("Firebase connection error:", error);
+    // Show error to user
+    const errDiv = document.createElement("div");
+    errDiv.style.cssText = "background:#fee;color:#c00;padding:16px 24px;font-weight:600;text-align:center;border-bottom:2px solid #c00;";
+    errDiv.textContent = "Firebase error: " + error.message + " — Check your database rules in the Firebase console.";
+    document.body.prepend(errDiv);
 });
 
 // Run migration after listener is set up
