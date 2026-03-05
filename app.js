@@ -20,14 +20,16 @@ const BOWLS = {
 const BOWL_ORDER = ["A", "B", "C", "D", "E", "F", "G", "H", "I", "The Hull", "Thors Hammer", "TTT", "Stubby", "Ol Iron Sides"];
 
 // Status flow configuration
-const STATUS_FLOW = ["mixing", "mixing_complete", "pouring", "batch_complete"];
+const STATUS_FLOW = ["queued", "mixing", "mixing_complete", "pouring", "batch_complete"];
 const STATUS_LABELS = {
+    queued: "QUEUED",
     mixing: "MIXING",
     mixing_complete: "MIXING COMPLETE",
     pouring: "POURING",
     batch_complete: "BATCH COMPLETE",
 };
 const STATUS_NEXT_ACTION = {
+    queued: { label: "Start Mixing", next: "mixing" },
     mixing: { label: "Mixing Complete", next: "mixing_complete" },
     mixing_complete: { label: "Start Pouring", next: "pouring" },
     pouring: { label: "Batch Complete", next: "batch_complete" },
@@ -165,9 +167,8 @@ render();
 batchesRef.on("value", (snapshot) => {
     const data = snapshot.val();
     batches = data ? Object.values(data) : [];
-    // Migrate old statuses
+    // Migrate old "complete" status to new name
     for (const batch of batches) {
-        if (batch.status === "queued") batch.status = "mixing";
         if (batch.status === "complete") batch.status = "batch_complete";
     }
     render();
@@ -332,7 +333,8 @@ function createBatchCard(batch) {
     let actionsHtml = "";
     if (isAdmin) {
         const nextAction = STATUS_NEXT_ACTION[batch.status];
-        const nextBtnClass = batch.status === "mixing" ? "btn-mixing-complete"
+        const nextBtnClass = batch.status === "queued" ? "btn-start-mixing"
+            : batch.status === "mixing" ? "btn-mixing-complete"
             : batch.status === "mixing_complete" ? "btn-pouring"
             : batch.status === "pouring" ? "btn-batch-complete"
             : "";
@@ -684,10 +686,10 @@ batchForm.addEventListener("submit", (e) => {
         bowl,
         packaging: packaging || null,
         notes: notes || null,
-        status: "mixing",
+        status: "queued",
         sortOrder: maxOrder + 1,
         createdAt: Date.now(),
-        startedAt: Date.now(),
+        startedAt: null,
         completedAt: null,
     };
 
@@ -712,3 +714,19 @@ document.getElementById("clear-completed-btn").addEventListener("click", () => {
 function generateId() {
     return Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
 }
+
+// ── Keep Firebase Connected / Auto-Reconnect ────────────────────────
+// Force Firebase to stay connected even when the tab is idle
+firebase.database().goOnline();
+
+// Re-connect whenever the browser comes back online
+window.addEventListener("online", () => {
+    firebase.database().goOnline();
+});
+
+// Re-connect when the tab becomes visible again
+document.addEventListener("visibilitychange", () => {
+    if (!document.hidden) {
+        firebase.database().goOnline();
+    }
+});
