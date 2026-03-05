@@ -50,6 +50,7 @@ const PACKAGING = {
 
 // ── Firebase Reference ──────────────────────────────────────────────
 const batchesRef = db.ref("batches");
+const batchCounterRef = db.ref("meta/batchCounter");
 
 // ── State ───────────────────────────────────────────────────────────
 let batches = [];
@@ -322,6 +323,7 @@ function getCompletedRows() {
             const bowlCap = bowlInfo ? bowlInfo.capacity : null;
             const fmtTs = (ts) => ts ? new Date(ts).toLocaleString() : "—";
             return {
+                batchNumber: batch.batchNumber || "",
                 product: batch.product,
                 bowl: bowlName,
                 capacity: bowlCap ? bowlCap.toLocaleString() + " gal" : "N/A",
@@ -349,7 +351,7 @@ function renderCompleted() {
     const toolbar = document.querySelector(".completed-toolbar");
 
     if (rows.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="15" class="completed-empty">No completed batches</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="16" class="completed-empty">No completed batches</td></tr>`;
         if (toolbar) toolbar.classList.add("hidden");
         if (completedChart) { completedChart.destroy(); completedChart = null; }
         return;
@@ -360,6 +362,7 @@ function renderCompleted() {
     tbody.innerHTML = rows.map((r, i) => `
         <tr>
             <td>${i + 1}</td>
+            <td class="batch-num-cell">${escapeHtml(r.batchNumber) || "—"}</td>
             <td>${escapeHtml(r.product)}</td>
             <td>${escapeHtml(r.bowl)}</td>
             <td>${r.capacity}</td>
@@ -458,6 +461,7 @@ function exportToExcel() {
 
     const data = rows.map((r, i) => ({
         "#": i + 1,
+        "Batch #": r.batchNumber || "N/A",
         "Product": r.product,
         "Bowl": r.bowl,
         "Bowl Capacity": r.capacity,
@@ -524,6 +528,7 @@ function createBatchCard(batch) {
         actionsHtml = `
             <div class="card-actions">
                 ${nextAction ? `<button class="btn btn-sm ${nextBtnClass}" data-action="advance" data-id="${batch.id}">${nextAction.label}</button>` : ""}
+                <button class="btn btn-sm btn-edit" data-action="edit" data-id="${batch.id}">Edit</button>
                 <button class="btn btn-sm btn-delete" data-action="delete" data-id="${batch.id}">&times;</button>
             </div>
         `;
@@ -534,9 +539,11 @@ function createBatchCard(batch) {
     if (batch.initials) extraInfo += `<span class="card-initials">by ${escapeHtml(batch.initials)}</span>`;
     if (batch.pouredBy) extraInfo += `<span class="card-poured-by">Poured: ${escapeHtml(batch.pouredBy)}</span>`;
 
+    const batchNumDisplay = batch.batchNumber ? `<span class="card-batch-number">${escapeHtml(batch.batchNumber)}</span>` : "";
+
     card.innerHTML = `
         <div class="card-top">
-            <span class="card-product">${escapeHtml(batch.product)}</span>
+            <span class="card-product">${batchNumDisplay}${escapeHtml(batch.product)}</span>
             <span class="card-status">${statusLabel}</span>
         </div>
         <div class="card-details">
@@ -789,6 +796,8 @@ document.addEventListener("click", (e) => {
 
     if (action === "advance") {
         advanceStatus(id);
+    } else if (action === "edit") {
+        openEditModal(id);
     } else if (action === "delete") {
         deleteBatch(id);
     }
@@ -931,6 +940,55 @@ function updateStatus(id, newStatus) {
     }
 }
 
+// ── Edit Batch Modal ─────────────────────────────────────────────────
+const editOverlay = document.getElementById("edit-overlay");
+const editForm = document.getElementById("edit-form");
+
+function openEditModal(id) {
+    const batch = batches.find((b) => b.id === id);
+    if (!batch) return;
+
+    document.getElementById("edit-batch-id").value = batch.id;
+    document.getElementById("edit-batch-number").textContent = batch.batchNumber || "";
+    document.getElementById("edit-product").value = batch.product || "";
+    document.getElementById("edit-packaging").value = batch.packaging || "";
+    document.getElementById("edit-unit-count").value = batch.unitCount || "";
+    document.getElementById("edit-viscosity").value = batch.viscosity || "";
+    document.getElementById("edit-initials").value = batch.initials || "";
+    document.getElementById("edit-poured-by").value = batch.pouredBy || "";
+    document.getElementById("edit-notes").value = batch.notes || "";
+
+    editOverlay.classList.remove("hidden");
+    document.getElementById("edit-product").focus();
+}
+
+document.getElementById("edit-cancel").addEventListener("click", () => {
+    editOverlay.classList.add("hidden");
+});
+
+editOverlay.addEventListener("click", (e) => {
+    if (e.target === editOverlay) editOverlay.classList.add("hidden");
+});
+
+editForm.addEventListener("submit", (e) => {
+    e.preventDefault();
+    const id = document.getElementById("edit-batch-id").value;
+    const batch = batches.find((b) => b.id === id);
+    if (!batch) return;
+
+    batch.product = document.getElementById("edit-product").value.trim();
+    batch.packaging = document.getElementById("edit-packaging").value || null;
+    const uc = document.getElementById("edit-unit-count").value.trim();
+    batch.unitCount = uc ? Number(uc) : null;
+    batch.viscosity = document.getElementById("edit-viscosity").value.trim() || null;
+    batch.initials = document.getElementById("edit-initials").value.trim().toUpperCase() || null;
+    batch.pouredBy = document.getElementById("edit-poured-by").value.trim() || null;
+    batch.notes = document.getElementById("edit-notes").value.trim() || null;
+
+    batchesRef.child(id).update(batch);
+    editOverlay.classList.add("hidden");
+});
+
 function deleteBatch(id) {
     batchesRef.child(id).remove();
 }
@@ -975,26 +1033,39 @@ batchForm.addEventListener("submit", (e) => {
         return Math.max(max, order);
     }, -1);
 
-    const batch = {
-        id: generateId(),
-        product,
-        bowl,
-        packaging: packaging || null,
-        unitCount: unitCountVal ? Number(unitCountVal) : null,
-        notes: notes || null,
-        status: "queued",
-        sortOrder: maxOrder + 1,
-        createdAt: Date.now(),
-        startedAt: null,
-        mixingCompleteAt: null,
-        pouringAt: null,
-        completedAt: null,
-        viscosity: null,
-        initials: null,
-        pouredBy: null,
-    };
+    // Generate batch number via atomic counter
+    batchCounterRef.transaction((current) => {
+        return (current || 0) + 1;
+    }, (error, committed, snapshot) => {
+        if (error || !committed) {
+            alert("Failed to generate batch number. Please try again.");
+            return;
+        }
+        const num = snapshot.val();
+        const batchNumber = "A" + String(num).padStart(4, "0");
 
-    batchesRef.child(batch.id).set(batch);
+        const batch = {
+            id: generateId(),
+            batchNumber,
+            product,
+            bowl,
+            packaging: packaging || null,
+            unitCount: unitCountVal ? Number(unitCountVal) : null,
+            notes: notes || null,
+            status: "queued",
+            sortOrder: maxOrder + 1,
+            createdAt: Date.now(),
+            startedAt: null,
+            mixingCompleteAt: null,
+            pouringAt: null,
+            completedAt: null,
+            viscosity: null,
+            initials: null,
+            pouredBy: null,
+        };
+
+        batchesRef.child(batch.id).set(batch);
+    });
 
     batchForm.reset();
     modalOverlay.classList.add("hidden");

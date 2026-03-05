@@ -137,6 +137,60 @@
         </div>
     </div>
 
+    <!-- Modal for editing a batch -->
+    <div id="edit-overlay" class="modal-overlay hidden">
+        <div class="modal">
+            <h2>Edit Batch</h2>
+            <p id="edit-batch-number" class="modal-subtitle"></p>
+            <form id="edit-form">
+                <input type="hidden" id="edit-batch-id">
+                <div class="form-group">
+                    <label for="edit-product">Product Name</label>
+                    <input type="text" id="edit-product" required>
+                </div>
+                <div class="form-group">
+                    <label for="edit-packaging">Packaging</label>
+                    <select id="edit-packaging">
+                        <option value="">-- Select Packaging --</option>
+                        <option value="Quart Bottles">Quart Bottles</option>
+                        <option value="24 Oz. Jars">24 Oz. Jars</option>
+                        <option value="1 Gallon Jugs">1 Gallon Jugs</option>
+                        <option value="1 Gallon Pails">1 Gallon Pails</option>
+                        <option value="4.5 Gallon Pails">4.5 Gallon Pails</option>
+                        <option value="5 Gallon Pails">5 Gallon Pails</option>
+                        <option value="30 Gallon Kegs">30 Gallon Kegs</option>
+                        <option value="55 Gallon Drums">55 Gallon Drums</option>
+                        <option value="275 Gallon Totes">275 Gallon Totes</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="edit-unit-count">Approx. Unit Count</label>
+                    <input type="number" id="edit-unit-count" min="0">
+                </div>
+                <div class="form-group">
+                    <label for="edit-viscosity">Viscosity (KU)</label>
+                    <input type="text" id="edit-viscosity">
+                </div>
+                <div class="form-group">
+                    <label for="edit-initials">Initials</label>
+                    <input type="text" id="edit-initials" maxlength="5">
+                </div>
+                <div class="form-group">
+                    <label for="edit-poured-by">Poured By</label>
+                    <input type="text" id="edit-poured-by">
+                </div>
+                <div class="form-group">
+                    <label for="edit-notes">Notes</label>
+                    <input type="text" id="edit-notes">
+                </div>
+                <div class="form-actions">
+                    <button type="button" id="edit-cancel" class="btn btn-secondary">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <!-- Board layout (active batches) -->
     <main id="board">
         <!-- Bowl lanes get rendered by JS -->
@@ -159,6 +213,7 @@
                 <thead>
                     <tr>
                         <th>#</th>
+                        <th>Batch #</th>
                         <th>Product</th>
                         <th>Bowl</th>
                         <th>Bowl Capacity</th>
