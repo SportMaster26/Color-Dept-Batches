@@ -320,24 +320,17 @@ function getCompletedRows() {
             const bowlInfo = BOWLS[batch.bowl];
             const bowlName = bowlInfo ? bowlInfo.name : batch.bowl;
             const bowlCap = bowlInfo ? bowlInfo.capacity : null;
-            let unitCount = "";
-            let packagingLabel = batch.packaging || "";
-            if (batch.packaging) {
-                const pkg = PACKAGING[batch.packaging];
-                if (pkg && bowlCap) {
-                    unitCount = Math.floor(bowlCap / pkg.gallons);
-                }
-            }
             const fmtTs = (ts) => ts ? new Date(ts).toLocaleString() : "—";
             return {
                 product: batch.product,
                 bowl: bowlName,
                 capacity: bowlCap ? bowlCap.toLocaleString() + " gal" : "N/A",
                 capacityNum: bowlCap || 0,
-                packaging: packagingLabel,
-                unitCount,
+                packaging: batch.packaging || "",
+                unitCount: batch.unitCount || "",
                 viscosity: batch.viscosity || "",
                 initials: batch.initials || "",
+                pouredBy: batch.pouredBy || "",
                 notes: batch.notes || "",
                 queuedAt: fmtTs(batch.createdAt),
                 mixingStarted: fmtTs(batch.startedAt),
@@ -356,7 +349,7 @@ function renderCompleted() {
     const toolbar = document.querySelector(".completed-toolbar");
 
     if (rows.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="14" class="completed-empty">No completed batches</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="15" class="completed-empty">No completed batches</td></tr>`;
         if (toolbar) toolbar.classList.add("hidden");
         if (completedChart) { completedChart.destroy(); completedChart = null; }
         return;
@@ -371,9 +364,10 @@ function renderCompleted() {
             <td>${escapeHtml(r.bowl)}</td>
             <td>${r.capacity}</td>
             <td>${escapeHtml(r.packaging)}</td>
-            <td>${r.unitCount ? r.unitCount.toLocaleString() + " approx." : "—"}</td>
-            <td>${escapeHtml(r.viscosity)}${r.viscosity ? " KU" : "—"}</td>
+            <td>${r.unitCount ? Number(r.unitCount).toLocaleString() : "—"}</td>
+            <td>${r.viscosity ? escapeHtml(r.viscosity) + " KU" : "—"}</td>
             <td>${escapeHtml(r.initials) || "—"}</td>
+            <td>${escapeHtml(r.pouredBy) || "—"}</td>
             <td>${escapeHtml(r.notes) || "—"}</td>
             <td class="completed-time-cell">${r.queuedAt}</td>
             <td class="completed-time-cell">${r.mixingStarted}</td>
@@ -471,6 +465,7 @@ function exportToExcel() {
         "Unit Count": r.unitCount || "N/A",
         "Viscosity (KU)": r.viscosity || "N/A",
         "Initials": r.initials || "N/A",
+        "Poured By": r.pouredBy || "N/A",
         "Notes": r.notes || "",
         "Queued": r.queuedAt,
         "Mixing Started": r.mixingStarted,
@@ -509,19 +504,12 @@ function createBatchCard(batch) {
 
     const statusLabel = STATUS_LABELS[batch.status] || batch.status.toUpperCase();
 
-    // Support both old "gallons" field and new "packaging" field
     let packagingDisplay = "";
     if (batch.packaging) {
-        const pkg = PACKAGING[batch.packaging];
-        const bowlCap = BOWLS[batch.bowl] ? BOWLS[batch.bowl].capacity : null;
-        if (pkg && bowlCap) {
-            const count = Math.floor(bowlCap / pkg.gallons);
-            packagingDisplay = `<span class="card-packaging">${escapeHtml(batch.packaging)} - ${count.toLocaleString()} ${pkg.unit} Approx.</span>`;
-        } else {
-            packagingDisplay = `<span class="card-packaging">${escapeHtml(batch.packaging)}</span>`;
-        }
-    } else if (batch.gallons) {
-        packagingDisplay = `<span class="card-packaging">${Number(batch.gallons).toLocaleString()} gal</span>`;
+        packagingDisplay = `<span class="card-packaging">${escapeHtml(batch.packaging)}</span>`;
+    }
+    if (batch.unitCount) {
+        packagingDisplay += `<span class="card-packaging">${Number(batch.unitCount).toLocaleString()} units</span>`;
     }
 
     // Only show action buttons for admin
@@ -544,6 +532,7 @@ function createBatchCard(batch) {
     let extraInfo = "";
     if (batch.viscosity) extraInfo += `<span class="card-viscosity">Viscosity: ${escapeHtml(batch.viscosity)} KU</span>`;
     if (batch.initials) extraInfo += `<span class="card-initials">by ${escapeHtml(batch.initials)}</span>`;
+    if (batch.pouredBy) extraInfo += `<span class="card-poured-by">Poured: ${escapeHtml(batch.pouredBy)}</span>`;
 
     card.innerHTML = `
         <div class="card-top">
@@ -818,6 +807,12 @@ function advanceStatus(id) {
         return;
     }
 
+    // If advancing from pouring → batch_complete, show the poured-by modal
+    if (batch.status === "pouring" && nextAction.next === "batch_complete") {
+        showBatchCompleteModal(batch);
+        return;
+    }
+
     applyStatusAdvance(batch, nextAction.next);
 }
 
@@ -880,6 +875,45 @@ mixingCompleteForm.addEventListener("submit", (e) => {
     pendingMixingBatchId = null;
 });
 
+// ── Batch Complete Modal ──────────────────────────────────────────────
+const batchCompleteOverlay = document.getElementById("batch-complete-overlay");
+const batchCompleteForm = document.getElementById("batch-complete-form");
+let pendingCompleteBatchId = null;
+
+function showBatchCompleteModal(batch) {
+    pendingCompleteBatchId = batch.id;
+    document.getElementById("batch-complete-product").textContent = batch.product;
+    document.getElementById("poured-by-input").value = "";
+    batchCompleteOverlay.classList.remove("hidden");
+    document.getElementById("poured-by-input").focus();
+}
+
+document.getElementById("batch-complete-cancel").addEventListener("click", () => {
+    batchCompleteOverlay.classList.add("hidden");
+    pendingCompleteBatchId = null;
+});
+
+batchCompleteOverlay.addEventListener("click", (e) => {
+    if (e.target === batchCompleteOverlay) {
+        batchCompleteOverlay.classList.add("hidden");
+        pendingCompleteBatchId = null;
+    }
+});
+
+batchCompleteForm.addEventListener("submit", (e) => {
+    e.preventDefault();
+    if (!pendingCompleteBatchId) return;
+
+    const batch = batches.find((b) => b.id === pendingCompleteBatchId);
+    if (!batch) return;
+
+    batch.pouredBy = document.getElementById("poured-by-input").value.trim();
+
+    batchCompleteOverlay.classList.add("hidden");
+    applyStatusAdvance(batch, "batch_complete");
+    pendingCompleteBatchId = null;
+});
+
 function updateStatus(id, newStatus) {
     const batch = batches.find((b) => b.id === id);
     if (batch) {
@@ -930,6 +964,7 @@ batchForm.addEventListener("submit", (e) => {
     const product = document.getElementById("product-name").value.trim();
     const bowl = document.getElementById("bowl-select").value;
     const packaging = document.getElementById("batch-packaging").value;
+    const unitCountVal = document.getElementById("batch-unit-count").value.trim();
     const notes = document.getElementById("batch-notes").value.trim();
 
     if (!product || !bowl) return;
@@ -945,6 +980,7 @@ batchForm.addEventListener("submit", (e) => {
         product,
         bowl,
         packaging: packaging || null,
+        unitCount: unitCountVal ? Number(unitCountVal) : null,
         notes: notes || null,
         status: "queued",
         sortOrder: maxOrder + 1,
@@ -955,6 +991,7 @@ batchForm.addEventListener("submit", (e) => {
         completedAt: null,
         viscosity: null,
         initials: null,
+        pouredBy: null,
     };
 
     batchesRef.child(batch.id).set(batch);

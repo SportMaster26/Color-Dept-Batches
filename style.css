@@ -382,6 +382,11 @@ header h1 {
     color: #2980b9;
 }
 
+.card-poured-by {
+    font-weight: 600;
+    color: #27ae60;
+}
+
 .card-actions {
     display: flex;
     gap: 6px;

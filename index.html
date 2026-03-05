@@ -82,6 +82,10 @@
                     </select>
                 </div>
                 <div class="form-group">
+                    <label for="batch-unit-count">Approx. Unit Count</label>
+                    <input type="number" id="batch-unit-count" placeholder="e.g. 500" min="0">
+                </div>
+                <div class="form-group">
                     <label for="batch-notes">Notes (optional)</label>
                     <input type="text" id="batch-notes" placeholder="e.g. Rush order for Customer X">
                 </div>
@@ -109,6 +113,24 @@
                 </div>
                 <div class="form-actions">
                     <button type="button" id="mixing-complete-cancel" class="btn btn-secondary">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Confirm</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal for Batch Complete (poured by) -->
+    <div id="batch-complete-overlay" class="modal-overlay hidden">
+        <div class="modal">
+            <h2>Batch Complete</h2>
+            <p id="batch-complete-product" class="modal-subtitle"></p>
+            <form id="batch-complete-form">
+                <div class="form-group">
+                    <label for="poured-by-input">Poured By (Name)</label>
+                    <input type="text" id="poured-by-input" required placeholder="e.g. John Doe">
+                </div>
+                <div class="form-actions">
+                    <button type="button" id="batch-complete-cancel" class="btn btn-secondary">Cancel</button>
                     <button type="submit" class="btn btn-primary">Confirm</button>
                 </div>
             </form>
@@ -144,6 +166,7 @@
                         <th>Unit Count</th>
                         <th>Viscosity</th>
                         <th>Initials</th>
+                        <th>Poured By</th>
                         <th>Notes</th>
                         <th>Queued</th>
                         <th>Mixing Started</th>
