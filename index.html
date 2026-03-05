@@ -10,8 +10,9 @@
     <header>
         <h1>Color Department - Batch Board</h1>
         <div class="header-actions">
-            <button id="add-batch-btn" class="btn btn-primary">+ New Batch</button>
-            <button id="clear-completed-btn" class="btn btn-secondary">Clear Completed</button>
+            <button id="admin-toggle-btn" class="btn btn-admin">Admin Login</button>
+            <button id="add-batch-btn" class="btn btn-primary admin-only hidden">+ New Batch</button>
+            <button id="clear-completed-btn" class="btn btn-secondary admin-only hidden">Clear Completed</button>
         </div>
     </header>
 
@@ -80,6 +81,10 @@
         <!-- Bowl lanes get rendered by JS -->
     </main>
 
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+    <script src="firebase-config.js"></script>
     <script src="app.js"></script>
 </body>
 </html>

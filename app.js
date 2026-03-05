@@ -16,20 +16,93 @@ const BOWLS = {
 // Display order for the lanes
 const BOWL_ORDER = ["A", "B", "C", "D", "E", "F", "G", "H", "I", "Big Iron", "Thors Hammer"];
 
-// ── State ───────────────────────────────────────────────────────────
-let batches = loadBatches();
+// ── Firebase Reference ──────────────────────────────────────────────
+const batchesRef = db.ref("batches");
 
-function loadBatches() {
+// ── State ───────────────────────────────────────────────────────────
+let batches = [];
+let isAdmin = sessionStorage.getItem("adminMode") === "true";
+
+// ── Admin Mode ──────────────────────────────────────────────────────
+const adminToggleBtn = document.getElementById("admin-toggle-btn");
+
+function updateAdminUI() {
+    const adminElements = document.querySelectorAll(".admin-only");
+    if (isAdmin) {
+        adminToggleBtn.textContent = "Logout Admin";
+        adminToggleBtn.classList.add("admin-active");
+        adminElements.forEach((el) => el.classList.remove("hidden"));
+        document.body.classList.add("admin-mode");
+    } else {
+        adminToggleBtn.textContent = "Admin Login";
+        adminToggleBtn.classList.remove("admin-active");
+        adminElements.forEach((el) => el.classList.add("hidden"));
+        document.body.classList.remove("admin-mode");
+    }
+    render();
+}
+
+adminToggleBtn.addEventListener("click", () => {
+    if (isAdmin) {
+        // Log out
+        isAdmin = false;
+        sessionStorage.removeItem("adminMode");
+        updateAdminUI();
+    } else {
+        // Prompt for password
+        const pw = prompt("Enter admin password:");
+        if (pw === ADMIN_PASSWORD) {
+            isAdmin = true;
+            sessionStorage.setItem("adminMode", "true");
+            updateAdminUI();
+        } else if (pw !== null) {
+            alert("Incorrect password.");
+        }
+    }
+});
+
+// Initialize admin UI on load
+updateAdminUI();
+
+// Migrate any existing localStorage data into Firebase (one-time)
+function migrateLocalStorage() {
     try {
         const raw = localStorage.getItem("colorDeptBatches");
-        return raw ? JSON.parse(raw) : [];
+        if (raw) {
+            const oldBatches = JSON.parse(raw);
+            if (oldBatches.length > 0) {
+                const updates = {};
+                for (const batch of oldBatches) {
+                    updates[batch.id] = batch;
+                }
+                batchesRef.update(updates);
+                localStorage.removeItem("colorDeptBatches");
+            }
+        }
     } catch {
-        return [];
+        // ignore migration errors
     }
 }
 
+// ── Real-Time Listener ──────────────────────────────────────────────
+// This fires immediately with current data, then again on every change
+// from ANY device/tab connected to this Firebase project.
+batchesRef.on("value", (snapshot) => {
+    const data = snapshot.val();
+    batches = data ? Object.values(data) : [];
+    render();
+});
+
+// Run migration after listener is set up
+migrateLocalStorage();
+
+// ── Save to Firebase ────────────────────────────────────────────────
 function saveBatches() {
-    localStorage.setItem("colorDeptBatches", JSON.stringify(batches));
+    const updates = {};
+    for (const batch of batches) {
+        updates[batch.id] = batch;
+    }
+    batchesRef.set(updates);
 }
 
 // ── Drag & Drop State ───────────────────────────────────────────────
@@ -61,11 +134,13 @@ function render() {
         dropZone.className = "drop-zone";
         dropZone.dataset.bowl = bowlKey;
 
-        // Allow dropping
-        dropZone.addEventListener("dragover", handleDragOver);
-        dropZone.addEventListener("drop", handleDrop);
-        dropZone.addEventListener("dragenter", handleDragEnter);
-        dropZone.addEventListener("dragleave", handleDragLeave);
+        // Only allow dropping if admin
+        if (isAdmin) {
+            dropZone.addEventListener("dragover", handleDragOver);
+            dropZone.addEventListener("drop", handleDrop);
+            dropZone.addEventListener("dragenter", handleDragEnter);
+            dropZone.addEventListener("dragleave", handleDragLeave);
+        }
 
         // Get batches for this bowl, ordered by sortOrder then createdAt
         const laneBatches = batches
@@ -96,11 +171,13 @@ function createBatchCard(batch) {
     const card = document.createElement("div");
     card.className = `batch-card status-${batch.status}`;
     card.dataset.id = batch.id;
-    card.draggable = true;
 
-    // Drag events
-    card.addEventListener("dragstart", handleDragStart);
-    card.addEventListener("dragend", handleDragEnd);
+    // Only make draggable if admin
+    if (isAdmin) {
+        card.draggable = true;
+        card.addEventListener("dragstart", handleDragStart);
+        card.addEventListener("dragend", handleDragEnd);
+    }
 
     const statusLabel = { queued: "QUEUED", mixing: "MIXING", complete: "COMPLETE" }[batch.status];
 
@@ -111,6 +188,18 @@ function createBatchCard(batch) {
             ? `<span class="card-packaging">${Number(batch.gallons).toLocaleString()} gal</span>`
             : "";
 
+    // Only show action buttons for admin
+    let actionsHtml = "";
+    if (isAdmin) {
+        actionsHtml = `
+            <div class="card-actions">
+                ${batch.status === "queued" ? `<button class="btn btn-sm btn-mixing" data-action="mixing" data-id="${batch.id}">Start Mixing</button>` : ""}
+                ${batch.status === "mixing" ? `<button class="btn btn-sm btn-complete" data-action="complete" data-id="${batch.id}">Mark Complete</button>` : ""}
+                <button class="btn btn-sm btn-delete" data-action="delete" data-id="${batch.id}">&times;</button>
+            </div>
+        `;
+    }
+
     card.innerHTML = `
         <div class="card-top">
             <span class="card-product">${escapeHtml(batch.product)}</span>
@@ -120,11 +209,7 @@ function createBatchCard(batch) {
             ${packagingDisplay}
             ${batch.notes ? `<span class="card-notes">${escapeHtml(batch.notes)}</span>` : ""}
         </div>
-        <div class="card-actions">
-            ${batch.status === "queued" ? `<button class="btn btn-sm btn-mixing" data-action="mixing" data-id="${batch.id}">Start Mixing</button>` : ""}
-            ${batch.status === "mixing" ? `<button class="btn btn-sm btn-complete" data-action="complete" data-id="${batch.id}">Mark Complete</button>` : ""}
-            <button class="btn btn-sm btn-delete" data-action="delete" data-id="${batch.id}">&times;</button>
-        </div>
+        ${actionsHtml}
     `;
 
     return card;
@@ -138,6 +223,7 @@ function escapeHtml(str) {
 
 // ── Drag & Drop Handlers ────────────────────────────────────────────
 function handleDragStart(e) {
+    if (!isAdmin) return;
     draggedId = e.target.dataset.id;
     e.target.classList.add("dragging");
     e.dataTransfer.effectAllowed = "move";
@@ -146,12 +232,12 @@ function handleDragStart(e) {
 function handleDragEnd(e) {
     e.target.classList.remove("dragging");
     draggedId = null;
-    // Remove all drag-over visuals
     document.querySelectorAll(".drag-over").forEach((el) => el.classList.remove("drag-over"));
     document.querySelectorAll(".drop-indicator").forEach((el) => el.remove());
 }
 
 function handleDragOver(e) {
+    if (!isAdmin) return;
     e.preventDefault();
     e.dataTransfer.dropEffect = "move";
 
@@ -161,10 +247,8 @@ function handleDragOver(e) {
 
     const afterElement = getDragAfterElement(dropZone, e.clientY);
 
-    // Remove old indicators
     dropZone.querySelectorAll(".drop-indicator").forEach((el) => el.remove());
 
-    // Add drop indicator line
     const indicator = document.createElement("div");
     indicator.className = "drop-indicator";
 
@@ -176,12 +260,12 @@ function handleDragOver(e) {
 }
 
 function handleDragEnter(e) {
+    if (!isAdmin) return;
     e.preventDefault();
     e.currentTarget.classList.add("drag-over");
 }
 
 function handleDragLeave(e) {
-    // Only remove if leaving the drop zone itself
     if (!e.currentTarget.contains(e.relatedTarget)) {
         e.currentTarget.classList.remove("drag-over");
         e.currentTarget.querySelectorAll(".drop-indicator").forEach((el) => el.remove());
@@ -189,6 +273,7 @@ function handleDragLeave(e) {
 }
 
 function handleDrop(e) {
+    if (!isAdmin) return;
     e.preventDefault();
     const dropZone = e.currentTarget;
     dropZone.classList.remove("drag-over");
@@ -200,10 +285,8 @@ function handleDrop(e) {
     const batch = batches.find((b) => b.id === draggedId);
     if (!batch) return;
 
-    // Update the bowl if moved to a different lane
     batch.bowl = targetBowl;
 
-    // Determine new sort order based on drop position
     const afterElement = getDragAfterElement(dropZone, e.clientY);
     const laneBatches = batches
         .filter((b) => b.bowl === targetBowl && b.id !== draggedId)
@@ -220,14 +303,12 @@ function handleDrop(e) {
         if (insertIndex === -1) insertIndex = laneBatches.length;
     }
 
-    // Reassign sort orders for all batches in this lane
     laneBatches.splice(insertIndex, 0, batch);
     laneBatches.forEach((b, i) => {
         b.sortOrder = i;
     });
 
     saveBatches();
-    render();
 }
 
 function getDragAfterElement(dropZone, y) {
@@ -255,6 +336,7 @@ let touchStartX = 0;
 let touchMoved = false;
 
 board.addEventListener("touchstart", (e) => {
+    if (!isAdmin) return;
     const card = e.target.closest(".batch-card:not(.empty)");
     if (!card || e.target.closest("[data-action]")) return;
 
@@ -265,7 +347,7 @@ board.addEventListener("touchstart", (e) => {
 }, { passive: true });
 
 board.addEventListener("touchmove", (e) => {
-    if (!touchDragEl) return;
+    if (!isAdmin || !touchDragEl) return;
 
     const dx = e.touches[0].clientX - touchStartX;
     const dy = e.touches[0].clientY - touchStartY;
@@ -287,7 +369,6 @@ board.addEventListener("touchmove", (e) => {
     touchClone.style.left = e.touches[0].clientX - touchClone.offsetWidth / 2 + "px";
     touchClone.style.top = e.touches[0].clientY - touchClone.offsetHeight / 2 + "px";
 
-    // Show drop indicator
     const dropZone = getDropZoneAt(e.touches[0].clientX, e.touches[0].clientY);
     document.querySelectorAll(".drop-indicator").forEach((el) => el.remove());
     document.querySelectorAll(".drag-over").forEach((el) => el.classList.remove("drag-over"));
@@ -352,11 +433,9 @@ board.addEventListener("touchend", (e) => {
     draggedId = null;
     document.querySelectorAll(".drag-over").forEach((el) => el.classList.remove("drag-over"));
     document.querySelectorAll(".drop-indicator").forEach((el) => el.remove());
-    render();
 });
 
 function getDropZoneAt(x, y) {
-    // Temporarily hide clone to find element underneath
     if (touchClone) touchClone.style.display = "none";
     const el = document.elementFromPoint(x, y);
     if (touchClone) touchClone.style.display = "";
@@ -367,7 +446,7 @@ function getDropZoneAt(x, y) {
 // ── Actions ─────────────────────────────────────────────────────────
 board.addEventListener("click", (e) => {
     const btn = e.target.closest("[data-action]");
-    if (!btn) return;
+    if (!btn || !isAdmin) return;
 
     const action = btn.dataset.action;
     const id = btn.dataset.id;
@@ -387,15 +466,12 @@ function updateStatus(id, newStatus) {
         batch.status = newStatus;
         if (newStatus === "mixing") batch.startedAt = Date.now();
         if (newStatus === "complete") batch.completedAt = Date.now();
-        saveBatches();
-        render();
+        batchesRef.child(id).update(batch);
     }
 }
 
 function deleteBatch(id) {
-    batches = batches.filter((b) => b.id !== id);
-    saveBatches();
-    render();
+    batchesRef.child(id).remove();
 }
 
 // ── Modal ───────────────────────────────────────────────────────────
@@ -403,6 +479,7 @@ const modalOverlay = document.getElementById("modal-overlay");
 const batchForm = document.getElementById("batch-form");
 
 document.getElementById("add-batch-btn").addEventListener("click", () => {
+    if (!isAdmin) return;
     modalOverlay.classList.remove("hidden");
     document.getElementById("product-name").focus();
 });
@@ -421,6 +498,7 @@ modalOverlay.addEventListener("click", (e) => {
 
 batchForm.addEventListener("submit", (e) => {
     e.preventDefault();
+    if (!isAdmin) return;
 
     const product = document.getElementById("product-name").value.trim();
     const bowl = document.getElementById("bowl-select").value;
@@ -429,7 +507,6 @@ batchForm.addEventListener("submit", (e) => {
 
     if (!product || !bowl) return;
 
-    // Calculate sort order: place at end of this bowl's list
     const laneBatches = batches.filter((b) => b.bowl === bowl);
     const maxOrder = laneBatches.reduce((max, b) => {
         const order = b.sortOrder != null ? b.sortOrder : b.createdAt;
@@ -449,9 +526,7 @@ batchForm.addEventListener("submit", (e) => {
         completedAt: null,
     };
 
-    batches.push(batch);
-    saveBatches();
-    render();
+    batchesRef.child(batch.id).set(batch);
 
     batchForm.reset();
     modalOverlay.classList.add("hidden");
@@ -459,15 +534,16 @@ batchForm.addEventListener("submit", (e) => {
 
 // Clear all completed batches
 document.getElementById("clear-completed-btn").addEventListener("click", () => {
-    batches = batches.filter((b) => b.status !== "complete");
-    saveBatches();
-    render();
+    if (!isAdmin) return;
+    const completedBatches = batches.filter((b) => b.status === "complete");
+    const updates = {};
+    for (const batch of completedBatches) {
+        updates[batch.id] = null;
+    }
+    batchesRef.update(updates);
 });
 
 // ── Helpers ─────────────────────────────────────────────────────────
 function generateId() {
     return Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
 }
-
-// ── Init ────────────────────────────────────────────────────────────
-render();
