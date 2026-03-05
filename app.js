@@ -198,6 +198,28 @@ batchesRef.on("value", (snapshot) => {
     if (Object.keys(migrations).length > 0) {
         batchesRef.update(migrations);
     }
+
+    // Assign batch numbers to any batches that don't have one
+    const missingNumbers = batches
+        .filter((b) => !b.batchNumber)
+        .sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
+    if (missingNumbers.length > 0) {
+        batchCounterRef.transaction((current) => {
+            return (current || 0) + missingNumbers.length;
+        }, (error, committed, snapshot) => {
+            if (error || !committed) return;
+            const endNum = snapshot.val();
+            const startNum = endNum - missingNumbers.length + 1;
+            const updates = {};
+            missingNumbers.forEach((batch, i) => {
+                const num = startNum + i;
+                const batchNumber = "A" + String(num).padStart(4, "0");
+                batch.batchNumber = batchNumber;
+                updates[batch.id + "/batchNumber"] = batchNumber;
+            });
+            batchesRef.update(updates);
+        });
+    }
     render();
     updateCompletedCount();
     if (activeTab === "completed") renderCompleted();
