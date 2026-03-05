@@ -9,19 +9,19 @@
 
 body {
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-    background: #1a1a2e;
+    background: #ffffff;
     color: #000000;
     min-height: 100vh;
 }
 
 /* ── Header ────────────────────────────────────────────────────────── */
 header {
-    background: #16213e;
+    background: #f0f2f5;
     padding: 16px 24px;
     display: flex;
     align-items: center;
     justify-content: space-between;
-    border-bottom: 3px solid #0f3460;
+    border-bottom: 3px solid #d0d5dd;
     position: sticky;
     top: 0;
     z-index: 10;
@@ -64,13 +64,13 @@ header h1 {
 }
 
 .btn-secondary {
-    background: #0f3460;
-    color: #ccc;
+    background: #d0d5dd;
+    color: #555;
     padding: 10px 20px;
 }
 
 .btn-secondary:hover {
-    background: #1a4a7a;
+    background: #bcc3ce;
 }
 
 .btn-sm {
@@ -81,7 +81,7 @@ header h1 {
 
 .btn-mixing {
     background: #f5a623;
-    color: #1a1a2e;
+    color: #fff;
 }
 
 .btn-mixing:hover {
@@ -99,7 +99,7 @@ header h1 {
 
 .btn-delete {
     background: transparent;
-    color: #777;
+    color: #999;
     font-size: 1rem;
     line-height: 1;
     padding: 2px 8px;
@@ -110,15 +110,15 @@ header h1 {
 }
 
 .btn-admin {
-    background: #2c3e50;
-    color: #8899aa;
+    background: #e8ecf0;
+    color: #667788;
     padding: 10px 20px;
-    border: 2px solid #3d5166;
+    border: 2px solid #d0d5dd;
 }
 
 .btn-admin:hover {
-    background: #34495e;
-    color: #ccc;
+    background: #dce1e8;
+    color: #555;
 }
 
 .btn-admin.admin-active {
@@ -145,16 +145,17 @@ header h1 {
 
 /* ── Lane (one per bowl) ───────────────────────────────────────────── */
 .lane {
-    background: #16213e;
+    background: #f5f7fa;
     border-radius: 10px;
     overflow: hidden;
     display: flex;
     flex-direction: column;
     min-height: 180px;
+    border: 1px solid #e0e4ea;
 }
 
 .lane-header {
-    background: #0f3460;
+    background: #e0e4ea;
     padding: 12px 16px;
     display: flex;
     justify-content: space-between;
@@ -164,13 +165,13 @@ header h1 {
 .lane-name {
     font-weight: 700;
     font-size: 1.05rem;
-    color: #fff;
+    color: #333;
 }
 
 .lane-capacity {
     font-size: 0.8rem;
-    color: #8899aa;
-    background: #1a1a2e;
+    color: #667788;
+    background: #fff;
     padding: 3px 8px;
     border-radius: 20px;
 }
@@ -184,10 +185,10 @@ header h1 {
 }
 
 .batch-card.empty {
-    color: #555;
+    color: #aaa;
     text-align: center;
     font-style: italic;
-    border: 1px dashed #333;
+    border: 1px dashed #ccc;
     background: transparent;
     margin-top: auto;
     margin-bottom: auto;
@@ -195,18 +196,18 @@ header h1 {
 
 /* Status colors */
 .batch-card.status-queued {
-    background: #1c2a4a;
+    background: #eaf2fb;
     border-left-color: #3498db;
 }
 
 .batch-card.status-mixing {
-    background: #2a2517;
+    background: #fef8ec;
     border-left-color: #f5a623;
     animation: pulse-mix 2s ease-in-out infinite;
 }
 
 .batch-card.status-complete {
-    background: #1a2e1a;
+    background: #eaf5ee;
     border-left-color: #27ae60;
     opacity: 0.7;
 }
@@ -227,7 +228,7 @@ header h1 {
 .card-product {
     font-weight: 700;
     font-size: 0.95rem;
-    color: #fff;
+    color: #222;
     word-break: break-word;
 }
 
@@ -248,7 +249,7 @@ header h1 {
 
 .status-mixing .card-status {
     background: #f5a623;
-    color: #1a1a2e;
+    color: #fff;
 }
 
 .status-complete .card-status {
@@ -260,7 +261,7 @@ header h1 {
     display: flex;
     gap: 12px;
     font-size: 0.8rem;
-    color: #8899aa;
+    color: #667788;
     margin-bottom: 8px;
     flex-wrap: wrap;
 }
@@ -271,7 +272,7 @@ header h1 {
 
 .card-packaging {
     font-weight: 600;
-    color: #aabbcc;
+    color: #556677;
 }
 
 .card-actions {
@@ -319,14 +320,14 @@ header h1 {
     opacity: 0.85;
     pointer-events: none;
     transform: rotate(2deg);
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
 }
 
 /* ── Modal ──────────────────────────────────────────────────────────── */
 .modal-overlay {
     position: fixed;
     inset: 0;
-    background: rgba(0, 0, 0, 0.7);
+    background: rgba(0, 0, 0, 0.4);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -338,12 +339,12 @@ header h1 {
 }
 
 .modal {
-    background: #16213e;
+    background: #ffffff;
     border-radius: 12px;
     padding: 28px 32px;
     width: 90%;
     max-width: 440px;
-    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
 }
 
 .modal h2 {
@@ -360,7 +361,7 @@ header h1 {
     display: block;
     font-size: 0.8rem;
     font-weight: 600;
-    color: #8899aa;
+    color: #667788;
     margin-bottom: 4px;
     text-transform: uppercase;
     letter-spacing: 0.5px;
@@ -370,10 +371,10 @@ header h1 {
 .form-group select {
     width: 100%;
     padding: 10px 12px;
-    border: 2px solid #0f3460;
+    border: 2px solid #d0d5dd;
     border-radius: 6px;
-    background: #1a1a2e;
-    color: #e0e0e0;
+    background: #ffffff;
+    color: #333;
     font-size: 0.95rem;
     transition: border-color 0.15s;
 }
@@ -385,8 +386,8 @@ header h1 {
 }
 
 .form-group select option {
-    background: #1a1a2e;
-    color: #e0e0e0;
+    background: #ffffff;
+    color: #333;
 }
 
 .form-actions {
