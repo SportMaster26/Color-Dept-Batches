@@ -54,7 +54,8 @@ const batchCounterRef = db.ref("meta/batchCounter");
 
 // ── State ───────────────────────────────────────────────────────────
 let batches = [];
-let undoStack = []; // stores { id, prevStatus } for undo
+let undoStack = []; // stores { id, prevStatus } for admin undo
+let operatorUndoStack = []; // separate undo stack for operator
 const MAX_UNDO = 20;
 let isAdmin = sessionStorage.getItem("adminMode") === "true";
 let isOperator = sessionStorage.getItem("operatorMode") === "true";
@@ -154,15 +155,23 @@ function updateCompletedCount() {
 }
 
 // ── Undo Button ─────────────────────────────────────────────────────
+function getActiveUndoStack() {
+    if (isAdmin) return undoStack;
+    if (isOperator) return operatorUndoStack;
+    return [];
+}
+
 function updateUndoBtn() {
     if (undoBtn) {
-        undoBtn.classList.toggle("hidden", !isAdmin || undoStack.length === 0);
+        const stack = getActiveUndoStack();
+        undoBtn.classList.toggle("hidden", (!isAdmin && !isOperator) || stack.length === 0);
     }
 }
 
 undoBtn.addEventListener("click", () => {
-    if (!isAdmin || undoStack.length === 0) return;
-    const action = undoStack.pop();
+    const stack = getActiveUndoStack();
+    if ((!isAdmin && !isOperator) || stack.length === 0) return;
+    const action = stack.pop();
     const batch = batches.find((b) => b.id === action.id);
     if (batch) {
         batch.status = action.prevStatus;
@@ -877,9 +886,10 @@ function advanceStatus(id) {
 }
 
 function applyStatusAdvance(batch, nextStatus) {
-    // Push to undo stack
-    undoStack.push({ id: batch.id, prevStatus: batch.status });
-    if (undoStack.length > MAX_UNDO) undoStack.shift();
+    // Push to the active role's undo stack
+    const stack = getActiveUndoStack();
+    stack.push({ id: batch.id, prevStatus: batch.status });
+    if (stack.length > MAX_UNDO) stack.shift();
 
     const now = Date.now();
     batch.status = nextStatus;
