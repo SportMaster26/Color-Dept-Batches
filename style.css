@@ -372,10 +372,27 @@ header h1 {
     color: #556677;
 }
 
+.card-viscosity {
+    font-weight: 600;
+    color: #8e44ad;
+}
+
+.card-initials {
+    font-weight: 600;
+    color: #2980b9;
+}
+
 .card-actions {
     display: flex;
     gap: 6px;
     align-items: center;
+}
+
+.modal-subtitle {
+    font-weight: 600;
+    color: #333;
+    margin: -10px 0 16px;
+    font-size: 1rem;
 }
 
 /* ── Completed Board ─────────────────────────────────────────────── */

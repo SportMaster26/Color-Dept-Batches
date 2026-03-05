@@ -93,6 +93,28 @@
         </div>
     </div>
 
+    <!-- Modal for Mixing Complete (viscosity + initials) -->
+    <div id="mixing-complete-overlay" class="modal-overlay hidden">
+        <div class="modal">
+            <h2>Mixing Complete</h2>
+            <p id="mixing-complete-product" class="modal-subtitle"></p>
+            <form id="mixing-complete-form">
+                <div class="form-group">
+                    <label for="viscosity-input">Viscosity (KU)</label>
+                    <input type="text" id="viscosity-input" required placeholder="e.g. 85">
+                </div>
+                <div class="form-group">
+                    <label for="initials-input">Initials</label>
+                    <input type="text" id="initials-input" required placeholder="e.g. JD" maxlength="5">
+                </div>
+                <div class="form-actions">
+                    <button type="button" id="mixing-complete-cancel" class="btn btn-secondary">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Confirm</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <!-- Board layout (active batches) -->
     <main id="board">
         <!-- Bowl lanes get rendered by JS -->
@@ -120,8 +142,14 @@
                         <th>Bowl Capacity</th>
                         <th>Packaging</th>
                         <th>Unit Count</th>
+                        <th>Viscosity</th>
+                        <th>Initials</th>
                         <th>Notes</th>
-                        <th>Completed</th>
+                        <th>Queued</th>
+                        <th>Mixing Started</th>
+                        <th>Mixing Complete</th>
+                        <th>Pouring Started</th>
+                        <th>Batch Complete</th>
                     </tr>
                 </thead>
                 <tbody id="completed-table-body"></tbody>

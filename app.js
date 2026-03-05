@@ -328,6 +328,7 @@ function getCompletedRows() {
                     unitCount = Math.floor(bowlCap / pkg.gallons);
                 }
             }
+            const fmtTs = (ts) => ts ? new Date(ts).toLocaleString() : "—";
             return {
                 product: batch.product,
                 bowl: bowlName,
@@ -335,8 +336,14 @@ function getCompletedRows() {
                 capacityNum: bowlCap || 0,
                 packaging: packagingLabel,
                 unitCount,
+                viscosity: batch.viscosity || "",
+                initials: batch.initials || "",
                 notes: batch.notes || "",
-                completed: batch.completedAt ? new Date(batch.completedAt).toLocaleString() : "",
+                queuedAt: fmtTs(batch.createdAt),
+                mixingStarted: fmtTs(batch.startedAt),
+                mixingComplete: fmtTs(batch.mixingCompleteAt),
+                pouringStarted: fmtTs(batch.pouringAt),
+                batchComplete: fmtTs(batch.completedAt),
                 completedAt: batch.completedAt || 0,
                 id: batch.id,
             };
@@ -349,7 +356,7 @@ function renderCompleted() {
     const toolbar = document.querySelector(".completed-toolbar");
 
     if (rows.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="8" class="completed-empty">No completed batches</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="14" class="completed-empty">No completed batches</td></tr>`;
         if (toolbar) toolbar.classList.add("hidden");
         if (completedChart) { completedChart.destroy(); completedChart = null; }
         return;
@@ -365,8 +372,14 @@ function renderCompleted() {
             <td>${r.capacity}</td>
             <td>${escapeHtml(r.packaging)}</td>
             <td>${r.unitCount ? r.unitCount.toLocaleString() + " approx." : "—"}</td>
-            <td>${escapeHtml(r.notes)}</td>
-            <td class="completed-time-cell">${r.completed}${isAdmin ? ` <button class="btn btn-sm btn-delete" data-action="delete" data-id="${r.id}">&times;</button>` : ""}</td>
+            <td>${escapeHtml(r.viscosity)}${r.viscosity ? " KU" : "—"}</td>
+            <td>${escapeHtml(r.initials) || "—"}</td>
+            <td>${escapeHtml(r.notes) || "—"}</td>
+            <td class="completed-time-cell">${r.queuedAt}</td>
+            <td class="completed-time-cell">${r.mixingStarted}</td>
+            <td class="completed-time-cell">${r.mixingComplete}</td>
+            <td class="completed-time-cell">${r.pouringStarted}</td>
+            <td class="completed-time-cell">${r.batchComplete}${isAdmin ? ` <button class="btn btn-sm btn-delete" data-action="delete" data-id="${r.id}">&times;</button>` : ""}</td>
         </tr>
     `).join("");
 
@@ -456,8 +469,14 @@ function exportToExcel() {
         "Bowl Capacity": r.capacity,
         "Packaging": r.packaging,
         "Unit Count": r.unitCount || "N/A",
-        "Notes": r.notes,
-        "Completed": r.completed,
+        "Viscosity (KU)": r.viscosity || "N/A",
+        "Initials": r.initials || "N/A",
+        "Notes": r.notes || "",
+        "Queued": r.queuedAt,
+        "Mixing Started": r.mixingStarted,
+        "Mixing Complete": r.mixingComplete,
+        "Pouring Started": r.pouringStarted,
+        "Batch Complete": r.batchComplete,
     }));
 
     const ws = XLSX.utils.json_to_sheet(data);
@@ -522,6 +541,10 @@ function createBatchCard(batch) {
         `;
     }
 
+    let extraInfo = "";
+    if (batch.viscosity) extraInfo += `<span class="card-viscosity">Viscosity: ${escapeHtml(batch.viscosity)} KU</span>`;
+    if (batch.initials) extraInfo += `<span class="card-initials">by ${escapeHtml(batch.initials)}</span>`;
+
     card.innerHTML = `
         <div class="card-top">
             <span class="card-product">${escapeHtml(batch.product)}</span>
@@ -529,6 +552,7 @@ function createBatchCard(batch) {
         </div>
         <div class="card-details">
             ${packagingDisplay}
+            ${extraInfo}
             ${batch.notes ? `<span class="card-notes">${escapeHtml(batch.notes)}</span>` : ""}
         </div>
         ${actionsHtml}
@@ -788,16 +812,73 @@ function advanceStatus(id) {
     const nextAction = STATUS_NEXT_ACTION[batch.status];
     if (!nextAction) return;
 
+    // If advancing from mixing → mixing_complete, show the viscosity/initials modal
+    if (batch.status === "mixing" && nextAction.next === "mixing_complete") {
+        showMixingCompleteModal(batch);
+        return;
+    }
+
+    applyStatusAdvance(batch, nextAction.next);
+}
+
+function applyStatusAdvance(batch, nextStatus) {
     // Push to undo stack
     undoStack.push({ id: batch.id, prevStatus: batch.status });
     if (undoStack.length > MAX_UNDO) undoStack.shift();
 
-    batch.status = nextAction.next;
-    if (nextAction.next === "mixing") batch.startedAt = Date.now();
-    if (nextAction.next === "batch_complete") batch.completedAt = Date.now();
-    batchesRef.child(id).update(batch);
+    const now = Date.now();
+    batch.status = nextStatus;
+
+    // Record timestamp for each step
+    if (nextStatus === "mixing") batch.startedAt = now;
+    if (nextStatus === "mixing_complete") batch.mixingCompleteAt = now;
+    if (nextStatus === "pouring") batch.pouringAt = now;
+    if (nextStatus === "batch_complete") batch.completedAt = now;
+
+    batchesRef.child(batch.id).update(batch);
     updateUndoBtn();
 }
+
+// ── Mixing Complete Modal ────────────────────────────────────────────
+const mixingCompleteOverlay = document.getElementById("mixing-complete-overlay");
+const mixingCompleteForm = document.getElementById("mixing-complete-form");
+let pendingMixingBatchId = null;
+
+function showMixingCompleteModal(batch) {
+    pendingMixingBatchId = batch.id;
+    document.getElementById("mixing-complete-product").textContent = batch.product;
+    document.getElementById("viscosity-input").value = "";
+    document.getElementById("initials-input").value = "";
+    mixingCompleteOverlay.classList.remove("hidden");
+    document.getElementById("viscosity-input").focus();
+}
+
+document.getElementById("mixing-complete-cancel").addEventListener("click", () => {
+    mixingCompleteOverlay.classList.add("hidden");
+    pendingMixingBatchId = null;
+});
+
+mixingCompleteOverlay.addEventListener("click", (e) => {
+    if (e.target === mixingCompleteOverlay) {
+        mixingCompleteOverlay.classList.add("hidden");
+        pendingMixingBatchId = null;
+    }
+});
+
+mixingCompleteForm.addEventListener("submit", (e) => {
+    e.preventDefault();
+    if (!pendingMixingBatchId) return;
+
+    const batch = batches.find((b) => b.id === pendingMixingBatchId);
+    if (!batch) return;
+
+    batch.viscosity = document.getElementById("viscosity-input").value.trim();
+    batch.initials = document.getElementById("initials-input").value.trim().toUpperCase();
+
+    mixingCompleteOverlay.classList.add("hidden");
+    applyStatusAdvance(batch, "mixing_complete");
+    pendingMixingBatchId = null;
+});
 
 function updateStatus(id, newStatus) {
     const batch = batches.find((b) => b.id === id);
@@ -805,9 +886,12 @@ function updateStatus(id, newStatus) {
         undoStack.push({ id: batch.id, prevStatus: batch.status });
         if (undoStack.length > MAX_UNDO) undoStack.shift();
 
+        const now = Date.now();
         batch.status = newStatus;
-        if (newStatus === "mixing") batch.startedAt = Date.now();
-        if (newStatus === "batch_complete") batch.completedAt = Date.now();
+        if (newStatus === "mixing") batch.startedAt = now;
+        if (newStatus === "mixing_complete") batch.mixingCompleteAt = now;
+        if (newStatus === "pouring") batch.pouringAt = now;
+        if (newStatus === "batch_complete") batch.completedAt = now;
         batchesRef.child(id).update(batch);
         updateUndoBtn();
     }
@@ -866,7 +950,11 @@ batchForm.addEventListener("submit", (e) => {
         sortOrder: maxOrder + 1,
         createdAt: Date.now(),
         startedAt: null,
+        mixingCompleteAt: null,
+        pouringAt: null,
         completedAt: null,
+        viscosity: null,
+        initials: null,
     };
 
     batchesRef.child(batch.id).set(batch);
