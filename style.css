@@ -202,6 +202,16 @@ header h1 {
     background: #1e8c4c;
 }
 
+.btn-admin.operator-active {
+    background: #3498db;
+    color: #fff;
+    border-color: #3498db;
+}
+
+.btn-admin.operator-active:hover {
+    background: #2980b9;
+}
+
 .hidden {
     display: none !important;
 }

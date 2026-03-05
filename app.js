@@ -57,6 +57,7 @@ let batches = [];
 let undoStack = []; // stores { id, prevStatus } for undo
 const MAX_UNDO = 20;
 let isAdmin = sessionStorage.getItem("adminMode") === "true";
+let isOperator = sessionStorage.getItem("operatorMode") === "true";
 let activeTab = "active"; // "active" or "completed"
 const board = document.getElementById("board");
 const adminToggleBtn = document.getElementById("admin-toggle-btn");
@@ -72,29 +73,50 @@ function updateAdminUI() {
     if (isAdmin) {
         adminToggleBtn.textContent = "Logout Admin";
         adminToggleBtn.classList.add("admin-active");
+        adminToggleBtn.classList.remove("operator-active");
         adminElements.forEach((el) => el.classList.remove("hidden"));
         document.body.classList.add("admin-mode");
-    } else {
-        adminToggleBtn.textContent = "Admin Login";
+        document.body.classList.remove("operator-mode");
+    } else if (isOperator) {
+        adminToggleBtn.textContent = "Logout Operator";
         adminToggleBtn.classList.remove("admin-active");
+        adminToggleBtn.classList.add("operator-active");
         adminElements.forEach((el) => el.classList.add("hidden"));
         document.body.classList.remove("admin-mode");
+        document.body.classList.add("operator-mode");
+    } else {
+        adminToggleBtn.textContent = "Login";
+        adminToggleBtn.classList.remove("admin-active");
+        adminToggleBtn.classList.remove("operator-active");
+        adminElements.forEach((el) => el.classList.add("hidden"));
+        document.body.classList.remove("admin-mode");
+        document.body.classList.remove("operator-mode");
     }
     render();
 }
 
 adminToggleBtn.addEventListener("click", () => {
-    if (isAdmin) {
-        // Log out
+    if (isAdmin || isOperator) {
+        // Log out of whichever role
         isAdmin = false;
+        isOperator = false;
         sessionStorage.removeItem("adminMode");
+        sessionStorage.removeItem("operatorMode");
         updateAdminUI();
     } else {
         // Prompt for password
-        const pw = prompt("Enter admin password:");
+        const pw = prompt("Enter password:");
         if (pw === ADMIN_PASSWORD) {
             isAdmin = true;
+            isOperator = false;
             sessionStorage.setItem("adminMode", "true");
+            sessionStorage.removeItem("operatorMode");
+            updateAdminUI();
+        } else if (pw === OPERATOR_PASSWORD) {
+            isOperator = true;
+            isAdmin = false;
+            sessionStorage.setItem("operatorMode", "true");
+            sessionStorage.removeItem("adminMode");
             updateAdminUI();
         } else if (pw !== null) {
             alert("Incorrect password.");
@@ -538,15 +560,15 @@ function createBatchCard(batch) {
         packagingDisplay += `<span class="card-packaging">${Number(batch.unitCount).toLocaleString()} units</span>`;
     }
 
-    // Only show action buttons for admin
+    // Show action buttons based on role
     let actionsHtml = "";
+    const nextAction = STATUS_NEXT_ACTION[batch.status];
+    const nextBtnClass = batch.status === "queued" ? "btn-start-mixing"
+        : batch.status === "mixing" ? "btn-mixing-complete"
+        : batch.status === "mixing_complete" ? "btn-pouring"
+        : batch.status === "pouring" ? "btn-batch-complete"
+        : "";
     if (isAdmin) {
-        const nextAction = STATUS_NEXT_ACTION[batch.status];
-        const nextBtnClass = batch.status === "queued" ? "btn-start-mixing"
-            : batch.status === "mixing" ? "btn-mixing-complete"
-            : batch.status === "mixing_complete" ? "btn-pouring"
-            : batch.status === "pouring" ? "btn-batch-complete"
-            : "";
         actionsHtml = `
             <div class="card-actions">
                 ${nextAction ? `<button class="btn btn-sm ${nextBtnClass}" data-action="advance" data-id="${batch.id}">${nextAction.label}</button>` : ""}
@@ -554,6 +576,13 @@ function createBatchCard(batch) {
                 <button class="btn btn-sm btn-delete" data-action="delete" data-id="${batch.id}">&times;</button>
             </div>
         `;
+    } else if (isOperator) {
+        // Operators can only advance status (click through steps)
+        actionsHtml = nextAction ? `
+            <div class="card-actions">
+                <button class="btn btn-sm ${nextBtnClass}" data-action="advance" data-id="${batch.id}">${nextAction.label}</button>
+            </div>
+        ` : "";
     }
 
     let extraInfo = "";
@@ -811,16 +840,16 @@ function getDropZoneAt(x, y) {
 // Handle clicks on both boards
 document.addEventListener("click", (e) => {
     const btn = e.target.closest("[data-action]");
-    if (!btn || !isAdmin) return;
+    if (!btn) return;
 
     const action = btn.dataset.action;
     const id = btn.dataset.id;
 
-    if (action === "advance") {
+    if (action === "advance" && (isAdmin || isOperator)) {
         advanceStatus(id);
-    } else if (action === "edit") {
+    } else if (action === "edit" && isAdmin) {
         openEditModal(id);
-    } else if (action === "delete") {
+    } else if (action === "delete" && isAdmin) {
         deleteBatch(id);
     }
 });
