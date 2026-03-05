@@ -50,6 +50,7 @@ const PACKAGING = {
 
 // ── Firebase Reference ──────────────────────────────────────────────
 const batchesRef = db.ref("batches");
+const batchCounterRef = db.ref("meta/batchCounter");
 
 // ── State ───────────────────────────────────────────────────────────
 let batches = [];
@@ -320,24 +321,18 @@ function getCompletedRows() {
             const bowlInfo = BOWLS[batch.bowl];
             const bowlName = bowlInfo ? bowlInfo.name : batch.bowl;
             const bowlCap = bowlInfo ? bowlInfo.capacity : null;
-            let unitCount = "";
-            let packagingLabel = batch.packaging || "";
-            if (batch.packaging) {
-                const pkg = PACKAGING[batch.packaging];
-                if (pkg && bowlCap) {
-                    unitCount = Math.floor(bowlCap / pkg.gallons);
-                }
-            }
             const fmtTs = (ts) => ts ? new Date(ts).toLocaleString() : "—";
             return {
+                batchNumber: batch.batchNumber || "",
                 product: batch.product,
                 bowl: bowlName,
                 capacity: bowlCap ? bowlCap.toLocaleString() + " gal" : "N/A",
                 capacityNum: bowlCap || 0,
-                packaging: packagingLabel,
-                unitCount,
+                packaging: batch.packaging || "",
+                unitCount: batch.unitCount || "",
                 viscosity: batch.viscosity || "",
                 initials: batch.initials || "",
+                pouredBy: batch.pouredBy || "",
                 notes: batch.notes || "",
                 queuedAt: fmtTs(batch.createdAt),
                 mixingStarted: fmtTs(batch.startedAt),
@@ -356,7 +351,7 @@ function renderCompleted() {
     const toolbar = document.querySelector(".completed-toolbar");
 
     if (rows.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="14" class="completed-empty">No completed batches</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="16" class="completed-empty">No completed batches</td></tr>`;
         if (toolbar) toolbar.classList.add("hidden");
         if (completedChart) { completedChart.destroy(); completedChart = null; }
         return;
@@ -367,13 +362,15 @@ function renderCompleted() {
     tbody.innerHTML = rows.map((r, i) => `
         <tr>
             <td>${i + 1}</td>
+            <td class="batch-num-cell">${escapeHtml(r.batchNumber) || "—"}</td>
             <td>${escapeHtml(r.product)}</td>
             <td>${escapeHtml(r.bowl)}</td>
             <td>${r.capacity}</td>
             <td>${escapeHtml(r.packaging)}</td>
-            <td>${r.unitCount ? r.unitCount.toLocaleString() + " approx." : "—"}</td>
-            <td>${escapeHtml(r.viscosity)}${r.viscosity ? " KU" : "—"}</td>
+            <td>${r.unitCount ? Number(r.unitCount).toLocaleString() : "—"}</td>
+            <td>${r.viscosity ? escapeHtml(r.viscosity) + " KU" : "—"}</td>
             <td>${escapeHtml(r.initials) || "—"}</td>
+            <td>${escapeHtml(r.pouredBy) || "—"}</td>
             <td>${escapeHtml(r.notes) || "—"}</td>
             <td class="completed-time-cell">${r.queuedAt}</td>
             <td class="completed-time-cell">${r.mixingStarted}</td>
@@ -464,6 +461,7 @@ function exportToExcel() {
 
     const data = rows.map((r, i) => ({
         "#": i + 1,
+        "Batch #": r.batchNumber || "N/A",
         "Product": r.product,
         "Bowl": r.bowl,
         "Bowl Capacity": r.capacity,
@@ -471,6 +469,7 @@ function exportToExcel() {
         "Unit Count": r.unitCount || "N/A",
         "Viscosity (KU)": r.viscosity || "N/A",
         "Initials": r.initials || "N/A",
+        "Poured By": r.pouredBy || "N/A",
         "Notes": r.notes || "",
         "Queued": r.queuedAt,
         "Mixing Started": r.mixingStarted,
@@ -509,19 +508,12 @@ function createBatchCard(batch) {
 
     const statusLabel = STATUS_LABELS[batch.status] || batch.status.toUpperCase();
 
-    // Support both old "gallons" field and new "packaging" field
     let packagingDisplay = "";
     if (batch.packaging) {
-        const pkg = PACKAGING[batch.packaging];
-        const bowlCap = BOWLS[batch.bowl] ? BOWLS[batch.bowl].capacity : null;
-        if (pkg && bowlCap) {
-            const count = Math.floor(bowlCap / pkg.gallons);
-            packagingDisplay = `<span class="card-packaging">${escapeHtml(batch.packaging)} - ${count.toLocaleString()} ${pkg.unit} Approx.</span>`;
-        } else {
-            packagingDisplay = `<span class="card-packaging">${escapeHtml(batch.packaging)}</span>`;
-        }
-    } else if (batch.gallons) {
-        packagingDisplay = `<span class="card-packaging">${Number(batch.gallons).toLocaleString()} gal</span>`;
+        packagingDisplay = `<span class="card-packaging">${escapeHtml(batch.packaging)}</span>`;
+    }
+    if (batch.unitCount) {
+        packagingDisplay += `<span class="card-packaging">${Number(batch.unitCount).toLocaleString()} units</span>`;
     }
 
     // Only show action buttons for admin
@@ -536,6 +528,7 @@ function createBatchCard(batch) {
         actionsHtml = `
             <div class="card-actions">
                 ${nextAction ? `<button class="btn btn-sm ${nextBtnClass}" data-action="advance" data-id="${batch.id}">${nextAction.label}</button>` : ""}
+                <button class="btn btn-sm btn-edit" data-action="edit" data-id="${batch.id}">Edit</button>
                 <button class="btn btn-sm btn-delete" data-action="delete" data-id="${batch.id}">&times;</button>
             </div>
         `;
@@ -544,10 +537,13 @@ function createBatchCard(batch) {
     let extraInfo = "";
     if (batch.viscosity) extraInfo += `<span class="card-viscosity">Viscosity: ${escapeHtml(batch.viscosity)} KU</span>`;
     if (batch.initials) extraInfo += `<span class="card-initials">by ${escapeHtml(batch.initials)}</span>`;
+    if (batch.pouredBy) extraInfo += `<span class="card-poured-by">Poured: ${escapeHtml(batch.pouredBy)}</span>`;
+
+    const batchNumDisplay = batch.batchNumber ? `<span class="card-batch-number">${escapeHtml(batch.batchNumber)}</span>` : "";
 
     card.innerHTML = `
         <div class="card-top">
-            <span class="card-product">${escapeHtml(batch.product)}</span>
+            <span class="card-product">${batchNumDisplay}${escapeHtml(batch.product)}</span>
             <span class="card-status">${statusLabel}</span>
         </div>
         <div class="card-details">
@@ -800,6 +796,8 @@ document.addEventListener("click", (e) => {
 
     if (action === "advance") {
         advanceStatus(id);
+    } else if (action === "edit") {
+        openEditModal(id);
     } else if (action === "delete") {
         deleteBatch(id);
     }
@@ -815,6 +813,12 @@ function advanceStatus(id) {
     // If advancing from mixing → mixing_complete, show the viscosity/initials modal
     if (batch.status === "mixing" && nextAction.next === "mixing_complete") {
         showMixingCompleteModal(batch);
+        return;
+    }
+
+    // If advancing from pouring → batch_complete, show the poured-by modal
+    if (batch.status === "pouring" && nextAction.next === "batch_complete") {
+        showBatchCompleteModal(batch);
         return;
     }
 
@@ -880,6 +884,45 @@ mixingCompleteForm.addEventListener("submit", (e) => {
     pendingMixingBatchId = null;
 });
 
+// ── Batch Complete Modal ──────────────────────────────────────────────
+const batchCompleteOverlay = document.getElementById("batch-complete-overlay");
+const batchCompleteForm = document.getElementById("batch-complete-form");
+let pendingCompleteBatchId = null;
+
+function showBatchCompleteModal(batch) {
+    pendingCompleteBatchId = batch.id;
+    document.getElementById("batch-complete-product").textContent = batch.product;
+    document.getElementById("poured-by-input").value = "";
+    batchCompleteOverlay.classList.remove("hidden");
+    document.getElementById("poured-by-input").focus();
+}
+
+document.getElementById("batch-complete-cancel").addEventListener("click", () => {
+    batchCompleteOverlay.classList.add("hidden");
+    pendingCompleteBatchId = null;
+});
+
+batchCompleteOverlay.addEventListener("click", (e) => {
+    if (e.target === batchCompleteOverlay) {
+        batchCompleteOverlay.classList.add("hidden");
+        pendingCompleteBatchId = null;
+    }
+});
+
+batchCompleteForm.addEventListener("submit", (e) => {
+    e.preventDefault();
+    if (!pendingCompleteBatchId) return;
+
+    const batch = batches.find((b) => b.id === pendingCompleteBatchId);
+    if (!batch) return;
+
+    batch.pouredBy = document.getElementById("poured-by-input").value.trim();
+
+    batchCompleteOverlay.classList.add("hidden");
+    applyStatusAdvance(batch, "batch_complete");
+    pendingCompleteBatchId = null;
+});
+
 function updateStatus(id, newStatus) {
     const batch = batches.find((b) => b.id === id);
     if (batch) {
@@ -896,6 +939,55 @@ function updateStatus(id, newStatus) {
         updateUndoBtn();
     }
 }
+
+// ── Edit Batch Modal ─────────────────────────────────────────────────
+const editOverlay = document.getElementById("edit-overlay");
+const editForm = document.getElementById("edit-form");
+
+function openEditModal(id) {
+    const batch = batches.find((b) => b.id === id);
+    if (!batch) return;
+
+    document.getElementById("edit-batch-id").value = batch.id;
+    document.getElementById("edit-batch-number").textContent = batch.batchNumber || "";
+    document.getElementById("edit-product").value = batch.product || "";
+    document.getElementById("edit-packaging").value = batch.packaging || "";
+    document.getElementById("edit-unit-count").value = batch.unitCount || "";
+    document.getElementById("edit-viscosity").value = batch.viscosity || "";
+    document.getElementById("edit-initials").value = batch.initials || "";
+    document.getElementById("edit-poured-by").value = batch.pouredBy || "";
+    document.getElementById("edit-notes").value = batch.notes || "";
+
+    editOverlay.classList.remove("hidden");
+    document.getElementById("edit-product").focus();
+}
+
+document.getElementById("edit-cancel").addEventListener("click", () => {
+    editOverlay.classList.add("hidden");
+});
+
+editOverlay.addEventListener("click", (e) => {
+    if (e.target === editOverlay) editOverlay.classList.add("hidden");
+});
+
+editForm.addEventListener("submit", (e) => {
+    e.preventDefault();
+    const id = document.getElementById("edit-batch-id").value;
+    const batch = batches.find((b) => b.id === id);
+    if (!batch) return;
+
+    batch.product = document.getElementById("edit-product").value.trim();
+    batch.packaging = document.getElementById("edit-packaging").value || null;
+    const uc = document.getElementById("edit-unit-count").value.trim();
+    batch.unitCount = uc ? Number(uc) : null;
+    batch.viscosity = document.getElementById("edit-viscosity").value.trim() || null;
+    batch.initials = document.getElementById("edit-initials").value.trim().toUpperCase() || null;
+    batch.pouredBy = document.getElementById("edit-poured-by").value.trim() || null;
+    batch.notes = document.getElementById("edit-notes").value.trim() || null;
+
+    batchesRef.child(id).update(batch);
+    editOverlay.classList.add("hidden");
+});
 
 function deleteBatch(id) {
     batchesRef.child(id).remove();
@@ -930,6 +1022,7 @@ batchForm.addEventListener("submit", (e) => {
     const product = document.getElementById("product-name").value.trim();
     const bowl = document.getElementById("bowl-select").value;
     const packaging = document.getElementById("batch-packaging").value;
+    const unitCountVal = document.getElementById("batch-unit-count").value.trim();
     const notes = document.getElementById("batch-notes").value.trim();
 
     if (!product || !bowl) return;
@@ -940,24 +1033,39 @@ batchForm.addEventListener("submit", (e) => {
         return Math.max(max, order);
     }, -1);
 
-    const batch = {
-        id: generateId(),
-        product,
-        bowl,
-        packaging: packaging || null,
-        notes: notes || null,
-        status: "queued",
-        sortOrder: maxOrder + 1,
-        createdAt: Date.now(),
-        startedAt: null,
-        mixingCompleteAt: null,
-        pouringAt: null,
-        completedAt: null,
-        viscosity: null,
-        initials: null,
-    };
+    // Generate batch number via atomic counter
+    batchCounterRef.transaction((current) => {
+        return (current || 0) + 1;
+    }, (error, committed, snapshot) => {
+        if (error || !committed) {
+            alert("Failed to generate batch number. Please try again.");
+            return;
+        }
+        const num = snapshot.val();
+        const batchNumber = "A" + String(num).padStart(4, "0");
 
-    batchesRef.child(batch.id).set(batch);
+        const batch = {
+            id: generateId(),
+            batchNumber,
+            product,
+            bowl,
+            packaging: packaging || null,
+            unitCount: unitCountVal ? Number(unitCountVal) : null,
+            notes: notes || null,
+            status: "queued",
+            sortOrder: maxOrder + 1,
+            createdAt: Date.now(),
+            startedAt: null,
+            mixingCompleteAt: null,
+            pouringAt: null,
+            completedAt: null,
+            viscosity: null,
+            initials: null,
+            pouredBy: null,
+        };
+
+        batchesRef.child(batch.id).set(batch);
+    });
 
     batchForm.reset();
     modalOverlay.classList.add("hidden");
