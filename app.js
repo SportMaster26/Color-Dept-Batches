@@ -45,9 +45,13 @@ const MAX_UNDO = 20;
 let isAdmin = sessionStorage.getItem("adminMode") === "true";
 let activeTab = "active"; // "active" or "completed"
 const board = document.getElementById("board");
+const adminToggleBtn = document.getElementById("admin-toggle-btn");
+const undoBtn = document.getElementById("undo-btn");
+const tabActive = document.getElementById("tab-active");
+const tabCompleted = document.getElementById("tab-completed");
+const completedBoard = document.getElementById("completed-board");
 
 // ── Admin Mode ──────────────────────────────────────────────────────
-const adminToggleBtn = document.getElementById("admin-toggle-btn");
 
 function updateAdminUI() {
     const adminElements = document.querySelectorAll(".admin-only");
@@ -88,10 +92,6 @@ adminToggleBtn.addEventListener("click", () => {
 updateAdminUI();
 
 // ── Tab Switching ───────────────────────────────────────────────────
-const tabActive = document.getElementById("tab-active");
-const tabCompleted = document.getElementById("tab-completed");
-const completedBoard = document.getElementById("completed-board");
-
 tabActive.addEventListener("click", () => {
     activeTab = "active";
     tabActive.classList.add("tab-selected");
@@ -118,8 +118,6 @@ function updateCompletedCount() {
 }
 
 // ── Undo Button ─────────────────────────────────────────────────────
-const undoBtn = document.getElementById("undo-btn");
-
 function updateUndoBtn() {
     if (undoBtn) {
         undoBtn.classList.toggle("hidden", !isAdmin || undoStack.length === 0);
@@ -158,6 +156,14 @@ function migrateLocalStorage() {
 }
 
 // ── Initial Render ──────────────────────────────────────────────────
+// Warn if opened as a local file (Firebase won't work)
+if (window.location.protocol === "file:") {
+    const warn = document.createElement("div");
+    warn.style.cssText = "background:#fff3cd;color:#856404;padding:16px 24px;font-weight:600;text-align:center;border-bottom:2px solid #ffc107;";
+    warn.textContent = "This app must be served over HTTP (not file://). Use a local server or deploy to GitHub Pages.";
+    document.body.prepend(warn);
+}
+
 // Render immediately so the board shows even before Firebase connects
 render();
 
@@ -167,15 +173,27 @@ render();
 batchesRef.on("value", (snapshot) => {
     const data = snapshot.val();
     batches = data ? Object.values(data) : [];
-    // Migrate old "complete" status to new name
+    // Migrate old "complete" status to new name and persist
+    const migrations = {};
     for (const batch of batches) {
-        if (batch.status === "complete") batch.status = "batch_complete";
+        if (batch.status === "complete") {
+            batch.status = "batch_complete";
+            migrations[batch.id + "/status"] = "batch_complete";
+        }
+    }
+    if (Object.keys(migrations).length > 0) {
+        batchesRef.update(migrations);
     }
     render();
     updateCompletedCount();
     if (activeTab === "completed") renderCompleted();
 }, (error) => {
     console.error("Firebase connection error:", error);
+    // Show error to user
+    const errDiv = document.createElement("div");
+    errDiv.style.cssText = "background:#fee;color:#c00;padding:16px 24px;font-weight:600;text-align:center;border-bottom:2px solid #c00;";
+    errDiv.textContent = "Firebase error: " + error.message + " — Check your database rules in the Firebase console.";
+    document.body.prepend(errDiv);
 });
 
 // Run migration after listener is set up
