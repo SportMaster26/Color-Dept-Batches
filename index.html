@@ -100,8 +100,43 @@
 
     <!-- Completed batches board -->
     <div id="completed-board" class="completed-board hidden">
-        <!-- Completed cards rendered by JS -->
+        <!-- Toolbar: view toggle + export -->
+        <div class="completed-toolbar">
+            <div class="view-toggle">
+                <button id="view-table-btn" class="view-btn view-btn-active">Table</button>
+                <button id="view-chart-btn" class="view-btn">Chart</button>
+            </div>
+            <button id="export-excel-btn" class="btn btn-primary btn-export">Export to Excel</button>
+        </div>
+
+        <!-- Table view -->
+        <div id="completed-table-wrap" class="completed-table-wrap">
+            <table id="completed-table" class="completed-table">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Product</th>
+                        <th>Bowl</th>
+                        <th>Bowl Capacity</th>
+                        <th>Packaging</th>
+                        <th>Unit Count</th>
+                        <th>Notes</th>
+                        <th>Completed</th>
+                    </tr>
+                </thead>
+                <tbody id="completed-table-body"></tbody>
+            </table>
+        </div>
+
+        <!-- Chart view -->
+        <div id="completed-chart-wrap" class="completed-chart-wrap hidden">
+            <canvas id="completed-chart"></canvas>
+        </div>
     </div>
+
+    <!-- Chart.js & SheetJS for completed tab -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
 
     <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
