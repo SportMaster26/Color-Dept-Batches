@@ -167,9 +167,16 @@ render();
 batchesRef.on("value", (snapshot) => {
     const data = snapshot.val();
     batches = data ? Object.values(data) : [];
-    // Migrate old "complete" status to new name
+    // Migrate old "complete" status to new name and persist
+    const migrations = {};
     for (const batch of batches) {
-        if (batch.status === "complete") batch.status = "batch_complete";
+        if (batch.status === "complete") {
+            batch.status = "batch_complete";
+            migrations[batch.id + "/status"] = "batch_complete";
+        }
+    }
+    if (Object.keys(migrations).length > 0) {
+        batchesRef.update(migrations);
     }
     render();
     updateCompletedCount();
