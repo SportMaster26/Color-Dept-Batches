@@ -10,13 +10,13 @@
 // Replace the placeholder values below with your real Firebase config:
 
 const firebaseConfig = {
-    apiKey: "YOUR_API_KEY",
-    authDomain: "YOUR_PROJECT.firebaseapp.com",
-    databaseURL: "https://YOUR_PROJECT-default-rtdb.firebaseio.com",
-    projectId: "YOUR_PROJECT",
-    storageBucket: "YOUR_PROJECT.appspot.com",
-    messagingSenderId: "YOUR_SENDER_ID",
-    appId: "YOUR_APP_ID",
+    apiKey: "AIzaSyCjvDDLjNR5_gBnOI5E4d5R6EMG1f-sgwU",
+    authDomain: "color-dept-batches.firebaseapp.com",
+    databaseURL: "https://color-dept-batches-default-rtdb.firebaseio.com",
+    projectId: "color-dept-batches",
+    storageBucket: "color-dept-batches.firebasestorage.app",
+    messagingSenderId: "216718965064",
+    appId: "1:216718965064:web:deafb9b68e6b56b4779b7d",
 };
 
 // ── Admin Password ──────────────────────────────────────────────────
