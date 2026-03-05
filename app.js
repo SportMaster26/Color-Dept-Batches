@@ -45,9 +45,13 @@ const MAX_UNDO = 20;
 let isAdmin = sessionStorage.getItem("adminMode") === "true";
 let activeTab = "active"; // "active" or "completed"
 const board = document.getElementById("board");
+const adminToggleBtn = document.getElementById("admin-toggle-btn");
+const undoBtn = document.getElementById("undo-btn");
+const tabActive = document.getElementById("tab-active");
+const tabCompleted = document.getElementById("tab-completed");
+const completedBoard = document.getElementById("completed-board");
 
 // ── Admin Mode ──────────────────────────────────────────────────────
-const adminToggleBtn = document.getElementById("admin-toggle-btn");
 
 function updateAdminUI() {
     const adminElements = document.querySelectorAll(".admin-only");
@@ -88,10 +92,6 @@ adminToggleBtn.addEventListener("click", () => {
 updateAdminUI();
 
 // ── Tab Switching ───────────────────────────────────────────────────
-const tabActive = document.getElementById("tab-active");
-const tabCompleted = document.getElementById("tab-completed");
-const completedBoard = document.getElementById("completed-board");
-
 tabActive.addEventListener("click", () => {
     activeTab = "active";
     tabActive.classList.add("tab-selected");
@@ -118,8 +118,6 @@ function updateCompletedCount() {
 }
 
 // ── Undo Button ─────────────────────────────────────────────────────
-const undoBtn = document.getElementById("undo-btn");
-
 function updateUndoBtn() {
     if (undoBtn) {
         undoBtn.classList.toggle("hidden", !isAdmin || undoStack.length === 0);
