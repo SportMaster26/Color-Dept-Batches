@@ -25,6 +25,12 @@ const firebaseConfig = {
 // else sees a read-only view.
 const ADMIN_PASSWORD = "colordept";
 
+// ── Operator Password ──────────────────────────────────────────────
+// Operators can advance batch statuses (click through steps) and
+// enter viscosity / names. They cannot add, edit, delete, move, or
+// clear batches.
+const OPERATOR_PASSWORD = "operator";
+
 // Initialize Firebase
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
