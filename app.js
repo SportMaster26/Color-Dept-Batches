@@ -1323,16 +1323,6 @@ batchForm.addEventListener("submit", (e) => {
     modalOverlay.classList.add("hidden");
 });
 
-// Clear all completed batches
-document.getElementById("clear-completed-btn").addEventListener("click", () => {
-    if (!isAdmin) return;
-    const completedBatches = batches.filter((b) => b.status === "batch_complete");
-    const updates = {};
-    for (const batch of completedBatches) {
-        updates[batch.id] = null;
-    }
-    batchesRef.update(updates);
-});
 
 // ── Helpers ─────────────────────────────────────────────────────────
 function generateId() {
