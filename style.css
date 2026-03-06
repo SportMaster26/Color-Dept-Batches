@@ -34,6 +34,44 @@ header h1 {
     letter-spacing: 0.5px;
 }
 
+.header-brand {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.header-logo {
+    height: 48px;
+    width: auto;
+    flex-shrink: 0;
+}
+
+.header-title {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+    font-family: Georgia, 'Times New Roman', serif;
+}
+
+.header-title-main {
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: #0065A1;
+}
+
+.header-title-sep {
+    color: #D4952B;
+    font-weight: 300;
+    font-size: 1.2rem;
+}
+
+.header-title-sub {
+    font-size: 1.15rem;
+    font-weight: 400;
+    color: #0065A1;
+    letter-spacing: 0.5px;
+}
+
 .header-actions {
     display: flex;
     gap: 10px;
@@ -1015,6 +1053,21 @@ header h1 {
         flex-direction: column;
         gap: 12px;
         text-align: center;
+    }
+
+    .header-brand {
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .header-title {
+        flex-direction: column;
+        align-items: center;
+        gap: 2px;
+    }
+
+    .header-title-sep {
+        display: none;
     }
 
     #board {
