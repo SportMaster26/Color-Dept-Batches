@@ -443,6 +443,8 @@ const chartSearchBtn = document.getElementById("chart-search-btn");
 const chartDateFrom = document.getElementById("chart-date-from");
 const chartDateTo = document.getElementById("chart-date-to");
 let dailyChart = null;
+let timelineChart = null;
+let comparisonChart = null;
 
 chartSearchBtn.addEventListener("click", renderCharts);
 
@@ -494,9 +496,11 @@ function renderCharts() {
         compounderStatsDiv.innerHTML = `<p style="color:#999;font-style:italic;">No completed batches for ${who}</p>`;
     }
 
-    // Daily chart (batches per day)
+    // Destroy old charts
     if (dailyChart) dailyChart.destroy();
     if (completedChart) completedChart.destroy();
+    if (timelineChart) timelineChart.destroy();
+    if (comparisonChart) comparisonChart.destroy();
 
     if (rows.length === 0) return;
 
@@ -564,6 +568,90 @@ function renderCharts() {
             scales: {
                 y: { beginAtZero: true, ticks: { stepSize: 1, font: { size: 10 } }, title: { display: true, text: "Batches", font: { size: 11 } } },
                 y1: { position: "right", beginAtZero: true, grid: { drawOnChartArea: false }, ticks: { font: { size: 10 } }, title: { display: true, text: "Gallons", font: { size: 11 } } },
+            },
+        },
+    });
+
+    // Timeline line chart — cumulative batches/gallons over days
+    const sortedDays = Object.keys(dayMap).slice().sort((a, b) => {
+        return new Date(a + " 2026").getTime() - new Date(b + " 2026").getTime();
+    });
+    let cumBatches = 0;
+    let cumGallons = 0;
+    const cumBatchData = sortedDays.map((d) => { cumBatches += dayMap[d].count; return cumBatches; });
+    const cumGallonData = sortedDays.map((d) => { cumGallons += dayMap[d].gallons; return cumGallons; });
+
+    const timelineTitle = selectedCompounder
+        ? `Production Flow — ${selectedCompounder}`
+        : "Production Flow — All";
+
+    timelineChart = new Chart(document.getElementById("timeline-chart").getContext("2d"), {
+        type: "line",
+        data: {
+            labels: sortedDays,
+            datasets: [
+                { label: "Cumulative Batches", data: cumBatchData, borderColor: "#27ae60", backgroundColor: "rgba(39,174,96,0.1)", fill: true, tension: 0.3, pointRadius: 3, borderWidth: 2 },
+                { label: "Cumulative Gallons", data: cumGallonData, borderColor: "#3498db", backgroundColor: "rgba(52,152,219,0.1)", fill: true, tension: 0.3, pointRadius: 3, borderWidth: 2, yAxisID: "y1" },
+            ],
+        },
+        options: {
+            responsive: true, maintainAspectRatio: false,
+            plugins: { title: { display: true, text: timelineTitle, font: { size: 13 } }, legend: { labels: { boxWidth: 12, font: { size: 11 } } } },
+            scales: {
+                y: { beginAtZero: true, ticks: { font: { size: 10 } }, title: { display: true, text: "Batches", font: { size: 11 } } },
+                y1: { position: "right", beginAtZero: true, grid: { drawOnChartArea: false }, ticks: { font: { size: 10 } }, title: { display: true, text: "Gallons", font: { size: 11 } } },
+            },
+        },
+    });
+
+    // Compounder comparison — get ALL rows in date range (ignore compounder filter)
+    let allRows = getCompletedRows();
+    const from = chartDateFrom.value;
+    const to = chartDateTo.value;
+    if (from) {
+        const [fy, fm, fd] = from.split("-").map(Number);
+        const fromTs = new Date(fy, fm - 1, fd, 0, 0, 0, 0).getTime();
+        allRows = allRows.filter((r) => r.completedAt >= fromTs);
+    }
+    if (to) {
+        const [ty, tm, td] = to.split("-").map(Number);
+        const toTs = new Date(ty, tm - 1, td, 23, 59, 59, 999).getTime();
+        allRows = allRows.filter((r) => r.completedAt <= toTs);
+    }
+
+    const compMap = {};
+    for (const r of allRows) {
+        const name = r.initials || "Unknown";
+        if (!compMap[name]) compMap[name] = { batches: 0, gallons: 0 };
+        compMap[name].batches++;
+        compMap[name].gallons += r.capacityNum;
+    }
+
+    const compNames = Object.keys(compMap).sort((a, b) => compMap[b].batches - compMap[a].batches);
+    const compBatches = compNames.map((n) => compMap[n].batches);
+    const compGallons = compNames.map((n) => compMap[n].gallons);
+
+    // Highlight selected compounder
+    const compColors = compNames.map((n) => n === selectedCompounder ? "rgba(233,69,96,0.8)" : "rgba(39,174,96,0.6)");
+    const compGalColors = compNames.map((n) => n === selectedCompounder ? "rgba(233,69,96,0.4)" : "rgba(52,152,219,0.5)");
+
+    comparisonChart = new Chart(document.getElementById("comparison-chart").getContext("2d"), {
+        type: "bar",
+        data: {
+            labels: compNames,
+            datasets: [
+                { label: "Batches", data: compBatches, backgroundColor: compColors, borderWidth: 0 },
+                { label: "Gallons", data: compGallons, backgroundColor: compGalColors, borderWidth: 0, yAxisID: "y1" },
+            ],
+        },
+        options: {
+            indexAxis: "y",
+            responsive: true, maintainAspectRatio: false,
+            plugins: { title: { display: true, text: "Compounder Comparison", font: { size: 13 } }, legend: { labels: { boxWidth: 12, font: { size: 11 } } } },
+            scales: {
+                x: { beginAtZero: true, ticks: { font: { size: 10 } }, title: { display: true, text: "Batches", font: { size: 11 } } },
+                y: { ticks: { font: { size: 10 } } },
+                y1: { display: false },
             },
         },
     });
