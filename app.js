@@ -145,6 +145,9 @@ tabCompleted.addEventListener("click", () => {
     tabActive.classList.remove("tab-selected");
     board.classList.add("hidden");
     completedBoard.classList.remove("hidden");
+    // Hide the badge when viewing completed tab
+    const badge = document.getElementById("completed-count");
+    badge.classList.add("hidden");
     renderCompleted();
 });
 
@@ -152,7 +155,8 @@ function updateCompletedCount() {
     const count = batches.filter((b) => b.status === "batch_complete").length;
     const badge = document.getElementById("completed-count");
     badge.textContent = count;
-    badge.classList.toggle("hidden", count === 0);
+    // Only show badge when on the active tab and count > 0
+    badge.classList.toggle("hidden", count === 0 || activeTab === "completed");
 }
 
 // ── Undo Button ─────────────────────────────────────────────────────
