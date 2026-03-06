@@ -1327,15 +1327,6 @@ batchForm.addEventListener("submit", (e) => {
 document.getElementById("clear-completed-btn").addEventListener("click", () => {
     if (!isAdmin) return;
     const completedBatches = batches.filter((b) => b.status === "batch_complete");
-    // Recycle all batch numbers from cleared batches
-    for (const batch of completedBatches) {
-        if (batch.batchNumber) {
-            const num = parseInt(batch.batchNumber.slice(1), 10);
-            if (!isNaN(num)) {
-                recycledNumbersRef.push(num);
-            }
-        }
-    }
     const updates = {};
     for (const batch of completedBatches) {
         updates[batch.id] = null;
