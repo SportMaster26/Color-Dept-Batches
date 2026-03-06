@@ -254,21 +254,46 @@
 
         <!-- Chart view -->
         <div id="completed-chart-wrap" class="completed-chart-wrap hidden">
-            <div class="chart-filter">
-                <label for="compounder-select">Compounder:</label>
-                <select id="compounder-select">
-                    <option value="">All Compounders</option>
-                    <option value="Cordell Irby">Cordell Irby</option>
-                    <option value="Matt Huff">Matt Huff</option>
-                    <option value="Peyton Smith">Peyton Smith</option>
-                    <option value="Brandon Jones">Brandon Jones</option>
-                    <option value="Josh James">Josh James</option>
-                    <option value="Josh Wimer">Josh Wimer</option>
-                    <option value="Elisha Baker">Elisha Baker</option>
-                </select>
+            <div class="chart-filters">
+                <div class="chart-filter-row">
+                    <div class="filter-group">
+                        <label for="chart-date-from">From:</label>
+                        <input type="date" id="chart-date-from">
+                    </div>
+                    <div class="filter-group">
+                        <label for="chart-date-to">To:</label>
+                        <input type="date" id="chart-date-to">
+                    </div>
+                    <div class="filter-group">
+                        <label for="compounder-select">Compounder:</label>
+                        <select id="compounder-select">
+                            <option value="">All Compounders</option>
+                            <option value="Cordell Irby">Cordell Irby</option>
+                            <option value="Matt Huff">Matt Huff</option>
+                            <option value="Peyton Smith">Peyton Smith</option>
+                            <option value="Brandon Jones">Brandon Jones</option>
+                            <option value="Josh James">Josh James</option>
+                            <option value="Josh Wimer">Josh Wimer</option>
+                            <option value="Elisha Baker">Elisha Baker</option>
+                        </select>
+                    </div>
+                    <button id="chart-search-btn" class="btn btn-primary btn-sm">Search</button>
+                </div>
             </div>
-            <div id="compounder-stats" class="compounder-stats hidden"></div>
-            <canvas id="completed-chart"></canvas>
+            <div id="chart-results" class="hidden">
+                <div id="compounder-stats" class="compounder-stats"></div>
+                <div class="chart-grid">
+                    <div class="chart-box">
+                        <canvas id="daily-chart"></canvas>
+                    </div>
+                    <div class="chart-box">
+                        <canvas id="completed-chart"></canvas>
+                    </div>
+                </div>
+            </div>
+            <div id="chart-placeholder" class="chart-placeholder">
+                <p>Select a date range and click <strong>Search</strong> to view charts</p>
+            </div>
         </div>
     </div>
 
