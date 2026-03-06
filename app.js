@@ -656,8 +656,8 @@ function renderCharts() {
         data: {
             labels: compNames,
             datasets: [
-                { label: "Batches", data: compBatches, backgroundColor: compColors, borderWidth: 0 },
-                { label: "Gallons", data: compGallons, backgroundColor: compGalColors, borderWidth: 0, yAxisID: "y1" },
+                { label: "Batches", data: compBatches, backgroundColor: compColors, borderWidth: 0, xAxisID: "x" },
+                { label: "Gallons", data: compGallons, backgroundColor: compGalColors, borderWidth: 0, xAxisID: "x1" },
             ],
         },
         options: {
@@ -665,9 +665,9 @@ function renderCharts() {
             responsive: true, maintainAspectRatio: false,
             plugins: { title: { display: true, text: "Compounder Comparison", font: { size: 13 } }, legend: { labels: { boxWidth: 12, font: { size: 11 } } } },
             scales: {
-                x: { beginAtZero: true, ticks: { font: { size: 10 } }, title: { display: true, text: "Batches", font: { size: 11 } } },
+                x: { position: "bottom", beginAtZero: true, ticks: { font: { size: 10 } }, title: { display: true, text: "Batches", font: { size: 11 } } },
+                x1: { position: "top", beginAtZero: true, ticks: { font: { size: 10 } }, title: { display: true, text: "Gallons", font: { size: 11 } }, grid: { drawOnChartArea: false } },
                 y: { ticks: { font: { size: 10 } } },
-                y1: { display: false },
             },
         },
     });
@@ -1327,15 +1327,6 @@ batchForm.addEventListener("submit", (e) => {
 document.getElementById("clear-completed-btn").addEventListener("click", () => {
     if (!isAdmin) return;
     const completedBatches = batches.filter((b) => b.status === "batch_complete");
-    // Recycle all batch numbers from cleared batches
-    for (const batch of completedBatches) {
-        if (batch.batchNumber) {
-            const num = parseInt(batch.batchNumber.slice(1), 10);
-            if (!isNaN(num)) {
-                recycledNumbersRef.push(num);
-            }
-        }
-    }
     const updates = {};
     for (const batch of completedBatches) {
         updates[batch.id] = null;
