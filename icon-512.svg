@@ -13,22 +13,13 @@
   <!-- Blue gradient background -->
   <rect width="512" height="512" rx="96" fill="url(#bg)"/>
 
-  <!-- Subtle inner shadow/border -->
-  <rect x="3" y="3" width="506" height="506" rx="93" fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="1"/>
-
-  <!-- Golden arch - the signature brand element -->
-  <path d="M 130 265 Q 256 80 382 265" stroke="url(#gold)" stroke-width="18" fill="none" stroke-linecap="round"/>
-
-  <!-- T letter -->
-  <text x="180" y="355" font-family="Georgia, 'Times New Roman', serif" font-weight="700" font-size="160" fill="#ffffff">T</text>
-
-  <!-- W letter -->
-  <text x="272" y="355" font-family="Georgia, 'Times New Roman', serif" font-weight="700" font-size="160" fill="#ffffff">W</text>
+  <!-- TW monogram - spaced out and larger -->
+  <text x="256" y="290" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-weight="700" font-size="210" fill="#ffffff" letter-spacing="30">TW</text>
 
   <!-- Gold accent line -->
-  <rect x="120" y="378" width="272" height="5" rx="2.5" fill="url(#gold)"/>
+  <rect x="90" y="320" width="332" height="6" rx="3" fill="url(#gold)"/>
 
-  <!-- COLOR DEPT subtitle -->
-  <text x="256" y="428" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-weight="400" font-size="40" fill="rgba(255,255,255,0.85)" letter-spacing="10">COLOR</text>
-  <text x="256" y="464" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-weight="400" font-size="28" fill="rgba(255,255,255,0.7)" letter-spacing="8">DEPT</text>
+  <!-- COLOR DEPT subtitle - bigger -->
+  <text x="256" y="385" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-weight="400" font-size="52" fill="rgba(255,255,255,0.9)" letter-spacing="12">COLOR</text>
+  <text x="256" y="435" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-weight="400" font-size="38" fill="rgba(255,255,255,0.8)" letter-spacing="10">DEPT</text>
 </svg>
