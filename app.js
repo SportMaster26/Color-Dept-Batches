@@ -453,11 +453,13 @@ function getFilteredRows() {
     const compounder = compounderSelect.value;
 
     if (from) {
-        const fromTs = new Date(from).setHours(0, 0, 0, 0);
+        const [y, m, d] = from.split("-").map(Number);
+        const fromTs = new Date(y, m - 1, d, 0, 0, 0, 0).getTime();
         rows = rows.filter((r) => r.completedAt >= fromTs);
     }
     if (to) {
-        const toTs = new Date(to).setHours(23, 59, 59, 999);
+        const [y, m, d] = to.split("-").map(Number);
+        const toTs = new Date(y, m - 1, d, 23, 59, 59, 999).getTime();
         rows = rows.filter((r) => r.completedAt <= toTs);
     }
     if (compounder) {
