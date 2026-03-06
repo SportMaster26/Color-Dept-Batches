@@ -439,9 +439,45 @@ function renderCompleted() {
     }
 }
 
+const compounderSelect = document.getElementById("compounder-select");
+const compounderStatsDiv = document.getElementById("compounder-stats");
+
+compounderSelect.addEventListener("change", () => {
+    renderCompletedChart();
+});
+
 function renderCompletedChart() {
-    const rows = getCompletedRows();
+    let rows = getCompletedRows();
     if (rows.length === 0) return;
+
+    const selectedCompounder = compounderSelect.value;
+
+    // Filter by compounder if one is selected
+    if (selectedCompounder) {
+        rows = rows.filter((r) => r.initials === selectedCompounder);
+    }
+
+    // Show/hide compounder summary stats
+    if (selectedCompounder && rows.length > 0) {
+        const totalBatches = rows.length;
+        const totalGallons = rows.reduce((sum, r) => sum + r.capacityNum, 0);
+        compounderStatsDiv.classList.remove("hidden");
+        compounderStatsDiv.innerHTML = `
+            <div class="stat-card">
+                <span class="stat-value">${totalBatches}</span>
+                <span class="stat-label">Batches</span>
+            </div>
+            <div class="stat-card">
+                <span class="stat-value">${totalGallons.toLocaleString()}</span>
+                <span class="stat-label">Total Gallons</span>
+            </div>
+        `;
+    } else if (selectedCompounder && rows.length === 0) {
+        compounderStatsDiv.classList.remove("hidden");
+        compounderStatsDiv.innerHTML = `<p class="stat-empty">No completed batches for ${selectedCompounder}</p>`;
+    } else {
+        compounderStatsDiv.classList.add("hidden");
+    }
 
     // Group by bowl: count batches + total gallons
     const bowlMap = {};
@@ -454,9 +490,15 @@ function renderCompletedChart() {
     const counts = labels.map((l) => bowlMap[l].count);
     const gallons = labels.map((l) => bowlMap[l].gallons * bowlMap[l].count);
 
+    const chartTitle = selectedCompounder
+        ? `Completed Batches — ${selectedCompounder}`
+        : "Completed Batches by Bowl";
+
     const ctx = document.getElementById("completed-chart").getContext("2d");
 
     if (completedChart) completedChart.destroy();
+
+    if (rows.length === 0) return;
 
     completedChart = new Chart(ctx, {
         type: "bar",
@@ -485,7 +527,7 @@ function renderCompletedChart() {
             responsive: true,
             maintainAspectRatio: false,
             plugins: {
-                title: { display: true, text: "Completed Batches by Bowl", font: { size: 16 } },
+                title: { display: true, text: chartTitle, font: { size: 16 } },
                 legend: { position: "top" },
             },
             scales: {

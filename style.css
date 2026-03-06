@@ -563,6 +563,74 @@ header h1 {
     position: relative;
 }
 
+.chart-filter {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 16px;
+}
+
+.chart-filter label {
+    font-weight: 700;
+    font-size: 0.9rem;
+    color: #333;
+}
+
+.chart-filter select {
+    padding: 8px 12px;
+    border: 2px solid #d0d5dd;
+    border-radius: 6px;
+    font-size: 0.9rem;
+    color: #333;
+    background: #fff;
+    cursor: pointer;
+}
+
+.chart-filter select:focus {
+    outline: none;
+    border-color: #e94560;
+}
+
+.compounder-stats {
+    display: flex;
+    gap: 16px;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+}
+
+.stat-card {
+    background: #f0f2f5;
+    border: 1px solid #d0d5dd;
+    border-radius: 10px;
+    padding: 16px 24px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-width: 140px;
+}
+
+.stat-value {
+    font-size: 2rem;
+    font-weight: 800;
+    color: #e94560;
+    line-height: 1.1;
+}
+
+.stat-label {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: #667788;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-top: 4px;
+}
+
+.stat-empty {
+    color: #999;
+    font-style: italic;
+    font-size: 0.95rem;
+}
+
 .completed-empty {
     text-align: center;
     color: #aaa;
