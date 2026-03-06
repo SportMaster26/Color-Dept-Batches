@@ -108,8 +108,17 @@
                     <input type="text" id="viscosity-input" required placeholder="e.g. 85">
                 </div>
                 <div class="form-group">
-                    <label for="initials-input">Initials</label>
-                    <input type="text" id="initials-input" required placeholder="e.g. JD" maxlength="5">
+                    <label for="initials-input">Mixed By</label>
+                    <select id="initials-input" required>
+                        <option value="">-- Select Name --</option>
+                        <option value="Cordell Irby">Cordell Irby</option>
+                        <option value="Matt Huff">Matt Huff</option>
+                        <option value="Peyton Smith">Peyton Smith</option>
+                        <option value="Brandon Jones">Brandon Jones</option>
+                        <option value="Josh James">Josh James</option>
+                        <option value="Josh Wimer">Josh Wimer</option>
+                        <option value="Elisha Baker">Elisha Baker</option>
+                    </select>
                 </div>
                 <div class="form-actions">
                     <button type="button" id="mixing-complete-cancel" class="btn btn-secondary">Cancel</button>
@@ -172,8 +181,17 @@
                     <input type="text" id="edit-viscosity">
                 </div>
                 <div class="form-group">
-                    <label for="edit-initials">Initials</label>
-                    <input type="text" id="edit-initials" maxlength="5">
+                    <label for="edit-initials">Mixed By</label>
+                    <select id="edit-initials">
+                        <option value="">-- Select Name --</option>
+                        <option value="Cordell Irby">Cordell Irby</option>
+                        <option value="Matt Huff">Matt Huff</option>
+                        <option value="Peyton Smith">Peyton Smith</option>
+                        <option value="Brandon Jones">Brandon Jones</option>
+                        <option value="Josh James">Josh James</option>
+                        <option value="Josh Wimer">Josh Wimer</option>
+                        <option value="Elisha Baker">Elisha Baker</option>
+                    </select>
                 </div>
                 <div class="form-group">
                     <label for="edit-poured-by">Poured By</label>
@@ -220,7 +238,7 @@
                         <th>Packaging</th>
                         <th>Unit Count</th>
                         <th>Viscosity</th>
-                        <th>Initials</th>
+                        <th>Mixed By</th>
                         <th>Poured By</th>
                         <th>Notes</th>
                         <th>Queued</th>

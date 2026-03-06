@@ -521,7 +521,7 @@ function exportToExcel() {
         "Packaging": r.packaging,
         "Unit Count": r.unitCount || "N/A",
         "Viscosity (KU)": r.viscosity || "N/A",
-        "Initials": r.initials || "N/A",
+        "Mixed By": r.initials || "N/A",
         "Poured By": r.pouredBy || "N/A",
         "Notes": r.notes || "",
         "Queued": r.queuedAt,
@@ -596,7 +596,7 @@ function createBatchCard(batch) {
 
     let extraInfo = "";
     if (batch.viscosity) extraInfo += `<span class="card-viscosity">Viscosity: ${escapeHtml(batch.viscosity)} KU</span>`;
-    if (batch.initials) extraInfo += `<span class="card-initials">by ${escapeHtml(batch.initials)}</span>`;
+    if (batch.initials) extraInfo += `<span class="card-initials">Mixed: ${escapeHtml(batch.initials)}</span>`;
     if (batch.pouredBy) extraInfo += `<span class="card-poured-by">Poured: ${escapeHtml(batch.pouredBy)}</span>`;
 
     const batchNumDisplay = batch.batchNumber ? `<span class="card-batch-number">${escapeHtml(batch.batchNumber)}</span>` : "";
@@ -938,7 +938,7 @@ mixingCompleteForm.addEventListener("submit", (e) => {
     if (!batch) return;
 
     batch.viscosity = document.getElementById("viscosity-input").value.trim();
-    batch.initials = document.getElementById("initials-input").value.trim().toUpperCase();
+    batch.initials = document.getElementById("initials-input").value;
 
     mixingCompleteOverlay.classList.add("hidden");
     applyStatusAdvance(batch, "mixing_complete");
@@ -1042,7 +1042,7 @@ editForm.addEventListener("submit", (e) => {
     const uc = document.getElementById("edit-unit-count").value.trim();
     batch.unitCount = uc ? Number(uc) : null;
     batch.viscosity = document.getElementById("edit-viscosity").value.trim() || null;
-    batch.initials = document.getElementById("edit-initials").value.trim().toUpperCase() || null;
+    batch.initials = document.getElementById("edit-initials").value || null;
     batch.pouredBy = document.getElementById("edit-poured-by").value.trim() || null;
     batch.notes = document.getElementById("edit-notes").value.trim() || null;
 
