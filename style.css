@@ -41,7 +41,7 @@ header h1 {
 }
 
 .header-logo {
-    height: 48px;
+    height: 72px;
     width: auto;
     flex-shrink: 0;
 }
@@ -104,13 +104,13 @@ header h1 {
 }
 
 .tab-btn.tab-selected {
-    color: #e94560;
-    border-bottom-color: #e94560;
+    color: #0065A1;
+    border-bottom-color: #0065A1;
 }
 
 .tab-badge {
     display: inline-block;
-    background: #e94560;
+    background: #0065A1;
     color: #fff;
     font-size: 0.7rem;
     font-weight: 700;
@@ -135,7 +135,7 @@ header h1 {
 }
 
 .btn-primary {
-    background: #e94560;
+    background: #0065A1;
     color: #fff;
     padding: 10px 20px;
 }
@@ -215,7 +215,7 @@ header h1 {
 }
 
 .btn-delete:hover {
-    color: #e94560;
+    color: #0065A1;
 }
 
 .btn-admin {
@@ -638,7 +638,7 @@ header h1 {
 .filter-group input:focus,
 .filter-group select:focus {
     outline: none;
-    border-color: #e94560;
+    border-color: #0065A1;
 }
 
 .chart-placeholder {
@@ -669,7 +669,7 @@ header h1 {
 .stat-value {
     font-size: 1.4rem;
     font-weight: 800;
-    color: #e94560;
+    color: #0065A1;
     line-height: 1.1;
 }
 
@@ -742,7 +742,7 @@ header h1 {
 
 .drop-indicator {
     height: 3px;
-    background: #e94560;
+    background: #0065A1;
     margin: 0 10px;
     border-radius: 3px;
     transition: opacity 0.15s;
@@ -782,7 +782,7 @@ header h1 {
 }
 
 .modal h2 {
-    color: #e94560;
+    color: #0065A1;
     margin-bottom: 20px;
     font-size: 1.2rem;
 }
@@ -816,7 +816,7 @@ header h1 {
 .form-group input:focus,
 .form-group select:focus {
     outline: none;
-    border-color: #e94560;
+    border-color: #0065A1;
 }
 
 .form-group select option {
@@ -855,7 +855,7 @@ header h1 {
 }
 
 .numpad-btn:active {
-    background: #e94560;
+    background: #0065A1;
     color: #fff;
     transform: scale(0.95);
 }
@@ -903,7 +903,7 @@ header h1 {
 }
 
 .kb-btn:active {
-    background: #e94560;
+    background: #0065A1;
     color: #fff;
     transform: scale(0.95);
 }
@@ -961,7 +961,7 @@ header h1 {
 .login-title {
     font-size: 1.6rem;
     font-weight: 800;
-    color: #e94560;
+    color: #0065A1;
     margin-bottom: 4px;
 }
 
@@ -1000,7 +1000,7 @@ header h1 {
 
 .login-field input:focus {
     outline: none;
-    border-color: #e94560;
+    border-color: #0065A1;
 }
 
 .login-btn {
