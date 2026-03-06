@@ -51,6 +51,7 @@ const PACKAGING = {
 // ── Firebase Reference ──────────────────────────────────────────────
 const batchesRef = db.ref("batches");
 const batchCounterRef = db.ref("meta/batchCounter");
+const recycledNumbersRef = db.ref("meta/recycledNumbers");
 
 // ── State ───────────────────────────────────────────────────────────
 let batches = [];
@@ -356,6 +357,7 @@ viewTableBtn.addEventListener("click", () => {
 });
 
 viewChartBtn.addEventListener("click", () => {
+    if (isOperator) return; // operators can't access charts
     completedView = "chart";
     viewChartBtn.classList.add("view-btn-active");
     viewTableBtn.classList.remove("view-btn-active");
@@ -410,6 +412,20 @@ function renderCompleted() {
     }
 
     if (toolbar) toolbar.classList.remove("hidden");
+
+    // Hide chart controls for operators
+    const viewToggle = document.querySelector(".view-toggle");
+    if (viewToggle) {
+        viewToggle.classList.toggle("hidden", isOperator && !isAdmin);
+    }
+    if (isOperator && !isAdmin) {
+        // Force table view for operators
+        completedView = "table";
+        viewTableBtn.classList.add("view-btn-active");
+        viewChartBtn.classList.remove("view-btn-active");
+        completedTableWrap.classList.remove("hidden");
+        completedChartWrap.classList.add("hidden");
+    }
 
     tbody.innerHTML = rows.map((r, i) => `
         <tr>
@@ -1200,6 +1216,14 @@ editForm.addEventListener("submit", (e) => {
 });
 
 function deleteBatch(id) {
+    const batch = batches.find((b) => b.id === id);
+    if (batch && batch.batchNumber) {
+        // Recycle the batch number for reuse
+        const num = parseInt(batch.batchNumber.slice(1), 10);
+        if (!isNaN(num)) {
+            recycledNumbersRef.push(num);
+        }
+    }
     batchesRef.child(id).remove();
 }
 
@@ -1243,17 +1267,9 @@ batchForm.addEventListener("submit", (e) => {
         return Math.max(max, order);
     }, -1);
 
-    // Generate batch number via atomic counter
-    batchCounterRef.transaction((current) => {
-        return (current || 0) + 1;
-    }, (error, committed, snapshot) => {
-        if (error || !committed) {
-            alert("Failed to generate batch number. Please try again.");
-            return;
-        }
-        const num = snapshot.val();
+    // Generate batch number — reuse recycled numbers first, then increment counter
+    function createBatchWithNumber(num) {
         const batchNumber = "A" + String(num).padStart(4, "0");
-
         const batch = {
             id: generateId(),
             batchNumber,
@@ -1273,8 +1289,34 @@ batchForm.addEventListener("submit", (e) => {
             initials: null,
             pouredBy: null,
         };
-
         batchesRef.child(batch.id).set(batch);
+    }
+
+    recycledNumbersRef.once("value", (snap) => {
+        const recycled = snap.val();
+        if (recycled) {
+            // Find the smallest recycled number
+            const entries = Object.entries(recycled);
+            let minKey = entries[0][0];
+            let minNum = entries[0][1];
+            for (const [key, val] of entries) {
+                if (val < minNum) { minKey = key; minNum = val; }
+            }
+            // Remove it from recycled list and use it
+            recycledNumbersRef.child(minKey).remove();
+            createBatchWithNumber(minNum);
+        } else {
+            // No recycled numbers, increment counter
+            batchCounterRef.transaction((current) => {
+                return (current || 0) + 1;
+            }, (error, committed, snapshot) => {
+                if (error || !committed) {
+                    alert("Failed to generate batch number. Please try again.");
+                    return;
+                }
+                createBatchWithNumber(snapshot.val());
+            });
+        }
     });
 
     batchForm.reset();
@@ -1285,6 +1327,15 @@ batchForm.addEventListener("submit", (e) => {
 document.getElementById("clear-completed-btn").addEventListener("click", () => {
     if (!isAdmin) return;
     const completedBatches = batches.filter((b) => b.status === "batch_complete");
+    // Recycle all batch numbers from cleared batches
+    for (const batch of completedBatches) {
+        if (batch.batchNumber) {
+            const num = parseInt(batch.batchNumber.slice(1), 10);
+            if (!isNaN(num)) {
+                recycledNumbersRef.push(num);
+            }
+        }
+    }
     const updates = {};
     for (const batch of completedBatches) {
         updates[batch.id] = null;
