@@ -695,8 +695,8 @@ function renderCharts() {
     const compGallons = compNames.map((n) => compMap[n].gallons);
 
     // Highlight selected compounder
-    const compColors = compNames.map((n) => n === selectedCompounder ? "rgba(233,69,96,0.8)" : "rgba(39,174,96,0.6)");
-    const compGalColors = compNames.map((n) => n === selectedCompounder ? "rgba(233,69,96,0.4)" : "rgba(52,152,219,0.5)");
+    const compColors = compNames.map((n) => n === selectedCompounder ? "rgba(0,101,161,0.8)" : "rgba(212,149,43,0.7)");
+    const compGalColors = compNames.map((n) => n === selectedCompounder ? "rgba(0,101,161,0.4)" : "rgba(52,152,219,0.5)");
 
     comparisonChart = new Chart(document.getElementById("comparison-chart").getContext("2d"), {
         type: "bar",
