@@ -22,16 +22,36 @@ const firebaseConfig = {
 // ── Role Configuration ──────────────────────────────────────────────
 // Roles are determined by the email used to log in.
 // Create these accounts in Firebase Console → Authentication → Users:
-//   admin@colordept.local    → Full access (add, edit, delete, charts)
-//   operator@colordept.local → Advance steps, enter viscosity/names
-//   viewer@colordept.local   → Read-only with chart access
+//
+// Admin (full access — add, edit, delete, charts):
+//   admin@colordept.local
+//   tmahl@colordept.local    (TJ Mahl)
+//   kherrin@colordept.local  (Kevin Herrin)
+//
+// Operator (advance steps, enter viscosity/names):
+//   floor@colordept.local
+//   platform@colordept.local
+//
+// Viewer (read-only with chart access):
+//   ajolly@colordept.local   (AJ Jolly)
+//   jeff@colordept.local     (Jeff Gearheart)
+//   dpanyard@colordept.local (Dave Panyard)
+//   hhudak@colordept.local   (Haley Hudak)
+//   lab@colordept.local
 //
 // You can change these emails to whatever you like — just update the
 // mapping below to match.
 const ROLE_MAP = {
     "admin@colordept.local": "admin",
-    "operator@colordept.local": "operator",
-    "viewer@colordept.local": "viewer",
+    "tmahl@colordept.local": "admin",
+    "kherrin@colordept.local": "admin",
+    "floor@colordept.local": "operator",
+    "platform@colordept.local": "operator",
+    "ajolly@colordept.local": "viewer",
+    "jeff@colordept.local": "viewer",
+    "dpanyard@colordept.local": "viewer",
+    "hhudak@colordept.local": "viewer",
+    "lab@colordept.local": "viewer",
 };
 
 // Initialize Firebase
