@@ -19,18 +19,22 @@ const firebaseConfig = {
     appId: "1:216718965064:web:deafb9b68e6b56b4779b7d",
 };
 
-// ── Admin Password ──────────────────────────────────────────────────
-// Change this to whatever password you want. Only people who know
-// this password can add, edit, move, or delete batches. Everyone
-// else sees a read-only view.
-const ADMIN_PASSWORD = "colordept";
-
-// ── Operator Password ──────────────────────────────────────────────
-// Operators can advance batch statuses (click through steps) and
-// enter viscosity / names. They cannot add, edit, delete, move, or
-// clear batches.
-const OPERATOR_PASSWORD = "operator";
+// ── Role Configuration ──────────────────────────────────────────────
+// Roles are determined by the email used to log in.
+// Create these accounts in Firebase Console → Authentication → Users:
+//   admin@colordept.local    → Full access (add, edit, delete, charts)
+//   operator@colordept.local → Advance steps, enter viscosity/names
+//   viewer@colordept.local   → Read-only with chart access
+//
+// You can change these emails to whatever you like — just update the
+// mapping below to match.
+const ROLE_MAP = {
+    "admin@colordept.local": "admin",
+    "operator@colordept.local": "operator",
+    "viewer@colordept.local": "viewer",
+};
 
 // Initialize Firebase
 firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
 const db = firebase.database();
