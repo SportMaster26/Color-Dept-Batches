@@ -1,4 +1,25 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="192" height="192">
-  <rect width="512" height="512" rx="64" fill="#e94560"/>
-  <text x="256" y="300" text-anchor="middle" font-family="sans-serif" font-weight="700" font-size="220" fill="#ffffff">CD</text>
+  <!-- Blue background -->
+  <rect width="512" height="512" rx="64" fill="#0065A1"/>
+
+  <!-- Golden arch -->
+  <path d="M 195 210 Q 300 120 395 200" stroke="#D4952B" stroke-width="9" fill="none" stroke-linecap="round"/>
+
+  <!-- THORWORKS combined -->
+  <text y="252" font-family="Georgia, 'Times New Roman', serif" fill="#ffffff">
+    <tspan x="68" font-size="95" font-weight="700" letter-spacing="-1">T</tspan><tspan font-size="72" font-weight="700" letter-spacing="0">HOR</tspan><tspan font-size="95" font-weight="900" letter-spacing="-1">W</tspan><tspan font-size="72" font-weight="900" letter-spacing="0">ORKS</tspan>
+  </text>
+
+  <!-- INDUSTRIES superscript -->
+  <text x="383" y="192" font-family="Georgia, 'Times New Roman', serif" font-weight="400" font-size="24" fill="#ffffff" letter-spacing="1">INDUSTRIES</text>
+
+  <!-- Registered trademark -->
+  <text x="458" y="255" font-family="Georgia, 'Times New Roman', serif" font-weight="400" font-size="16" fill="#ffffff">&#174;</text>
+
+  <!-- Gold horizontal rule -->
+  <rect x="55" y="272" width="402" height="5" rx="2.5" fill="#D4952B"/>
+
+  <!-- COLOR DEPARTMENT -->
+  <text x="256" y="328" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-weight="400" font-size="52" fill="#ffffff" letter-spacing="8">COLOR</text>
+  <text x="256" y="382" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-weight="400" font-size="40" fill="#ffffff" letter-spacing="6">DEPARTMENT</text>
 </svg>
