@@ -141,7 +141,7 @@ header h1 {
 }
 
 .btn-primary:hover {
-    background: #c73650;
+    background: #D4952B;
 }
 
 .btn-secondary {
@@ -188,12 +188,12 @@ header h1 {
 }
 
 .btn-batch-complete {
-    background: #27ae60;
+    background: #D4952B;
     color: #fff;
 }
 
 .btn-batch-complete:hover {
-    background: #1e8c4c;
+    background: #B87D1F;
 }
 
 .btn-undo {
@@ -231,13 +231,13 @@ header h1 {
 }
 
 .btn-admin.admin-active {
-    background: #27ae60;
+    background: #D4952B;
     color: #fff;
-    border-color: #27ae60;
+    border-color: #D4952B;
 }
 
 .btn-admin.admin-active:hover {
-    background: #1e8c4c;
+    background: #B87D1F;
 }
 
 .btn-admin.operator-active {
@@ -337,8 +337,8 @@ header h1 {
 }
 
 .batch-card.status-batch_complete {
-    background: #a8e6bf;
-    border-left-color: #27ae60;
+    background: #f5e6c8;
+    border-left-color: #D4952B;
     opacity: 0.85;
 }
 
@@ -398,7 +398,7 @@ header h1 {
 }
 
 .status-batch_complete .card-status {
-    background: #27ae60;
+    background: #D4952B;
     color: #fff;
 }
 
@@ -432,7 +432,7 @@ header h1 {
 
 .card-poured-by {
     font-weight: 600;
-    color: #27ae60;
+    color: #D4952B;
 }
 
 .card-batch-number {
@@ -520,7 +520,7 @@ header h1 {
 }
 
 .view-btn.view-btn-active {
-    background: #27ae60;
+    background: #D4952B;
     color: #fff;
 }
 
@@ -569,7 +569,7 @@ header h1 {
 }
 
 .completed-table tbody tr:hover {
-    background: #f0faf3;
+    background: #fdf6eb;
 }
 
 .completed-table tbody tr:nth-child(even) {
@@ -577,7 +577,7 @@ header h1 {
 }
 
 .completed-table tbody tr:nth-child(even):hover {
-    background: #e8f8ed;
+    background: #faf0de;
 }
 
 .completed-time-cell {
@@ -736,7 +736,7 @@ header h1 {
 }
 
 .drop-zone.drag-over {
-    background: rgba(233, 69, 96, 0.05);
+    background: rgba(212, 149, 43, 0.08);
     border-radius: 0 0 10px 10px;
 }
 
@@ -1033,7 +1033,7 @@ header h1 {
 }
 
 .role-badge.role-admin {
-    background: #27ae60;
+    background: #D4952B;
     color: #fff;
 }
 

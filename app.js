@@ -588,7 +588,7 @@ function renderCharts() {
         data: {
             labels: dayLabels,
             datasets: [
-                { label: "Batches", data: dayCounts, backgroundColor: "rgba(39,174,96,0.7)", borderColor: "#27ae60", borderWidth: 1 },
+                { label: "Batches", data: dayCounts, backgroundColor: "rgba(212,149,43,0.7)", borderColor: "#D4952B", borderWidth: 1 },
                 { label: "Gallons", data: dayGallons, backgroundColor: "rgba(52,152,219,0.5)", borderColor: "#3498db", borderWidth: 1, yAxisID: "y1" },
             ],
         },
@@ -621,7 +621,7 @@ function renderCharts() {
         data: {
             labels: bowlLabels,
             datasets: [
-                { label: "Batches", data: bowlCounts, backgroundColor: "rgba(39,174,96,0.7)", borderColor: "#27ae60", borderWidth: 1 },
+                { label: "Batches", data: bowlCounts, backgroundColor: "rgba(212,149,43,0.7)", borderColor: "#D4952B", borderWidth: 1 },
                 { label: "Gallons", data: bowlGallons, backgroundColor: "rgba(52,152,219,0.5)", borderColor: "#3498db", borderWidth: 1, yAxisID: "y1" },
             ],
         },
@@ -653,7 +653,7 @@ function renderCharts() {
         data: {
             labels: sortedDays,
             datasets: [
-                { label: "Cumulative Batches", data: cumBatchData, borderColor: "#27ae60", backgroundColor: "rgba(39,174,96,0.1)", fill: true, tension: 0.3, pointRadius: 3, borderWidth: 2 },
+                { label: "Cumulative Batches", data: cumBatchData, borderColor: "#D4952B", backgroundColor: "rgba(212,149,43,0.1)", fill: true, tension: 0.3, pointRadius: 3, borderWidth: 2 },
                 { label: "Cumulative Gallons", data: cumGallonData, borderColor: "#3498db", backgroundColor: "rgba(52,152,219,0.1)", fill: true, tension: 0.3, pointRadius: 3, borderWidth: 2, yAxisID: "y1" },
             ],
         },
