@@ -188,7 +188,12 @@ tabCompleted.addEventListener("click", () => {
     tabActive.classList.remove("tab-selected");
     board.classList.add("hidden");
     completedBoard.classList.remove("hidden");
-    // Hide the badge when viewing completed tab
+    // Mark all current completed batches as seen for this user
+    const currentUser = auth.currentUser;
+    if (currentUser) {
+        const count = batches.filter((b) => b.status === "batch_complete").length;
+        localStorage.setItem("lastSeenCompleted_" + currentUser.uid, count);
+    }
     const badge = document.getElementById("completed-count");
     badge.classList.add("hidden");
     renderCompleted();
@@ -197,9 +202,13 @@ tabCompleted.addEventListener("click", () => {
 function updateCompletedCount() {
     const count = batches.filter((b) => b.status === "batch_complete").length;
     const badge = document.getElementById("completed-count");
-    badge.textContent = count;
-    // Only show badge when on the active tab and count > 0
-    badge.classList.toggle("hidden", count === 0 || activeTab === "completed");
+    const currentUser = auth.currentUser;
+    const lastSeen = currentUser
+        ? parseInt(localStorage.getItem("lastSeenCompleted_" + currentUser.uid) || "0", 10)
+        : 0;
+    const newCount = Math.max(0, count - lastSeen);
+    badge.textContent = newCount;
+    badge.classList.toggle("hidden", newCount === 0 || activeTab === "completed");
 }
 
 // ── Undo Button ─────────────────────────────────────────────────────
