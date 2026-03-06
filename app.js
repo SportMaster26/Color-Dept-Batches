@@ -14,10 +14,11 @@ const BOWLS = {
     "TTT": { name: "TTT", capacity: 4300, group: "4,300 gal" },
     "Stubby": { name: "Stubby", capacity: 30, group: "30 gal" },
     "Ol Iron Sides": { name: "Ol' Iron Sides", capacity: null, group: "Ribbon Mixer" },
+    "Latex Department": { name: "Latex Department", capacity: null, group: "Latex Department" },
 };
 
 // Display order for the lanes
-const BOWL_ORDER = ["A", "B", "C", "D", "E", "F", "G", "H", "I", "The Hull", "Thors Hammer", "TTT", "Stubby", "Ol Iron Sides"];
+const BOWL_ORDER = ["A", "B", "C", "D", "E", "F", "G", "H", "I", "The Hull", "Thors Hammer", "TTT", "Stubby", "Ol Iron Sides", "Latex Department"];
 
 // Status flow configuration
 const STATUS_FLOW = ["queued", "mixing", "mixing_complete", "pouring", "batch_complete"];
