@@ -361,7 +361,6 @@ viewChartBtn.addEventListener("click", () => {
     viewTableBtn.classList.remove("view-btn-active");
     completedChartWrap.classList.remove("hidden");
     completedTableWrap.classList.add("hidden");
-    renderCompletedChart();
 });
 
 exportExcelBtn.addEventListener("click", exportToExcel);
@@ -433,35 +432,51 @@ function renderCompleted() {
         </tr>
     `).join("");
 
-    // If chart view is active, update chart too
-    if (completedView === "chart") {
-        renderCompletedChart();
-    }
 }
 
+// ── Chart View ──────────────────────────────────────────────────────
 const compounderSelect = document.getElementById("compounder-select");
 const compounderStatsDiv = document.getElementById("compounder-stats");
+const chartResults = document.getElementById("chart-results");
+const chartPlaceholder = document.getElementById("chart-placeholder");
+const chartSearchBtn = document.getElementById("chart-search-btn");
+const chartDateFrom = document.getElementById("chart-date-from");
+const chartDateTo = document.getElementById("chart-date-to");
+let dailyChart = null;
 
-compounderSelect.addEventListener("change", () => {
-    renderCompletedChart();
-});
+chartSearchBtn.addEventListener("click", renderCharts);
 
-function renderCompletedChart() {
+function getFilteredRows() {
     let rows = getCompletedRows();
-    if (rows.length === 0) return;
+    const from = chartDateFrom.value;
+    const to = chartDateTo.value;
+    const compounder = compounderSelect.value;
 
+    if (from) {
+        const fromTs = new Date(from).setHours(0, 0, 0, 0);
+        rows = rows.filter((r) => r.completedAt >= fromTs);
+    }
+    if (to) {
+        const toTs = new Date(to).setHours(23, 59, 59, 999);
+        rows = rows.filter((r) => r.completedAt <= toTs);
+    }
+    if (compounder) {
+        rows = rows.filter((r) => r.initials === compounder);
+    }
+    return rows;
+}
+
+function renderCharts() {
+    const rows = getFilteredRows();
     const selectedCompounder = compounderSelect.value;
 
-    // Filter by compounder if one is selected
-    if (selectedCompounder) {
-        rows = rows.filter((r) => r.initials === selectedCompounder);
-    }
+    chartPlaceholder.classList.add("hidden");
+    chartResults.classList.remove("hidden");
 
-    // Show/hide compounder summary stats
-    if (selectedCompounder && rows.length > 0) {
+    // Stats
+    if (rows.length > 0) {
         const totalBatches = rows.length;
         const totalGallons = rows.reduce((sum, r) => sum + r.capacityNum, 0);
-        compounderStatsDiv.classList.remove("hidden");
         compounderStatsDiv.innerHTML = `
             <div class="stat-card">
                 <span class="stat-value">${totalBatches}</span>
@@ -472,79 +487,81 @@ function renderCompletedChart() {
                 <span class="stat-label">Total Gallons</span>
             </div>
         `;
-    } else if (selectedCompounder && rows.length === 0) {
-        compounderStatsDiv.classList.remove("hidden");
-        compounderStatsDiv.innerHTML = `<p class="stat-empty">No completed batches for ${selectedCompounder}</p>`;
     } else {
-        compounderStatsDiv.classList.add("hidden");
+        const who = selectedCompounder || "this range";
+        compounderStatsDiv.innerHTML = `<p style="color:#999;font-style:italic;">No completed batches for ${who}</p>`;
     }
 
-    // Group by bowl: count batches + total gallons
+    // Daily chart (batches per day)
+    if (dailyChart) dailyChart.destroy();
+    if (completedChart) completedChart.destroy();
+
+    if (rows.length === 0) return;
+
+    // Group by day
+    const dayMap = {};
+    for (const r of rows) {
+        const day = new Date(r.completedAt).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+        if (!dayMap[day]) dayMap[day] = { count: 0, gallons: 0 };
+        dayMap[day].count++;
+        dayMap[day].gallons += r.capacityNum;
+    }
+    const dayLabels = Object.keys(dayMap);
+    const dayCounts = dayLabels.map((d) => dayMap[d].count);
+    const dayGallons = dayLabels.map((d) => dayMap[d].gallons);
+
+    const dailyTitle = selectedCompounder
+        ? `Daily — ${selectedCompounder}`
+        : "Daily — All Compounders";
+
+    dailyChart = new Chart(document.getElementById("daily-chart").getContext("2d"), {
+        type: "bar",
+        data: {
+            labels: dayLabels,
+            datasets: [
+                { label: "Batches", data: dayCounts, backgroundColor: "rgba(39,174,96,0.7)", borderColor: "#27ae60", borderWidth: 1 },
+                { label: "Gallons", data: dayGallons, backgroundColor: "rgba(52,152,219,0.5)", borderColor: "#3498db", borderWidth: 1, yAxisID: "y1" },
+            ],
+        },
+        options: {
+            responsive: true, maintainAspectRatio: false,
+            plugins: { title: { display: true, text: dailyTitle, font: { size: 13 } }, legend: { labels: { boxWidth: 12, font: { size: 11 } } } },
+            scales: {
+                y: { beginAtZero: true, ticks: { stepSize: 1, font: { size: 10 } }, title: { display: true, text: "Batches", font: { size: 11 } } },
+                y1: { position: "right", beginAtZero: true, grid: { drawOnChartArea: false }, ticks: { font: { size: 10 } }, title: { display: true, text: "Gallons", font: { size: 11 } } },
+            },
+        },
+    });
+
+    // Bowl breakdown chart
     const bowlMap = {};
     for (const r of rows) {
         if (!bowlMap[r.bowl]) bowlMap[r.bowl] = { count: 0, gallons: r.capacityNum };
         bowlMap[r.bowl].count++;
     }
+    const bowlLabels = Object.keys(bowlMap);
+    const bowlCounts = bowlLabels.map((l) => bowlMap[l].count);
+    const bowlGallons = bowlLabels.map((l) => bowlMap[l].gallons * bowlMap[l].count);
 
-    const labels = Object.keys(bowlMap);
-    const counts = labels.map((l) => bowlMap[l].count);
-    const gallons = labels.map((l) => bowlMap[l].gallons * bowlMap[l].count);
+    const bowlTitle = selectedCompounder
+        ? `By Bowl — ${selectedCompounder}`
+        : "By Bowl — All Compounders";
 
-    const chartTitle = selectedCompounder
-        ? `Completed Batches — ${selectedCompounder}`
-        : "Completed Batches by Bowl";
-
-    const ctx = document.getElementById("completed-chart").getContext("2d");
-
-    if (completedChart) completedChart.destroy();
-
-    if (rows.length === 0) return;
-
-    completedChart = new Chart(ctx, {
+    completedChart = new Chart(document.getElementById("completed-chart").getContext("2d"), {
         type: "bar",
         data: {
-            labels,
+            labels: bowlLabels,
             datasets: [
-                {
-                    label: "Batches Completed",
-                    data: counts,
-                    backgroundColor: "rgba(39, 174, 96, 0.7)",
-                    borderColor: "#27ae60",
-                    borderWidth: 1,
-                    yAxisID: "y",
-                },
-                {
-                    label: "Total Gallons Produced",
-                    data: gallons,
-                    backgroundColor: "rgba(52, 152, 219, 0.5)",
-                    borderColor: "#3498db",
-                    borderWidth: 1,
-                    yAxisID: "y1",
-                },
+                { label: "Batches", data: bowlCounts, backgroundColor: "rgba(39,174,96,0.7)", borderColor: "#27ae60", borderWidth: 1 },
+                { label: "Gallons", data: bowlGallons, backgroundColor: "rgba(52,152,219,0.5)", borderColor: "#3498db", borderWidth: 1, yAxisID: "y1" },
             ],
         },
         options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                title: { display: true, text: chartTitle, font: { size: 16 } },
-                legend: { position: "top" },
-            },
+            responsive: true, maintainAspectRatio: false,
+            plugins: { title: { display: true, text: bowlTitle, font: { size: 13 } }, legend: { labels: { boxWidth: 12, font: { size: 11 } } } },
             scales: {
-                y: {
-                    type: "linear",
-                    position: "left",
-                    title: { display: true, text: "Batch Count" },
-                    beginAtZero: true,
-                    ticks: { stepSize: 1 },
-                },
-                y1: {
-                    type: "linear",
-                    position: "right",
-                    title: { display: true, text: "Total Gallons" },
-                    beginAtZero: true,
-                    grid: { drawOnChartArea: false },
-                },
+                y: { beginAtZero: true, ticks: { stepSize: 1, font: { size: 10 } }, title: { display: true, text: "Batches", font: { size: 11 } } },
+                y1: { position: "right", beginAtZero: true, grid: { drawOnChartArea: false }, ticks: { font: { size: 10 } }, title: { display: true, text: "Gallons", font: { size: 11 } } },
             },
         },
     });
