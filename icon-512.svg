@@ -1,4 +1,27 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
-  <rect width="512" height="512" rx="64" fill="#e94560"/>
-  <text x="256" y="300" text-anchor="middle" font-family="sans-serif" font-weight="700" font-size="220" fill="#ffffff">CD</text>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#0074B8"/>
+      <stop offset="100%" stop-color="#004F80"/>
+    </linearGradient>
+    <linearGradient id="gold" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#E8AD3B"/>
+      <stop offset="100%" stop-color="#C4882A"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Blue gradient background -->
+  <rect width="512" height="512" rx="96" fill="url(#bg)"/>
+
+  <!-- TW monogram - centered -->
+  <text x="256" y="260" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-weight="700" font-size="210" fill="#ffffff" letter-spacing="30">TW</text>
+
+  <!-- Gold accent line -->
+  <rect x="70" y="290" width="372" height="6" rx="3" fill="url(#gold)"/>
+
+  <!-- COLOR -->
+  <text x="256" y="365" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-weight="400" font-size="52" fill="rgba(255,255,255,0.9)" letter-spacing="12">COLOR</text>
+
+  <!-- DEPARTMENT - same size as COLOR -->
+  <text x="256" y="420" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-weight="400" font-size="52" fill="rgba(255,255,255,0.9)" letter-spacing="5">DEPARTMENT</text>
 </svg>
