@@ -231,26 +231,22 @@ batchesRef.on("value", (snapshot) => {
         batchesRef.update(migrations);
     }
 
-    // Assign batch numbers to any batches that don't have one
-    const missingNumbers = batches
-        .filter((b) => !b.batchNumber)
-        .sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
-    if (missingNumbers.length > 0) {
-        batchCounterRef.transaction((current) => {
-            return (current || 0) + missingNumbers.length;
-        }, (error, committed, snapshot) => {
-            if (error || !committed) return;
-            const endNum = snapshot.val();
-            const startNum = endNum - missingNumbers.length + 1;
-            const updates = {};
-            missingNumbers.forEach((batch, i) => {
-                const num = startNum + i;
-                const batchNumber = "A" + String(num).padStart(4, "0");
-                batch.batchNumber = batchNumber;
-                updates[batch.id + "/batchNumber"] = batchNumber;
-            });
-            batchesRef.update(updates);
+    // One-time reset: renumber ALL batches starting from A0001
+    const allSorted = [...batches].sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
+    const needsRenumber = allSorted.some((b, i) => b.batchNumber !== "A" + String(i + 1).padStart(4, "0"));
+    if (allSorted.length > 0 && needsRenumber) {
+        const updates = {};
+        allSorted.forEach((batch, i) => {
+            const batchNumber = "A" + String(i + 1).padStart(4, "0");
+            batch.batchNumber = batchNumber;
+            updates[batch.id + "/batchNumber"] = batchNumber;
         });
+        batchCounterRef.set(allSorted.length);
+        recycledNumbersRef.remove();
+        batchesRef.update(updates);
+    } else if (allSorted.length === 0) {
+        batchCounterRef.set(0);
+        recycledNumbersRef.remove();
     }
     render();
     updateCompletedCount();
