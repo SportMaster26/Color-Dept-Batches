@@ -8,7 +8,7 @@
 
     <!-- PWA -->
     <link rel="manifest" href="manifest.json">
-    <meta name="theme-color" content="#e94560">
+    <meta name="theme-color" content="#0065A1">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <meta name="apple-mobile-web-app-title" content="Batch Queue">
@@ -38,7 +38,31 @@
     <!-- Main App (hidden until logged in) -->
     <div id="app-container" class="hidden">
     <header>
-        <h1>Color Department - Batch Board</h1>
+        <div class="header-brand">
+            <svg class="header-logo" viewBox="0 0 360 100" xmlns="http://www.w3.org/2000/svg">
+                <!-- Golden arch -->
+                <path d="M 68 48 Q 120 8 185 45" stroke="#D4952B" stroke-width="4" fill="none" stroke-linecap="round"/>
+                <!-- THOR -->
+                <text y="62" font-family="Georgia, 'Times New Roman', serif" fill="#0065A1">
+                    <tspan x="28" font-size="42" font-weight="700">T</tspan><tspan font-size="32" font-weight="700">HOR</tspan>
+                </text>
+                <!-- WORKS -->
+                <text y="62" font-family="Georgia, 'Times New Roman', serif" fill="#0065A1">
+                    <tspan x="148" font-size="42" font-weight="900">W</tspan><tspan font-size="32" font-weight="900">ORKS</tspan>
+                </text>
+                <!-- INDUSTRIES -->
+                <text x="270" y="38" font-family="Georgia, 'Times New Roman', serif" font-weight="400" font-size="12" fill="#0065A1" letter-spacing="0.5">INDUSTRIES</text>
+                <!-- Registered trademark -->
+                <text x="298" y="62" font-family="Georgia, 'Times New Roman', serif" font-weight="400" font-size="9" fill="#0065A1">&#174;</text>
+                <!-- Gold line -->
+                <rect x="28" y="68" width="280" height="3" rx="1.5" fill="#D4952B"/>
+            </svg>
+            <div class="header-title">
+                <span class="header-title-main">Color Department</span>
+                <span class="header-title-sep">&#8212;</span>
+                <span class="header-title-sub">Batch Board</span>
+            </div>
+        </div>
         <div class="header-actions">
             <span id="role-badge" class="role-badge"></span>
             <button id="undo-btn" class="btn btn-undo hidden" title="Undo last status change">Undo</button>
