@@ -104,7 +104,21 @@
             <form id="mixing-complete-form">
                 <div class="form-group">
                     <label for="viscosity-input">Viscosity (KU)</label>
-                    <input type="text" id="viscosity-input" required placeholder="e.g. 85">
+                    <input type="text" id="viscosity-input" required placeholder="e.g. 85" readonly>
+                    <div class="numpad" id="viscosity-numpad">
+                        <button type="button" class="numpad-btn" data-val="1">1</button>
+                        <button type="button" class="numpad-btn" data-val="2">2</button>
+                        <button type="button" class="numpad-btn" data-val="3">3</button>
+                        <button type="button" class="numpad-btn" data-val="4">4</button>
+                        <button type="button" class="numpad-btn" data-val="5">5</button>
+                        <button type="button" class="numpad-btn" data-val="6">6</button>
+                        <button type="button" class="numpad-btn" data-val="7">7</button>
+                        <button type="button" class="numpad-btn" data-val="8">8</button>
+                        <button type="button" class="numpad-btn" data-val="9">9</button>
+                        <button type="button" class="numpad-btn" data-val=".">.</button>
+                        <button type="button" class="numpad-btn" data-val="0">0</button>
+                        <button type="button" class="numpad-btn numpad-del" data-val="del">&#9003;</button>
+                    </div>
                 </div>
                 <div class="form-group">
                     <label for="initials-input">Mixed By</label>
@@ -135,7 +149,46 @@
             <form id="batch-complete-form">
                 <div class="form-group">
                     <label for="poured-by-input">Poured By (Name)</label>
-                    <input type="text" id="poured-by-input" required placeholder="e.g. John Doe">
+                    <input type="text" id="poured-by-input" required placeholder="Tap keys below" readonly>
+                    <div class="onscreen-keyboard" id="poured-by-keyboard">
+                        <div class="kb-row">
+                            <button type="button" class="kb-btn" data-val="Q">Q</button>
+                            <button type="button" class="kb-btn" data-val="W">W</button>
+                            <button type="button" class="kb-btn" data-val="E">E</button>
+                            <button type="button" class="kb-btn" data-val="R">R</button>
+                            <button type="button" class="kb-btn" data-val="T">T</button>
+                            <button type="button" class="kb-btn" data-val="Y">Y</button>
+                            <button type="button" class="kb-btn" data-val="U">U</button>
+                            <button type="button" class="kb-btn" data-val="I">I</button>
+                            <button type="button" class="kb-btn" data-val="O">O</button>
+                            <button type="button" class="kb-btn" data-val="P">P</button>
+                        </div>
+                        <div class="kb-row">
+                            <button type="button" class="kb-btn" data-val="A">A</button>
+                            <button type="button" class="kb-btn" data-val="S">S</button>
+                            <button type="button" class="kb-btn" data-val="D">D</button>
+                            <button type="button" class="kb-btn" data-val="F">F</button>
+                            <button type="button" class="kb-btn" data-val="G">G</button>
+                            <button type="button" class="kb-btn" data-val="H">H</button>
+                            <button type="button" class="kb-btn" data-val="J">J</button>
+                            <button type="button" class="kb-btn" data-val="K">K</button>
+                            <button type="button" class="kb-btn" data-val="L">L</button>
+                        </div>
+                        <div class="kb-row">
+                            <button type="button" class="kb-btn" data-val="Z">Z</button>
+                            <button type="button" class="kb-btn" data-val="X">X</button>
+                            <button type="button" class="kb-btn" data-val="C">C</button>
+                            <button type="button" class="kb-btn" data-val="V">V</button>
+                            <button type="button" class="kb-btn" data-val="B">B</button>
+                            <button type="button" class="kb-btn" data-val="N">N</button>
+                            <button type="button" class="kb-btn" data-val="M">M</button>
+                            <button type="button" class="kb-btn kb-del" data-val="del">&#9003;</button>
+                        </div>
+                        <div class="kb-row">
+                            <button type="button" class="kb-btn kb-space" data-val=" ">SPACE</button>
+                            <button type="button" class="kb-btn kb-clear" data-val="clear">CLR</button>
+                        </div>
+                    </div>
                 </div>
                 <div class="form-actions">
                     <button type="button" id="batch-complete-cancel" class="btn btn-secondary">Cancel</button>
