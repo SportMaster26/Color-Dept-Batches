@@ -793,6 +793,112 @@ header h1 {
     margin-top: 20px;
 }
 
+/* ── Number Pad ────────────────────────────────────────────────────── */
+.numpad {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+    margin-top: 10px;
+}
+
+.numpad-btn {
+    padding: 18px 0;
+    font-size: 1.4rem;
+    font-weight: 700;
+    border: 2px solid #d0d5dd;
+    border-radius: 8px;
+    background: #f8f9fa;
+    color: #333;
+    cursor: pointer;
+    user-select: none;
+    -webkit-user-select: none;
+    touch-action: manipulation;
+    transition: background 0.1s, transform 0.1s;
+}
+
+.numpad-btn:active {
+    background: #e94560;
+    color: #fff;
+    transform: scale(0.95);
+}
+
+.numpad-del {
+    background: #fee;
+    color: #c00;
+    border-color: #fcc;
+}
+
+.numpad-del:active {
+    background: #c00;
+    color: #fff;
+}
+
+/* ── On-Screen Keyboard ───────────────────────────────────────────── */
+.onscreen-keyboard {
+    margin-top: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.kb-row {
+    display: flex;
+    justify-content: center;
+    gap: 4px;
+}
+
+.kb-btn {
+    flex: 0 1 auto;
+    min-width: 32px;
+    padding: 14px 8px;
+    font-size: 1rem;
+    font-weight: 700;
+    border: 2px solid #d0d5dd;
+    border-radius: 6px;
+    background: #f8f9fa;
+    color: #333;
+    cursor: pointer;
+    user-select: none;
+    -webkit-user-select: none;
+    touch-action: manipulation;
+    transition: background 0.1s, transform 0.1s;
+}
+
+.kb-btn:active {
+    background: #e94560;
+    color: #fff;
+    transform: scale(0.95);
+}
+
+.kb-del {
+    background: #fee;
+    color: #c00;
+    border-color: #fcc;
+    min-width: 48px;
+}
+
+.kb-del:active {
+    background: #c00;
+    color: #fff;
+}
+
+.kb-space {
+    flex: 1;
+    min-width: 120px;
+}
+
+.kb-clear {
+    background: #fff3e0;
+    color: #e65100;
+    border-color: #ffcc80;
+    min-width: 56px;
+}
+
+.kb-clear:active {
+    background: #e65100;
+    color: #fff;
+}
+
 /* ── Responsive ────────────────────────────────────────────────────── */
 @media (max-width: 600px) {
     header {

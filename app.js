@@ -1084,8 +1084,20 @@ function showMixingCompleteModal(batch) {
     document.getElementById("viscosity-input").value = "";
     document.getElementById("initials-input").value = "";
     mixingCompleteOverlay.classList.remove("hidden");
-    document.getElementById("viscosity-input").focus();
 }
+
+// ── Number Pad for Viscosity ─────────────────────────────────────────
+document.getElementById("viscosity-numpad").addEventListener("click", (e) => {
+    const btn = e.target.closest(".numpad-btn");
+    if (!btn) return;
+    const input = document.getElementById("viscosity-input");
+    const val = btn.dataset.val;
+    if (val === "del") {
+        input.value = input.value.slice(0, -1);
+    } else {
+        input.value += val;
+    }
+});
 
 document.getElementById("mixing-complete-cancel").addEventListener("click", () => {
     mixingCompleteOverlay.classList.add("hidden");
@@ -1124,8 +1136,22 @@ function showBatchCompleteModal(batch) {
     document.getElementById("batch-complete-product").textContent = batch.product;
     document.getElementById("poured-by-input").value = "";
     batchCompleteOverlay.classList.remove("hidden");
-    document.getElementById("poured-by-input").focus();
 }
+
+// ── On-Screen Keyboard for Poured By ─────────────────────────────────
+document.getElementById("poured-by-keyboard").addEventListener("click", (e) => {
+    const btn = e.target.closest(".kb-btn");
+    if (!btn) return;
+    const input = document.getElementById("poured-by-input");
+    const val = btn.dataset.val;
+    if (val === "del") {
+        input.value = input.value.slice(0, -1);
+    } else if (val === "clear") {
+        input.value = "";
+    } else {
+        input.value += val;
+    }
+});
 
 document.getElementById("batch-complete-cancel").addEventListener("click", () => {
     batchCompleteOverlay.classList.add("hidden");
