@@ -54,7 +54,7 @@ header h1 {
 }
 
 .header-title-main {
-    font-size: 1.3rem;
+    font-size: 1.6rem;
     font-weight: 700;
     color: #0065A1;
 }
@@ -62,11 +62,11 @@ header h1 {
 .header-title-sep {
     color: #D4952B;
     font-weight: 300;
-    font-size: 1.2rem;
+    font-size: 1.45rem;
 }
 
 .header-title-sub {
-    font-size: 1.15rem;
+    font-size: 1.4rem;
     font-weight: 400;
     color: #0065A1;
     letter-spacing: 0.5px;
