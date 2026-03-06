@@ -7,12 +7,35 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
+    <!-- Login Screen -->
+    <div id="login-screen" class="login-screen">
+        <div class="login-card">
+            <h1 class="login-title">Color Department</h1>
+            <p class="login-subtitle">Batch Board</p>
+            <form id="login-form">
+                <div class="login-field">
+                    <label for="login-email">Email</label>
+                    <input type="email" id="login-email" required placeholder="e.g. operator@colordept.local" autocomplete="username">
+                </div>
+                <div class="login-field">
+                    <label for="login-password">Password</label>
+                    <input type="password" id="login-password" required placeholder="Enter password" autocomplete="current-password">
+                </div>
+                <div id="login-error" class="login-error hidden"></div>
+                <button type="submit" class="btn btn-primary login-btn">Log In</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Main App (hidden until logged in) -->
+    <div id="app-container" class="hidden">
     <header>
         <h1>Color Department - Batch Board</h1>
         <div class="header-actions">
-            <button id="admin-toggle-btn" class="btn btn-admin">Admin Login</button>
+            <span id="role-badge" class="role-badge"></span>
             <button id="undo-btn" class="btn btn-undo hidden" title="Undo last status change">Undo</button>
             <button id="add-batch-btn" class="btn btn-primary admin-only hidden">+ New Batch</button>
+            <button id="logout-btn" class="btn btn-admin">Logout</button>
         </div>
     </header>
 
@@ -357,12 +380,15 @@
         </div>
     </div>
 
+    </div><!-- end #app-container -->
+
     <!-- Chart.js & SheetJS for completed tab -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
     <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
 
     <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
     <script src="firebase-config.js"></script>
     <script src="app.js"></script>

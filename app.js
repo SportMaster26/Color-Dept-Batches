@@ -58,76 +58,118 @@ let batches = [];
 let undoStack = []; // stores { id, prevStatus } for admin undo
 let operatorUndoStack = []; // separate undo stack for operator
 const MAX_UNDO = 20;
-let isAdmin = sessionStorage.getItem("adminMode") === "true";
-let isOperator = sessionStorage.getItem("operatorMode") === "true";
+let isAdmin = false;
+let isOperator = false;
+let isViewer = false;
+let currentRole = null; // "admin", "operator", "viewer", or null
 let activeTab = "active"; // "active" or "completed"
 const board = document.getElementById("board");
-const adminToggleBtn = document.getElementById("admin-toggle-btn");
 const undoBtn = document.getElementById("undo-btn");
+const logoutBtn = document.getElementById("logout-btn");
+const roleBadge = document.getElementById("role-badge");
 const tabActive = document.getElementById("tab-active");
 const tabCompleted = document.getElementById("tab-completed");
 const completedBoard = document.getElementById("completed-board");
+const loginScreen = document.getElementById("login-screen");
+const appContainer = document.getElementById("app-container");
+const loginForm = document.getElementById("login-form");
+const loginError = document.getElementById("login-error");
 
-// ── Admin Mode ──────────────────────────────────────────────────────
+// ── Authentication ──────────────────────────────────────────────────
+
+function setRole(role) {
+    currentRole = role;
+    isAdmin = role === "admin";
+    isOperator = role === "operator";
+    isViewer = role === "viewer";
+}
 
 function updateAdminUI() {
     const adminElements = document.querySelectorAll(".admin-only");
+
+    // Update role badge
+    roleBadge.className = "role-badge";
     if (isAdmin) {
-        adminToggleBtn.textContent = "Logout Admin";
-        adminToggleBtn.classList.add("admin-active");
-        adminToggleBtn.classList.remove("operator-active");
+        roleBadge.textContent = "Admin";
+        roleBadge.classList.add("role-admin");
         adminElements.forEach((el) => el.classList.remove("hidden"));
         document.body.classList.add("admin-mode");
-        document.body.classList.remove("operator-mode");
+        document.body.classList.remove("operator-mode", "viewer-mode");
     } else if (isOperator) {
-        adminToggleBtn.textContent = "Logout Operator";
-        adminToggleBtn.classList.remove("admin-active");
-        adminToggleBtn.classList.add("operator-active");
+        roleBadge.textContent = "Operator";
+        roleBadge.classList.add("role-operator");
         adminElements.forEach((el) => el.classList.add("hidden"));
-        document.body.classList.remove("admin-mode");
         document.body.classList.add("operator-mode");
-    } else {
-        adminToggleBtn.textContent = "Login";
-        adminToggleBtn.classList.remove("admin-active");
-        adminToggleBtn.classList.remove("operator-active");
+        document.body.classList.remove("admin-mode", "viewer-mode");
+    } else if (isViewer) {
+        roleBadge.textContent = "Viewer";
+        roleBadge.classList.add("role-viewer");
         adminElements.forEach((el) => el.classList.add("hidden"));
-        document.body.classList.remove("admin-mode");
-        document.body.classList.remove("operator-mode");
+        document.body.classList.add("viewer-mode");
+        document.body.classList.remove("admin-mode", "operator-mode");
     }
     render();
 }
 
-adminToggleBtn.addEventListener("click", () => {
-    if (isAdmin || isOperator) {
-        // Log out of whichever role
-        isAdmin = false;
-        isOperator = false;
-        sessionStorage.removeItem("adminMode");
-        sessionStorage.removeItem("operatorMode");
-        updateAdminUI();
-    } else {
-        // Prompt for password
-        const pw = prompt("Enter password:");
-        if (pw === ADMIN_PASSWORD) {
-            isAdmin = true;
-            isOperator = false;
-            sessionStorage.setItem("adminMode", "true");
-            sessionStorage.removeItem("operatorMode");
+// Login form handler
+loginForm.addEventListener("submit", (e) => {
+    e.preventDefault();
+    const email = document.getElementById("login-email").value.trim();
+    const password = document.getElementById("login-password").value;
+
+    loginError.classList.add("hidden");
+
+    auth.signInWithEmailAndPassword(email, password)
+        .then((cred) => {
+            const role = ROLE_MAP[cred.user.email] || "viewer";
+            setRole(role);
+            loginScreen.classList.add("hidden");
+            appContainer.classList.remove("hidden");
             updateAdminUI();
-        } else if (pw === OPERATOR_PASSWORD) {
-            isOperator = true;
-            isAdmin = false;
-            sessionStorage.setItem("operatorMode", "true");
-            sessionStorage.removeItem("adminMode");
-            updateAdminUI();
-        } else if (pw !== null) {
-            alert("Incorrect password.");
-        }
-    }
+        })
+        .catch((err) => {
+            loginError.textContent = err.code === "auth/invalid-credential"
+                ? "Invalid email or password."
+                : err.code === "auth/user-not-found"
+                ? "No account found with that email."
+                : err.code === "auth/wrong-password"
+                ? "Incorrect password."
+                : err.code === "auth/too-many-requests"
+                ? "Too many attempts. Try again later."
+                : "Login failed. Please try again.";
+            loginError.classList.remove("hidden");
+        });
 });
 
-// Initialize admin UI on load
-updateAdminUI();
+// Logout handler
+logoutBtn.addEventListener("click", () => {
+    auth.signOut().then(() => {
+        setRole(null);
+        isAdmin = false;
+        isOperator = false;
+        isViewer = false;
+        appContainer.classList.add("hidden");
+        loginScreen.classList.remove("hidden");
+        loginForm.reset();
+        loginError.classList.add("hidden");
+        document.body.classList.remove("admin-mode", "operator-mode", "viewer-mode");
+    });
+});
+
+// Check if already logged in (page refresh)
+auth.onAuthStateChanged((user) => {
+    if (user) {
+        const role = ROLE_MAP[user.email] || "viewer";
+        setRole(role);
+        loginScreen.classList.add("hidden");
+        appContainer.classList.remove("hidden");
+        updateAdminUI();
+    } else {
+        setRole(null);
+        appContainer.classList.add("hidden");
+        loginScreen.classList.remove("hidden");
+    }
+});
 
 // ── Tab Switching ───────────────────────────────────────────────────
 tabActive.addEventListener("click", () => {
@@ -175,7 +217,7 @@ function updateUndoBtn() {
 
 undoBtn.addEventListener("click", () => {
     const stack = getActiveUndoStack();
-    if ((!isAdmin && !isOperator) || stack.length === 0) return;
+    if (isViewer || (!isAdmin && !isOperator) || stack.length === 0) return;
     const action = stack.pop();
     const batch = batches.find((b) => b.id === action.id);
     if (batch) {
@@ -357,7 +399,7 @@ viewTableBtn.addEventListener("click", () => {
 });
 
 viewChartBtn.addEventListener("click", () => {
-    if (isOperator) return; // operators can't access charts
+    if (isOperator && !isAdmin) return; // operators can't access charts
     completedView = "chart";
     viewChartBtn.classList.add("view-btn-active");
     viewTableBtn.classList.remove("view-btn-active");

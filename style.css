@@ -899,6 +899,116 @@ header h1 {
     color: #fff;
 }
 
+/* ── Login Screen ─────────────────────────────────────────────────── */
+.login-screen {
+    position: fixed;
+    inset: 0;
+    background: #f0f2f5;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 200;
+}
+
+.login-card {
+    background: #ffffff;
+    border-radius: 16px;
+    padding: 40px 36px;
+    width: 90%;
+    max-width: 380px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+    text-align: center;
+}
+
+.login-title {
+    font-size: 1.6rem;
+    font-weight: 800;
+    color: #e94560;
+    margin-bottom: 4px;
+}
+
+.login-subtitle {
+    font-size: 1rem;
+    color: #667788;
+    margin-bottom: 28px;
+    font-weight: 600;
+}
+
+.login-field {
+    margin-bottom: 16px;
+    text-align: left;
+}
+
+.login-field label {
+    display: block;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: #667788;
+    margin-bottom: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.login-field input {
+    width: 100%;
+    padding: 12px 14px;
+    border: 2px solid #d0d5dd;
+    border-radius: 8px;
+    background: #fff;
+    color: #333;
+    font-size: 1rem;
+    transition: border-color 0.15s;
+}
+
+.login-field input:focus {
+    outline: none;
+    border-color: #e94560;
+}
+
+.login-btn {
+    width: 100%;
+    padding: 14px;
+    font-size: 1rem;
+    margin-top: 8px;
+}
+
+.login-error {
+    background: #fff0f0;
+    color: #c00;
+    padding: 10px 14px;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    margin-bottom: 12px;
+    border: 1px solid #fcc;
+}
+
+/* ── Role Badge ───────────────────────────────────────────────────── */
+.role-badge {
+    display: inline-block;
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+}
+
+.role-badge.role-admin {
+    background: #27ae60;
+    color: #fff;
+}
+
+.role-badge.role-operator {
+    background: #3498db;
+    color: #fff;
+}
+
+.role-badge.role-viewer {
+    background: #f5a623;
+    color: #fff;
+}
+
 /* ── Responsive ────────────────────────────────────────────────────── */
 @media (max-width: 600px) {
     header {
