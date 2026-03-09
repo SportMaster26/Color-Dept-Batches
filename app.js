@@ -1939,14 +1939,10 @@ function renderNotes() {
     list.innerHTML = siteNotes.map((note) => {
         const date = new Date(note.createdAt);
         const timestamp = date.toLocaleString("en-US", { month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit" });
-        const deleteBtn = (userEmail === note.authorEmail || isAdmin)
-            ? `<button class="note-delete-btn" data-note-id="${note.id}">Delete</button>`
-            : "";
         return `
             <div class="note-card">
                 <div class="note-card-header">
                     <span class="note-subject">${formatNoteDate(note.subject)}</span>
-                    ${deleteBtn}
                 </div>
                 ${note.body ? `<div class="note-body">${escapeHtml(note.body)}</div>` : ""}
                 <div class="note-meta">
@@ -1955,15 +1951,6 @@ function renderNotes() {
             </div>
         `;
     }).join("");
-
-    list.querySelectorAll(".note-delete-btn").forEach((btn) => {
-        btn.addEventListener("click", () => {
-            const noteId = btn.dataset.noteId;
-            if (confirm("Delete this note?")) {
-                notesRef.child(noteId).remove();
-            }
-        });
-    });
 }
 
 const notesForm = document.getElementById("notes-form");
