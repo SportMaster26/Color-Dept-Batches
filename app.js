@@ -50,7 +50,7 @@ const PACKAGING = {
 };
 
 // ── Product Catalog (name – item number) ────────────────────────────
-const PRODUCT_CATALOG = [
+let PRODUCT_CATALOG = [
     // MISCELLANEOUS PRODUCTS
     "NEUTRAL CONCENTRATE – C1360",
     "NEUTRAL CONCENTRATE WITH SAND – C1365",
@@ -269,6 +269,20 @@ const batchesRef = db.ref("batches");
 const batchCounterRef = db.ref("meta/batchCounter");
 const recycledNumbersRef = db.ref("meta/recycledNumbers");
 const notesRef = db.ref("notes");
+const customProductsRef = db.ref("meta/customProducts");
+
+// Load custom products from Firebase and merge into catalog
+customProductsRef.on("value", (snapshot) => {
+    const data = snapshot.val();
+    if (data) {
+        const customs = Object.values(data);
+        customs.forEach((p) => {
+            if (!PRODUCT_CATALOG.includes(p)) {
+                PRODUCT_CATALOG.push(p);
+            }
+        });
+    }
+});
 
 // ── State ───────────────────────────────────────────────────────────
 let batches = [];
@@ -1704,6 +1718,12 @@ editForm.addEventListener("submit", (e) => {
     batch.pouredBy = document.getElementById("edit-poured-by").value.trim() || null;
     batch.notes = document.getElementById("edit-notes").value.trim() || null;
 
+    // Save custom product type if not already in catalog
+    if (batch.productType && !PRODUCT_CATALOG.includes(batch.productType)) {
+        PRODUCT_CATALOG.push(batch.productType);
+        customProductsRef.push(batch.productType);
+    }
+
     batchesRef.child(id).update(batch);
     editOverlay.classList.add("hidden");
 });
@@ -1878,6 +1898,12 @@ batchForm.addEventListener("submit", (e) => {
             });
         }
     });
+
+    // Save custom product type if not already in catalog
+    if (productType && !PRODUCT_CATALOG.includes(productType)) {
+        PRODUCT_CATALOG.push(productType);
+        customProductsRef.push(productType);
+    }
 
     batchForm.reset();
     modalOverlay.classList.add("hidden");
