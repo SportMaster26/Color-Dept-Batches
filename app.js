@@ -199,6 +199,7 @@ const PRODUCT_CATALOG = [
 const batchesRef = db.ref("batches");
 const batchCounterRef = db.ref("meta/batchCounter");
 const recycledNumbersRef = db.ref("meta/recycledNumbers");
+const notesRef = db.ref("notes");
 
 // ── State ───────────────────────────────────────────────────────────
 let batches = [];
@@ -217,6 +218,8 @@ const roleBadge = document.getElementById("role-badge");
 const tabActive = document.getElementById("tab-active");
 const tabCompleted = document.getElementById("tab-completed");
 const completedBoard = document.getElementById("completed-board");
+const tabNotes = document.getElementById("tab-notes");
+const notesBoard = document.getElementById("notes-board");
 const loginScreen = document.getElementById("login-screen");
 const appContainer = document.getElementById("app-container");
 const loginForm = document.getElementById("login-form");
@@ -255,7 +258,28 @@ function updateAdminUI() {
         document.body.classList.add("viewer-mode");
         document.body.classList.remove("admin-mode", "operator-mode");
     }
+    // Notes tab: hide from floor and platform operators
+    const user = auth.currentUser;
+    const userEmail = user ? user.email : "";
+    const isFloorOrPlatform = userEmail === "floor@colordept.local" || userEmail === "platform@colordept.local";
+    tabNotes.classList.toggle("hidden", isFloorOrPlatform);
+
+    // Only TJ (tmahl) and Kevin (kherrin) can add notes
+    const canPostNotes = userEmail === "tmahl@colordept.local" || userEmail === "kherrin@colordept.local";
+    const notesAddSection = document.getElementById("notes-add-section");
+    if (notesAddSection) {
+        notesAddSection.classList.toggle("hidden", !canPostNotes);
+    }
+
     render();
+}
+
+// ── Notes Users ─────────────────────────────────────────────────────
+const NOTES_POST_USERS = ["tmahl@colordept.local", "kherrin@colordept.local"];
+
+function canPostNotes() {
+    const user = auth.currentUser;
+    return user && NOTES_POST_USERS.includes(user.email);
 }
 
 // Login form handler
@@ -319,21 +343,23 @@ auth.onAuthStateChanged((user) => {
 });
 
 // ── Tab Switching ───────────────────────────────────────────────────
+function selectTab(tab) {
+    activeTab = tab;
+    tabActive.classList.toggle("tab-selected", tab === "active");
+    tabCompleted.classList.toggle("tab-selected", tab === "completed");
+    tabNotes.classList.toggle("tab-selected", tab === "notes");
+    board.classList.toggle("hidden", tab !== "active");
+    completedBoard.classList.toggle("hidden", tab !== "completed");
+    notesBoard.classList.toggle("hidden", tab !== "notes");
+}
+
 tabActive.addEventListener("click", () => {
-    activeTab = "active";
-    tabActive.classList.add("tab-selected");
-    tabCompleted.classList.remove("tab-selected");
-    board.classList.remove("hidden");
-    completedBoard.classList.add("hidden");
+    selectTab("active");
     updateCompletedCount();
 });
 
 tabCompleted.addEventListener("click", () => {
-    activeTab = "completed";
-    tabCompleted.classList.add("tab-selected");
-    tabActive.classList.remove("tab-selected");
-    board.classList.add("hidden");
-    completedBoard.classList.remove("hidden");
+    selectTab("completed");
     // Mark all current completed batches as seen for this user
     const currentUser = auth.currentUser;
     if (currentUser) {
@@ -343,6 +369,11 @@ tabCompleted.addEventListener("click", () => {
     const badge = document.getElementById("completed-count");
     badge.classList.add("hidden");
     renderCompleted();
+});
+
+tabNotes.addEventListener("click", () => {
+    selectTab("notes");
+    renderNotes();
 });
 
 function updateCompletedCount() {
@@ -1783,6 +1814,80 @@ batchForm.addEventListener("submit", (e) => {
     modalOverlay.classList.add("hidden");
 });
 
+
+// ── Notes ───────────────────────────────────────────────────────────
+let siteNotes = [];
+
+notesRef.on("value", (snap) => {
+    const data = snap.val() || {};
+    siteNotes = Object.values(data).sort((a, b) => b.createdAt - a.createdAt);
+    if (activeTab === "notes") renderNotes();
+});
+
+function renderNotes() {
+    const list = document.getElementById("notes-list");
+    if (siteNotes.length === 0) {
+        list.innerHTML = `<p class="notes-empty">No notes yet.</p>`;
+        return;
+    }
+    const user = auth.currentUser;
+    const userEmail = user ? user.email : "";
+    list.innerHTML = siteNotes.map((note) => {
+        const date = new Date(note.createdAt);
+        const timestamp = date.toLocaleString("en-US", { month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit" });
+        const deleteBtn = (userEmail === note.authorEmail || isAdmin)
+            ? `<button class="note-delete-btn" data-note-id="${note.id}">Delete</button>`
+            : "";
+        return `
+            <div class="note-card">
+                <div class="note-card-header">
+                    <span class="note-subject">${escapeHtml(note.subject)}</span>
+                    ${deleteBtn}
+                </div>
+                ${note.body ? `<div class="note-body">${escapeHtml(note.body)}</div>` : ""}
+                <div class="note-meta">
+                    <span class="note-author">${escapeHtml(note.author)}</span> &middot; ${timestamp}
+                </div>
+            </div>
+        `;
+    }).join("");
+
+    list.querySelectorAll(".note-delete-btn").forEach((btn) => {
+        btn.addEventListener("click", () => {
+            const noteId = btn.dataset.noteId;
+            if (confirm("Delete this note?")) {
+                notesRef.child(noteId).remove();
+            }
+        });
+    });
+}
+
+const notesForm = document.getElementById("notes-form");
+notesForm.addEventListener("submit", (e) => {
+    e.preventDefault();
+    if (!canPostNotes()) return;
+
+    const subject = document.getElementById("note-subject").value.trim();
+    const body = document.getElementById("note-body").value.trim();
+    if (!subject) return;
+
+    const user = auth.currentUser;
+    const emailParts = user.email.split("@")[0];
+    // Derive display name from email prefix
+    const authorName = user.displayName || emailParts;
+
+    const noteId = generateId();
+    notesRef.child(noteId).set({
+        id: noteId,
+        subject,
+        body: body || null,
+        author: authorName,
+        authorEmail: user.email,
+        createdAt: Date.now(),
+    });
+
+    notesForm.reset();
+});
 
 // ── Helpers ─────────────────────────────────────────────────────────
 function generateId() {

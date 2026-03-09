@@ -58,6 +58,7 @@
     <div class="tab-bar">
         <button id="tab-active" class="tab-btn tab-selected">Active Batches</button>
         <button id="tab-completed" class="tab-btn">Completed <span id="completed-count" class="tab-badge hidden">0</span></button>
+        <button id="tab-notes" class="tab-btn">Notes</button>
     </div>
 
     <!-- Modal for adding a new batch -->
@@ -442,6 +443,29 @@
             <div id="history-placeholder" class="chart-placeholder">
                 <p>Select a product to view its batch history</p>
             </div>
+        </div>
+    </div>
+
+    <!-- Notes Board -->
+    <div id="notes-board" class="notes-board hidden">
+        <div id="notes-add-section" class="notes-add-section hidden">
+            <h3>Add a Note</h3>
+            <form id="notes-form">
+                <div class="form-group">
+                    <label for="note-subject">Subject</label>
+                    <input type="text" id="note-subject" required placeholder="e.g. Bowl C is down for maintenance">
+                </div>
+                <div class="form-group">
+                    <label for="note-body">Details (optional)</label>
+                    <textarea id="note-body" rows="3" placeholder="Any additional details..."></textarea>
+                </div>
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary">Post Note</button>
+                </div>
+            </form>
+        </div>
+        <div id="notes-list" class="notes-list">
+            <p class="notes-empty">No notes yet.</p>
         </div>
     </div>
 
