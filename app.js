@@ -1919,6 +1919,15 @@ notesRef.on("value", (snap) => {
     if (activeTab === "notes") renderNotes();
 });
 
+function formatNoteDate(dateStr) {
+    // If it looks like a date (YYYY-MM-DD), format it nicely
+    const d = new Date(dateStr + "T00:00:00");
+    if (!isNaN(d.getTime())) {
+        return d.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", year: "numeric" });
+    }
+    return escapeHtml(dateStr);
+}
+
 function renderNotes() {
     const list = document.getElementById("notes-list");
     if (siteNotes.length === 0) {
@@ -1936,7 +1945,7 @@ function renderNotes() {
         return `
             <div class="note-card">
                 <div class="note-card-header">
-                    <span class="note-subject">${escapeHtml(note.subject)}</span>
+                    <span class="note-subject">${formatNoteDate(note.subject)}</span>
                     ${deleteBtn}
                 </div>
                 ${note.body ? `<div class="note-body">${escapeHtml(note.body)}</div>` : ""}
@@ -1958,6 +1967,10 @@ function renderNotes() {
 }
 
 const notesForm = document.getElementById("notes-form");
+// Default the date picker to today
+const noteSubjectInput = document.getElementById("note-subject");
+noteSubjectInput.valueAsDate = new Date();
+
 notesForm.addEventListener("submit", (e) => {
     e.preventDefault();
     if (!canPostNotes()) return;
