@@ -314,6 +314,7 @@
             <div class="view-toggle">
                 <button id="view-table-btn" class="view-btn view-btn-active">Table</button>
                 <button id="view-chart-btn" class="view-btn">Chart</button>
+                <button id="view-history-btn" class="view-btn">Product History</button>
             </div>
             <button id="export-excel-btn" class="btn btn-primary btn-export">Export to Excel</button>
         </div>
@@ -394,6 +395,42 @@
             </div>
             <div id="chart-placeholder" class="chart-placeholder">
                 <p>Select a date range and click <strong>Search</strong> to view charts</p>
+            </div>
+        </div>
+
+        <!-- Product History view -->
+        <div id="product-history-wrap" class="product-history-wrap hidden">
+            <div class="history-search-bar">
+                <label for="history-product-select">Product:</label>
+                <select id="history-product-select">
+                    <option value="">-- Select a product --</option>
+                </select>
+            </div>
+            <div id="history-results" class="history-results hidden">
+                <div id="history-summary" class="history-summary"></div>
+                <table class="completed-table">
+                    <thead>
+                        <tr>
+                            <th>Batch #</th>
+                            <th>Bowl</th>
+                            <th>Packaging</th>
+                            <th>Unit Count</th>
+                            <th>Viscosity</th>
+                            <th>Mixed By</th>
+                            <th>Poured By</th>
+                            <th>Notes</th>
+                            <th>Queued</th>
+                            <th>Mixing Started</th>
+                            <th>Mixing Complete</th>
+                            <th>Pouring Started</th>
+                            <th>Batch Complete</th>
+                        </tr>
+                    </thead>
+                    <tbody id="history-table-body"></tbody>
+                </table>
+            </div>
+            <div id="history-placeholder" class="chart-placeholder">
+                <p>Select a product to view its batch history</p>
             </div>
         </div>
     </div>
