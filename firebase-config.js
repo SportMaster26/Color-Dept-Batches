@@ -38,6 +38,7 @@ const firebaseConfig = {
 //   dpanyard@colordept.local (Dave Panyard)
 //   hhudak@colordept.local   (Haley Hudak)
 //   lab@colordept.local
+//   colby@colordept.local
 //
 // You can change these emails to whatever you like — just update the
 // mapping below to match.
@@ -52,6 +53,7 @@ const ROLE_MAP = {
     "dpanyard@colordept.local": "viewer",
     "hhudak@colordept.local": "viewer",
     "lab@colordept.local": "viewer",
+    "colby@colordept.local": "viewer",
 };
 
 // Initialize Firebase
