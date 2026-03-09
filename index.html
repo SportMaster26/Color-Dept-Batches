@@ -58,6 +58,7 @@
     <div class="tab-bar">
         <button id="tab-active" class="tab-btn tab-selected">Active Batches</button>
         <button id="tab-completed" class="tab-btn">Completed <span id="completed-count" class="tab-badge hidden">0</span></button>
+        <button id="tab-notes" class="tab-btn">Notes</button>
     </div>
 
     <!-- Modal for adding a new batch -->
@@ -65,6 +66,11 @@
         <div class="modal">
             <h2>Add New Batch</h2>
             <form id="batch-form">
+                <div class="form-group product-type-group">
+                    <label for="product-type-input">Product Type</label>
+                    <input type="text" id="product-type-input" autocomplete="off" placeholder="Start typing to search products...">
+                    <div id="product-type-list" class="autocomplete-list hidden"></div>
+                </div>
                 <div class="form-group">
                     <label for="product-name">Product Name</label>
                     <input type="text" id="product-name" required placeholder="e.g. Safety Red 2041">
@@ -246,6 +252,11 @@
             <p id="edit-batch-number" class="modal-subtitle"></p>
             <form id="edit-form">
                 <input type="hidden" id="edit-batch-id">
+                <div class="form-group product-type-group">
+                    <label for="edit-product-type">Product Type</label>
+                    <input type="text" id="edit-product-type" autocomplete="off" placeholder="Start typing to search products...">
+                    <div id="edit-product-type-list" class="autocomplete-list hidden"></div>
+                </div>
                 <div class="form-group">
                     <label for="edit-product">Product Name</label>
                     <input type="text" id="edit-product" required>
@@ -432,6 +443,29 @@
             <div id="history-placeholder" class="chart-placeholder">
                 <p>Select a product to view its batch history</p>
             </div>
+        </div>
+    </div>
+
+    <!-- Notes Board -->
+    <div id="notes-board" class="notes-board hidden">
+        <div id="notes-add-section" class="notes-add-section hidden">
+            <h3>Add a Note</h3>
+            <form id="notes-form">
+                <div class="form-group">
+                    <label for="note-subject">Subject</label>
+                    <input type="text" id="note-subject" required placeholder="e.g. Bowl C is down for maintenance">
+                </div>
+                <div class="form-group">
+                    <label for="note-body">Details (optional)</label>
+                    <textarea id="note-body" rows="3" placeholder="Any additional details..."></textarea>
+                </div>
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary">Post Note</button>
+                </div>
+            </form>
+        </div>
+        <div id="notes-list" class="notes-list">
+            <p class="notes-empty">No notes yet.</p>
         </div>
     </div>
 

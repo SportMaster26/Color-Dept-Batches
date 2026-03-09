@@ -367,6 +367,14 @@ header h1 {
     word-break: break-word;
 }
 
+.card-product-type {
+    display: block;
+    font-size: 0.75rem;
+    color: #0065A1;
+    font-weight: 600;
+    margin-bottom: 2px;
+}
+
 .card-status {
     font-size: 0.65rem;
     font-weight: 700;
@@ -767,6 +775,112 @@ header h1 {
     font-size: 1.1rem;
 }
 
+/* ── Notes Board ──────────────────────────────────────────────────── */
+.notes-board {
+    padding: 20px;
+    max-width: 800px;
+    margin: 0 auto;
+}
+
+.notes-add-section {
+    background: #ffffff;
+    border-radius: 10px;
+    padding: 20px 24px;
+    margin-bottom: 24px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.notes-add-section h3 {
+    color: #0065A1;
+    margin-bottom: 14px;
+    font-size: 1.05rem;
+}
+
+.notes-add-section textarea {
+    width: 100%;
+    padding: 10px 12px;
+    border: 2px solid #d0d5dd;
+    border-radius: 6px;
+    background: #ffffff;
+    color: #333;
+    font-size: 0.95rem;
+    font-family: inherit;
+    resize: vertical;
+    transition: border-color 0.15s;
+}
+
+.notes-add-section textarea:focus {
+    outline: none;
+    border-color: #0065A1;
+}
+
+.notes-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.notes-empty {
+    text-align: center;
+    color: #aaa;
+    font-style: italic;
+    padding: 60px 20px;
+    font-size: 1.1rem;
+}
+
+.note-card {
+    background: #ffffff;
+    border-radius: 10px;
+    padding: 16px 20px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+    border-left: 4px solid #0065A1;
+}
+
+.note-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 6px;
+}
+
+.note-subject {
+    font-weight: 700;
+    font-size: 0.95rem;
+    color: #222;
+}
+
+.note-delete-btn {
+    background: none;
+    border: none;
+    color: #cc3333;
+    cursor: pointer;
+    font-size: 0.8rem;
+    font-weight: 600;
+    padding: 2px 6px;
+    border-radius: 4px;
+}
+
+.note-delete-btn:hover {
+    background: #ffeaea;
+}
+
+.note-body {
+    font-size: 0.88rem;
+    color: #555;
+    margin-bottom: 8px;
+    white-space: pre-wrap;
+}
+
+.note-meta {
+    font-size: 0.75rem;
+    color: #999;
+}
+
+.note-meta .note-author {
+    font-weight: 600;
+    color: #667788;
+}
+
 /* ── Drag & Drop ──────────────────────────────────────────────────── */
 .drop-zone {
     flex: 1;
@@ -881,6 +995,54 @@ header h1 {
     justify-content: flex-end;
     gap: 10px;
     margin-top: 20px;
+}
+
+/* ── Product Type Autocomplete ─────────────────────────────────────── */
+.product-type-group {
+    position: relative;
+}
+
+.autocomplete-list {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    max-height: 200px;
+    overflow-y: auto;
+    background: #ffffff;
+    border: 2px solid #0065A1;
+    border-top: none;
+    border-radius: 0 0 6px 6px;
+    z-index: 110;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.autocomplete-list.hidden {
+    display: none;
+}
+
+.autocomplete-item {
+    padding: 8px 12px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    color: #333;
+    border-bottom: 1px solid #eee;
+}
+
+.autocomplete-item:last-child {
+    border-bottom: none;
+}
+
+.autocomplete-item:hover,
+.autocomplete-item.active {
+    background: #e8f0fe;
+    color: #0065A1;
+}
+
+.autocomplete-item .item-number {
+    color: #667788;
+    font-size: 0.8rem;
+    margin-left: 6px;
 }
 
 /* ── Number Pad ────────────────────────────────────────────────────── */
