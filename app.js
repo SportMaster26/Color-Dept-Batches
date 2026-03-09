@@ -18,7 +18,7 @@ const BOWLS = {
 };
 
 // Display order for the lanes
-const BOWL_ORDER = ["A", "B", "C", "D", "E", "F", "G", "H", "I", "The Hull", "Thors Hammer", "TTT", "Stubby", "Ol Iron Sides"];
+const BOWL_ORDER = ["A", "B", "C", "D", "E", "F", "G", "H", "I", "The Hull", "Thors Hammer", "TTT", "Stubby", "Ol Iron Sides", "Latex Department"];
 
 // Status flow configuration
 const STATUS_FLOW = ["queued", "mixing", "mixing_complete", "pouring", "batch_complete"];
@@ -270,6 +270,49 @@ const batchCounterRef = db.ref("meta/batchCounter");
 const recycledNumbersRef = db.ref("meta/recycledNumbers");
 const notesRef = db.ref("notes");
 const customProductsRef = db.ref("meta/customProducts");
+const latexTanksRef = db.ref("latexTanks");
+
+// ── Latex Tank Configuration ─────────────────────────────────────────
+const LATEX_TANKS = [
+    { id: "C1", name: "C#1", capacity: 6000, group: "C Tanks" },
+    { id: "C2", name: "C#2", capacity: 6000, group: "C Tanks" },
+    { id: "C3", name: "C#3", capacity: 6000, group: "C Tanks" },
+    { id: "C4", name: "C#4", capacity: 6000, group: "C Tanks" },
+    { id: "C5", name: "C#5", capacity: 6000, group: "C Tanks" },
+    { id: "C6", name: "C#6", capacity: 6000, group: "C Tanks" },
+    { id: "C7", name: "C#7", capacity: 6000, group: "C Tanks" },
+    { id: "C8", name: "C#8", capacity: 6000, group: "C Tanks" },
+    { id: "TRIPLE_T", name: "TRIPLE T", capacity: 6000, group: "C Tanks" },
+    { id: "BR1", name: "BR#1", capacity: 6000, group: "BR Tanks" },
+    { id: "BR2", name: "BR#2", capacity: 6000, group: "BR Tanks" },
+    { id: "BR3", name: "BR#3", capacity: 6000, group: "BR Tanks" },
+    { id: "BR4", name: "BR#4", capacity: 6000, group: "BR Tanks" },
+    { id: "BR5", name: "BR#5", capacity: 6000, group: "BR Tanks" },
+    { id: "BR6", name: "BR#6", capacity: 6000, group: "BR Tanks" },
+    { id: "BR7", name: "BR#7", capacity: 6000, group: "BR Tanks" },
+    { id: "BR8", name: "BR#8", capacity: 6000, group: "BR Tanks" },
+    { id: "BR9", name: "BR#9", capacity: 6000, group: "BR Tanks" },
+    { id: "BR10", name: "BR#10", capacity: 6000, group: "BR Tanks" },
+    { id: "BR11", name: "BR#11", capacity: 6000, group: "BR Tanks" },
+    { id: "BR12", name: "BR#12", capacity: 6000, group: "BR Tanks" },
+    { id: "BR13", name: "BR#13", capacity: 6000, group: "BR Tanks" },
+    { id: "BR14", name: "BR#14", capacity: 6000, group: "BR Tanks" },
+    { id: "W1", name: "W#1", capacity: 10000, group: "W Tanks" },
+    { id: "W2", name: "W#2", capacity: 10000, group: "W Tanks" },
+    { id: "W3", name: "W#3", capacity: 10000, group: "W Tanks" },
+    { id: "W4", name: "W#4", capacity: 10000, group: "W Tanks" },
+    { id: "W5", name: "W#5", capacity: 10000, group: "W Tanks" },
+    { id: "W6", name: "W#6", capacity: 10000, group: "W Tanks" },
+    { id: "CB", name: "CB", capacity: 275, group: "Totes" },
+    { id: "T1", name: "T1", capacity: 275, group: "Totes" },
+    { id: "T2", name: "T2", capacity: 275, group: "Totes" },
+    { id: "T3", name: "T3", capacity: 275, group: "Totes" },
+    { id: "T4", name: "T4", capacity: 275, group: "Totes" },
+    { id: "T5", name: "T5", capacity: 275, group: "Totes" },
+    { id: "T6", name: "T6", capacity: 275, group: "Totes" },
+];
+
+let latexTankLevels = {}; // { tankId: gallons }
 
 // Load custom products from Firebase and merge into catalog
 customProductsRef.on("value", (snapshot) => {
@@ -361,13 +404,13 @@ function updateAdminUI() {
         document.body.classList.add("viewer-mode");
         document.body.classList.remove("admin-mode", "operator-mode");
     }
-    // Latex tab: only visible to specific users
+    // Latex tab: visible to all logged-in users (except floor/platform)
     const user = auth.currentUser;
     const userEmail = user ? user.email : "";
-    tabLatex.classList.toggle("hidden", !LATEX_TAB_USERS.includes(userEmail));
+    const isFloorOrPlatform = userEmail === "floor@colordept.local" || userEmail === "platform@colordept.local";
+    tabLatex.classList.toggle("hidden", isFloorOrPlatform);
 
     // Notes tab: hide from floor and platform operators
-    const isFloorOrPlatform = userEmail === "floor@colordept.local" || userEmail === "platform@colordept.local";
     tabNotes.classList.toggle("hidden", isFloorOrPlatform);
 
     // Only TJ (tmahl) and Kevin (kherrin) can add notes
@@ -673,57 +716,131 @@ function render() {
     updateUndoBtn();
 }
 
-// ── Latex Department Board ────────────────────────────────────────────
+// ── Latex Department — Tank Level Tracker ─────────────────────────────
+
+function getTankFillColor(pct) {
+    if (pct <= 0) return "#e0e0e0";
+    if (pct < 20) return "#ef4444";
+    if (pct < 50) return "#f59e0b";
+    return "#22c55e";
+}
+
+function createTankSVG(tank, gallons) {
+    const capacity = tank.capacity;
+    const pct = Math.min(100, Math.max(0, (gallons / capacity) * 100));
+    const fillColor = getTankFillColor(pct);
+
+    // Tank body: 80x120 viewBox, fill rises from bottom
+    const fillHeight = (pct / 100) * 80; // max body height is 80 (y 20..100)
+    const fillY = 100 - fillHeight;
+
+    return `
+    <svg viewBox="0 0 80 120" class="tank-svg" xmlns="http://www.w3.org/2000/svg">
+        <!-- Tank body -->
+        <rect x="10" y="20" width="60" height="80" rx="4" ry="4" fill="#d1d5db" stroke="#6b7280" stroke-width="2"/>
+        <!-- Fill level (clipped to body) -->
+        <clipPath id="clip-${tank.id}">
+            <rect x="10" y="20" width="60" height="80" rx="4" ry="4"/>
+        </clipPath>
+        <rect x="10" y="${fillY}" width="60" height="${fillHeight}" fill="${fillColor}" clip-path="url(#clip-${tank.id})"/>
+        <!-- Top dome / cap -->
+        <path d="M10,24 Q10,10 40,8 Q70,10 70,24" fill="#9ca3af" stroke="#6b7280" stroke-width="2"/>
+        <!-- Pipe on top -->
+        <rect x="35" y="2" width="10" height="8" rx="2" fill="#9ca3af" stroke="#6b7280" stroke-width="1.5"/>
+        <!-- Legs -->
+        <rect x="14" y="100" width="6" height="14" rx="1" fill="#6b7280"/>
+        <rect x="60" y="100" width="6" height="14" rx="1" fill="#6b7280"/>
+        <!-- Level lines -->
+        <line x1="12" y1="40" x2="18" y2="40" stroke="#6b7280" stroke-width="0.8" opacity="0.5"/>
+        <line x1="12" y1="60" x2="18" y2="60" stroke="#6b7280" stroke-width="0.8" opacity="0.5"/>
+        <line x1="12" y1="80" x2="18" y2="80" stroke="#6b7280" stroke-width="0.8" opacity="0.5"/>
+    </svg>`;
+}
+
 function renderLatexBoard() {
     latexBoard.innerHTML = "";
-    const bowlKey = "Latex Department";
-    const bowl = BOWLS[bowlKey];
 
-    const lane = document.createElement("div");
-    lane.className = "lane";
-    lane.dataset.bowl = bowlKey;
-
-    const header = document.createElement("div");
-    header.className = "lane-header";
-    header.innerHTML = `
-        <span class="lane-name">${bowl.name}</span>
-        <span class="lane-capacity">${bowl.group}</span>
-    `;
-    lane.appendChild(header);
-
-    const dropZone = document.createElement("div");
-    dropZone.className = "drop-zone";
-    dropZone.dataset.bowl = bowlKey;
-
-    if (isAdmin) {
-        dropZone.addEventListener("dragover", handleDragOver);
-        dropZone.addEventListener("drop", handleDrop);
-        dropZone.addEventListener("dragenter", handleDragEnter);
-        dropZone.addEventListener("dragleave", handleDragLeave);
+    const groups = {};
+    for (const tank of LATEX_TANKS) {
+        if (!groups[tank.group]) groups[tank.group] = [];
+        groups[tank.group].push(tank);
     }
 
-    const laneBatches = batches
-        .filter((b) => b.bowl === bowlKey && b.status !== "batch_complete")
-        .sort((a, b) => {
-            const numA = a.batchNumber ? parseInt(a.batchNumber.slice(1)) : Infinity;
-            const numB = b.batchNumber ? parseInt(b.batchNumber.slice(1)) : Infinity;
-            return numA - numB;
-        });
+    for (const [groupName, tanks] of Object.entries(groups)) {
+        const section = document.createElement("div");
+        section.className = "tank-group";
 
-    if (laneBatches.length === 0) {
-        const empty = document.createElement("div");
-        empty.className = "batch-card empty";
-        empty.textContent = "No batches";
-        dropZone.appendChild(empty);
+        const header = document.createElement("h3");
+        header.className = "tank-group-header";
+        header.textContent = groupName;
+        section.appendChild(header);
+
+        const grid = document.createElement("div");
+        grid.className = "tank-grid";
+
+        for (const tank of tanks) {
+            const gallons = latexTankLevels[tank.id] || 0;
+            const pct = Math.min(100, Math.max(0, (gallons / tank.capacity) * 100));
+
+            const card = document.createElement("div");
+            card.className = "tank-card";
+            card.innerHTML = `
+                <div class="tank-visual">
+                    ${createTankSVG(tank, gallons)}
+                </div>
+                <div class="tank-label">${escapeHtml(tank.name)}</div>
+                <div class="tank-level-display">${gallons.toLocaleString()} <span class="tank-unit">gal</span></div>
+                <div class="tank-pct">${Math.round(pct)}%</div>
+                <div class="tank-capacity">${tank.capacity.toLocaleString()} gal max</div>
+                <input type="number" class="tank-input hidden" min="0" max="${tank.capacity}" value="${gallons}" data-tank-id="${tank.id}">
+            `;
+
+            // Click to edit (admins & latex tab users)
+            card.addEventListener("click", (e) => {
+                if (e.target.classList.contains("tank-input")) return;
+                const user = auth.currentUser;
+                if (!user) return;
+
+                const input = card.querySelector(".tank-input");
+                input.classList.remove("hidden");
+                input.focus();
+                input.select();
+            });
+
+            const input = card.querySelector(".tank-input");
+            if (input) {
+                input.addEventListener("blur", () => saveTankLevel(input));
+                input.addEventListener("keydown", (e) => {
+                    if (e.key === "Enter") {
+                        e.preventDefault();
+                        saveTankLevel(input);
+                    }
+                });
+            }
+
+            grid.appendChild(card);
+        }
+
+        section.appendChild(grid);
+        latexBoard.appendChild(section);
     }
-
-    for (const batch of laneBatches) {
-        dropZone.appendChild(createBatchCard(batch));
-    }
-
-    lane.appendChild(dropZone);
-    latexBoard.appendChild(lane);
 }
+
+function saveTankLevel(input) {
+    const tankId = input.dataset.tankId;
+    const tank = LATEX_TANKS.find(t => t.id === tankId);
+    let val = parseInt(input.value) || 0;
+    if (val < 0) val = 0;
+    if (tank && val > tank.capacity) val = tank.capacity;
+    input.classList.add("hidden");
+    latexTanksRef.child(tankId).set(val);
+}
+
+// Listen for tank level changes from Firebase
+latexTanksRef.on("value", (snapshot) => {
+    latexTankLevels = snapshot.val() || {};
+    if (activeTab === "latex") renderLatexBoard();
+});
 
 // ── Completed Tab: Table / Chart / Export ────────────────────────────
 let completedView = "table"; // "table" or "chart"

@@ -1261,6 +1261,110 @@ header h1 {
     color: #fff;
 }
 
+/* ── Latex Tank Tracker ────────────────────────────────────────────── */
+.latex-board {
+    padding: 20px;
+}
+
+.tank-group {
+    margin-bottom: 28px;
+}
+
+.tank-group-header {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #0065A1;
+    padding: 8px 4px;
+    border-bottom: 2px solid #d0d5dd;
+    margin-bottom: 12px;
+}
+
+.tank-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+    gap: 12px;
+}
+
+.tank-card {
+    background: #f5f7fa;
+    border: 1px solid #e0e4ea;
+    border-radius: 10px;
+    padding: 12px 8px 10px;
+    text-align: center;
+    cursor: pointer;
+    transition: box-shadow 0.15s, transform 0.1s;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.tank-card:hover {
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.1);
+    transform: translateY(-2px);
+}
+
+.tank-visual {
+    width: 70px;
+    height: 100px;
+    margin-bottom: 6px;
+}
+
+.tank-svg {
+    width: 100%;
+    height: 100%;
+}
+
+.tank-label {
+    font-weight: 700;
+    font-size: 0.9rem;
+    color: #333;
+    margin-bottom: 2px;
+}
+
+.tank-level-display {
+    font-size: 1.05rem;
+    font-weight: 800;
+    color: #222;
+}
+
+.tank-unit {
+    font-weight: 500;
+    font-size: 0.75rem;
+    color: #667788;
+}
+
+.tank-pct {
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: #0065A1;
+    margin-top: 1px;
+}
+
+.tank-capacity {
+    font-size: 0.7rem;
+    color: #999;
+    margin-top: 1px;
+}
+
+.tank-input {
+    width: 90px;
+    padding: 6px 8px;
+    border: 2px solid #0065A1;
+    border-radius: 6px;
+    font-size: 0.95rem;
+    font-weight: 700;
+    text-align: center;
+    color: #333;
+    background: #fff;
+    margin-top: 6px;
+}
+
+.tank-input:focus {
+    outline: none;
+    border-color: #D4952B;
+    box-shadow: 0 0 0 3px rgba(212, 149, 43, 0.2);
+}
+
 /* ── Responsive ────────────────────────────────────────────────────── */
 @media (max-width: 600px) {
     header {
@@ -1291,6 +1395,15 @@ header h1 {
 
     .completed-board {
         grid-template-columns: 1fr;
+        padding: 12px;
+    }
+
+    .tank-grid {
+        grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+        gap: 8px;
+    }
+
+    .latex-board {
         padding: 12px;
     }
 }
