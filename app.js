@@ -730,6 +730,10 @@ function createTankSVG(tank, gallons) {
     const pct = Math.min(100, Math.max(0, (gallons / capacity) * 100));
     const fillColor = getTankFillColor(pct);
 
+    if (tank.group === "Totes") {
+        return createToteSVG(tank, gallons, pct, fillColor);
+    }
+
     // Tank body: 80x120 viewBox, fill rises from bottom
     const fillHeight = (pct / 100) * 80; // max body height is 80 (y 20..100)
     const fillY = 100 - fillHeight;
@@ -754,6 +758,40 @@ function createTankSVG(tank, gallons) {
         <line x1="12" y1="40" x2="18" y2="40" stroke="#6b7280" stroke-width="0.8" opacity="0.5"/>
         <line x1="12" y1="60" x2="18" y2="60" stroke="#6b7280" stroke-width="0.8" opacity="0.5"/>
         <line x1="12" y1="80" x2="18" y2="80" stroke="#6b7280" stroke-width="0.8" opacity="0.5"/>
+    </svg>`;
+}
+
+function createToteSVG(tank, gallons, pct, fillColor) {
+    // IBC tote: cube container in a metal cage on a pallet
+    const bodyH = 60; // inner container height (y 14..74)
+    const fillHeight = (pct / 100) * bodyH;
+    const fillY = 74 - fillHeight;
+
+    return `
+    <svg viewBox="0 0 80 110" class="tank-svg" xmlns="http://www.w3.org/2000/svg">
+        <!-- Pallet base -->
+        <rect x="6" y="82" width="68" height="8" rx="2" fill="#a07040" stroke="#7a5530" stroke-width="1.5"/>
+        <rect x="10" y="90" width="10" height="6" rx="1" fill="#8b6035"/>
+        <rect x="35" y="90" width="10" height="6" rx="1" fill="#8b6035"/>
+        <rect x="60" y="90" width="10" height="6" rx="1" fill="#8b6035"/>
+        <!-- Metal cage frame -->
+        <rect x="8" y="12" width="64" height="70" rx="2" ry="2" fill="none" stroke="#9ca3af" stroke-width="2"/>
+        <!-- Cage cross bars -->
+        <line x1="8" y1="36" x2="72" y2="36" stroke="#9ca3af" stroke-width="1" opacity="0.5"/>
+        <line x1="8" y1="56" x2="72" y2="56" stroke="#9ca3af" stroke-width="1" opacity="0.5"/>
+        <line x1="28" y1="12" x2="28" y2="82" stroke="#9ca3af" stroke-width="1" opacity="0.4"/>
+        <line x1="52" y1="12" x2="52" y2="82" stroke="#9ca3af" stroke-width="1" opacity="0.4"/>
+        <!-- Inner container (white plastic) -->
+        <rect x="12" y="14" width="56" height="66" rx="1" ry="1" fill="#e8ecf0" stroke="#d0d5dd" stroke-width="1"/>
+        <!-- Fill level -->
+        <clipPath id="clip-${tank.id}">
+            <rect x="12" y="14" width="56" height="66" rx="1" ry="1"/>
+        </clipPath>
+        <rect x="12" y="${fillY}" width="56" height="${fillHeight + 6}" fill="${fillColor}" opacity="0.85" clip-path="url(#clip-${tank.id})"/>
+        <!-- Cap / valve on top -->
+        <rect x="34" y="6" width="12" height="8" rx="3" fill="#9ca3af" stroke="#6b7280" stroke-width="1.5"/>
+        <!-- Valve at bottom -->
+        <rect x="60" y="72" width="14" height="6" rx="2" fill="#9ca3af" stroke="#6b7280" stroke-width="1"/>
     </svg>`;
 }
 
@@ -840,6 +878,20 @@ function saveTankLevel(input) {
 latexTanksRef.on("value", (snapshot) => {
     latexTankLevels = snapshot.val() || {};
     if (activeTab === "latex") renderLatexBoard();
+});
+
+// Seed initial tank levels if none exist yet (one-time)
+latexTanksRef.once("value", (snapshot) => {
+    if (snapshot.exists()) return;
+    const seed = {
+        C1: 4000, C2: 5500, C3: 4200, C4: 3100, C5: 5500, C6: 4700, C7: 2700, C8: 4500,
+        TRIPLE_T: 4300,
+        BR1: 5289, BR2: 0, BR3: 6055, BR4: 1458, BR5: 5548, BR6: 4155, BR7: 2800,
+        BR8: 5000, BR9: 5400, BR10: 5000, BR11: 2200, BR12: 300, BR13: 5200, BR14: 0,
+        W1: 6900, W2: 1500, W3: 6400, W4: 4300, W5: 7000, W6: 9000,
+        CB: 1, T1: 6, T2: 15, T3: 16, T4: 29, T5: 13, T6: 9,
+    };
+    latexTanksRef.set(seed);
 });
 
 // ── Completed Tab: Table / Chart / Export ────────────────────────────
