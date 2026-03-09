@@ -367,6 +367,14 @@ header h1 {
     word-break: break-word;
 }
 
+.card-product-type {
+    display: block;
+    font-size: 0.75rem;
+    color: #0065A1;
+    font-weight: 600;
+    margin-bottom: 2px;
+}
+
 .card-status {
     font-size: 0.65rem;
     font-weight: 700;
@@ -881,6 +889,54 @@ header h1 {
     justify-content: flex-end;
     gap: 10px;
     margin-top: 20px;
+}
+
+/* ── Product Type Autocomplete ─────────────────────────────────────── */
+.product-type-group {
+    position: relative;
+}
+
+.autocomplete-list {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    max-height: 200px;
+    overflow-y: auto;
+    background: #ffffff;
+    border: 2px solid #0065A1;
+    border-top: none;
+    border-radius: 0 0 6px 6px;
+    z-index: 110;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.autocomplete-list.hidden {
+    display: none;
+}
+
+.autocomplete-item {
+    padding: 8px 12px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    color: #333;
+    border-bottom: 1px solid #eee;
+}
+
+.autocomplete-item:last-child {
+    border-bottom: none;
+}
+
+.autocomplete-item:hover,
+.autocomplete-item.active {
+    background: #e8f0fe;
+    color: #0065A1;
+}
+
+.autocomplete-item .item-number {
+    color: #667788;
+    font-size: 0.8rem;
+    margin-left: 6px;
 }
 
 /* ── Number Pad ────────────────────────────────────────────────────── */
