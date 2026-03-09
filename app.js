@@ -420,6 +420,7 @@ viewChartBtn.addEventListener("click", () => {
 });
 
 viewHistoryBtn.addEventListener("click", () => {
+    if (!canSeeProductHistory()) return;
     setCompletedView("history");
     populateHistoryProductList();
 });
@@ -462,10 +463,25 @@ function getCompletedRows() {
         });
 }
 
+const PRODUCT_HISTORY_USERS = [
+    "ajolly@colordept.local",
+    "jeff@colordept.local",
+    "dpanyard@colordept.local",
+    "hhudak@colordept.local",
+];
+
+function canSeeProductHistory() {
+    const user = auth.currentUser;
+    return user && PRODUCT_HISTORY_USERS.includes(user.email);
+}
+
 function renderCompleted() {
     const rows = getCompletedRows();
     const tbody = document.getElementById("completed-table-body");
     const toolbar = document.querySelector(".completed-toolbar");
+
+    // Show/hide Product History button based on user
+    viewHistoryBtn.classList.toggle("hidden", !canSeeProductHistory());
 
     if (rows.length === 0) {
         tbody.innerHTML = `<tr><td colspan="16" class="completed-empty">No completed batches</td></tr>`;
