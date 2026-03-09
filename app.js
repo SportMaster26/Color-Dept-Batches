@@ -81,34 +81,34 @@ let PRODUCT_CATALOG = [
     "SEALMASTER CONCRETE CRACK SEALANT – M1355G",
     "DUST SUPPRESSANT/SOIL STABILIZER – S4000",
     // COLORPLUS
-    "LIGHT GREEN – C1372",
-    "FOREST GREEN – C1374",
-    "DARK GREEN – C1373",
-    "ICE BLUE – C1383",
-    "LIGHT BLUE – C1385",
-    "BLUE – C1384",
-    "DOVE GRAY – C1399",
-    "GRAY – C1380",
-    "YELLOW – C1390",
-    "SANDSTONE – C1389",
-    "BEIGE – C1378",
-    "ORANGE – C1379",
-    "RED – C1370",
-    "BRITE RED – C1392",
-    "MAROON – C1386",
-    "TOURNAMENT PURPLE – C1388",
-    "BLACK DISPERSION – C1660",
-    "DARK BLUE – C1131",
-    "LT BLUE – C1132",
+    "LIGHT GREEN COLORPLUS – C1372",
+    "FOREST GREEN COLORPLUS – C1374",
+    "DARK GREEN COLORPLUS – C1373",
+    "ICE BLUE COLORPLUS – C1383",
+    "LIGHT BLUE COLORPLUS – C1385",
+    "BLUE COLORPLUS – C1384",
+    "DOVE GRAY COLORPLUS – C1399",
+    "GRAY COLORPLUS – C1380",
+    "YELLOW COLORPLUS – C1390",
+    "SANDSTONE COLORPLUS – C1389",
+    "BEIGE COLORPLUS – C1378",
+    "ORANGE COLORPLUS – C1379",
+    "RED COLORPLUS – C1370",
+    "BRITE RED COLORPLUS – C1392",
+    "MAROON COLORPLUS – C1386",
+    "TOURNAMENT PURPLE COLORPLUS – C1388",
+    "BLACK DISPERSION COLORPLUS – C1660",
+    "DARK BLUE COLORPLUS – C1131",
+    "LT BLUE COLORPLUS – C1132",
     // BARN PAINTS / FARMPAINT PRODUCTS
-    "FP300 – B3000",
-    "WHITE – B2425",
-    "RED – B2405",
-    "GREEN – B2395",
-    "BROWN – B2385",
-    "GRAY – B2435",
-    "10 YEAR – B1348",
-    "7 YEAR – B1349",
+    "FP300 BARN FARMPAINT – B3000",
+    "WHITE BARN FARMPAINT – B2425",
+    "RED BARN FARMPAINT – B2405",
+    "GREEN BARN FARMPAINT – B2395",
+    "BROWN BARN FARMPAINT – B2385",
+    "GRAY BARN FARMPAINT – B2435",
+    "10 YEAR BARN FARMPAINT – B1348",
+    "7 YEAR BARN FARMPAINT – B1349",
     // STRIPING PAINTS
     "WHITE STRIPE – M1200P",
     "YELLOW STRIPE – M1210P",
@@ -139,31 +139,31 @@ let PRODUCT_CATALOG = [
     "PICKLEMASTER RTU BASE – C1299P",
     // JETCOAT BARN PAINTS
     "JETCOAT BLACK (HALLOWEEN) – JC66765",
-    "RED – JC66405",
-    "GRAY – JC66435",
-    "WHITE – JC66425",
-    "GREEN – JC66395",
+    "RED JETCOAT BARN PAINT – JC66405",
+    "GRAY JETCOAT BARN PAINT – JC66435",
+    "WHITE JETCOAT BARN PAINT – JC66425",
+    "GREEN JETCOAT BARN PAINT – JC66395",
     // JETCOAT REFLECTIVES
     "7 YEAR FARM PRIDE – JC66491",
     "7 YEAR COOL KING – JC66201",
     // COLOR CONCENTRATES
-    "LIGHT GREEN – C1050",
-    "FOREST GREEN – C1030",
-    "DARK GREEN – C1082",
-    "BEIGE – C1000",
-    "BLUE – C1010",
-    "RED – C1070",
-    "MAROON – C1060",
-    "GRAY – C1040",
+    "LIGHT GREEN COLOR CONCENTRATE – C1050",
+    "FOREST GREEN COLOR CONCENTRATE – C1030",
+    "DARK GREEN COLOR CONCENTRATE – C1082",
+    "BEIGE COLOR CONCENTRATE – C1000",
+    "BLUE COLOR CONCENTRATE – C1010",
+    "RED COLOR CONCENTRATE – C1070",
+    "MAROON COLOR CONCENTRATE – C1060",
+    "GRAY COLOR CONCENTRATE – C1040",
     // COLOR CONCENTRATE WITH SAND
-    "LIGHT GREEN – C1150",
-    "FOREST GREEN – C1130",
-    "DARK GREEN – C1182",
-    "BEIGE – C1100",
-    "BLUE – C1110",
-    "RED – C1170",
-    "MAROON – C1160",
-    "GRAY – C1140",
+    "LIGHT GREEN COLOR CONCENTRATE W/ SAND – C1150",
+    "FOREST GREEN COLOR CONCENTRATE W/ SAND – C1130",
+    "DARK GREEN COLOR CONCENTRATE W/ SAND – C1182",
+    "BEIGE COLOR CONCENTRATE W/ SAND – C1100",
+    "BLUE COLOR CONCENTRATE W/ SAND – C1110",
+    "RED COLOR CONCENTRATE W/ SAND – C1170",
+    "MAROON COLOR CONCENTRATE W/ SAND – C1160",
+    "GRAY COLOR CONCENTRATE W/ SAND – C1140",
     // READY-MIX
     "SPORTMASTER NEUTRAL READY-MIX – C1285P",
     // COURTFLEX / PATCH / MAGIC
@@ -180,19 +180,19 @@ let PRODUCT_CATALOG = [
     "CLEAR CRACK SEALANT – C1530G",
     "TRACKFLEX CRACK SEALANT – C1760G",
     // SEALBEST PRODUCTS
-    "CONCRETE SEALER – H4100",
-    "ULTRA GLOSS – H4111",
-    "10 YEAR – H3000",
-    "15 YEAR – H3275",
-    "SHINGLE SAVER – H3600",
-    "ROOF PATCH – H3200",
-    "GRAYSHIELD – H3500",
-    "DUCK COAT BASEMENT – H2981",
-    "WHITE DUCK COAT – H3115",
-    "BLACK DUCK COAT – H3125",
-    "DUCK PATCH – H2986",
-    "OIL SPOT PRIMER – H5900",
-    "ROOF CLEANER – H3693",
+    "SEALBEST CONCRETE SEALER – H4100",
+    "SEALBEST ULTRA GLOSS – H4111",
+    "SEALBEST 10 YEAR – H3000",
+    "SEALBEST 15 YEAR – H3275",
+    "SEALBEST SHINGLE SAVER – H3600",
+    "SEALBEST ROOF PATCH – H3200",
+    "SEALBEST GRAYSHIELD – H3500",
+    "SEALBEST DUCK COAT BASEMENT – H2981",
+    "SEALBEST WHITE DUCK COAT – H3115",
+    "SEALBEST BLACK DUCK COAT – H3125",
+    "SEALBEST DUCK PATCH – H2986",
+    "SEALBEST OIL SPOT PRIMER – H5900",
+    "SEALBEST ROOF CLEANER – H3693",
     // TRACKMASTER PRO
     "PRO LOCK (4076) – C1742",
     "PRO TACK (5051) – C1744",
@@ -243,16 +243,16 @@ let PRODUCT_CATALOG = [
     "FSA AE – M1172P",
     "BLACK POLY – M1234T",
     // SEALBEST SPECIAL ORDERS
-    "NEUTRAL PATCH – 8600",
-    "RED PATCH – H8601",
-    "GREEN PATCH – H8602",
-    "WHITE STRIPE – H7700",
-    "YELLOW STRIPE – H7703",
-    "FED WHITE – H7710",
-    "FED YELLOW – H7713",
-    "LINE BLOCKOUT – H7730",
-    "TEXTURED T/C LINE PAINT – H8605",
-    "HANDICAP BLUE – H7720",
+    "SEALBEST NEUTRAL PATCH – 8600",
+    "SEALBEST RED PATCH – H8601",
+    "SEALBEST GREEN PATCH – H8602",
+    "SEALBEST WHITE STRIPE – H7700",
+    "SEALBEST YELLOW STRIPE – H7703",
+    "SEALBEST FED WHITE – H7710",
+    "SEALBEST FED YELLOW – H7713",
+    "SEALBEST LINE BLOCKOUT – H7730",
+    "SEALBEST TEXTURED T/C LINE PAINT – H8605",
+    "SEALBEST HANDICAP BLUE – H7720",
     // RV COATINGS
     "RV 15 YEAR – H3137",
     "RV ROOF CLEANER – H3143",
@@ -1186,15 +1186,12 @@ function createBatchCard(batch) {
 
     const batchNumDisplay = batch.batchNumber ? `<span class="card-batch-number">${escapeHtml(batch.batchNumber)}</span>` : "";
 
-    const productTypeDisplay = batch.productType ? `<span class="card-product-type">${escapeHtml(batch.productType)}</span>` : "";
-
     card.innerHTML = `
         <div class="card-top">
             <span class="card-product">${batchNumDisplay}${escapeHtml(batch.product)}</span>
             <span class="card-status">${statusLabel}</span>
         </div>
         <div class="card-details">
-            ${productTypeDisplay}
             ${packagingDisplay}
             ${extraInfo}
             ${batch.notes ? `<span class="card-notes">${escapeHtml(batch.notes)}</span>` : ""}
@@ -1681,8 +1678,7 @@ function openEditModal(id) {
 
     document.getElementById("edit-batch-id").value = batch.id;
     document.getElementById("edit-batch-number").textContent = batch.batchNumber || "";
-    document.getElementById("edit-product-type").value = batch.productType || "";
-    document.getElementById("edit-product").value = batch.product || "";
+    document.getElementById("edit-product-type").value = batch.product || "";
     document.getElementById("edit-packaging").value = batch.packaging || "";
     document.getElementById("edit-unit-count").value = batch.unitCount || "";
     document.getElementById("edit-viscosity").value = batch.viscosity || "";
@@ -1708,8 +1704,7 @@ editForm.addEventListener("submit", (e) => {
     const batch = batches.find((b) => b.id === id);
     if (!batch) return;
 
-    batch.productType = document.getElementById("edit-product-type").value.trim() || null;
-    batch.product = document.getElementById("edit-product").value.trim();
+    batch.product = document.getElementById("edit-product-type").value.trim();
     batch.packaging = document.getElementById("edit-packaging").value || null;
     const uc = document.getElementById("edit-unit-count").value.trim();
     batch.unitCount = uc ? Number(uc) : null;
@@ -1718,10 +1713,10 @@ editForm.addEventListener("submit", (e) => {
     batch.pouredBy = document.getElementById("edit-poured-by").value.trim() || null;
     batch.notes = document.getElementById("edit-notes").value.trim() || null;
 
-    // Save custom product type if not already in catalog
-    if (batch.productType && !PRODUCT_CATALOG.includes(batch.productType)) {
-        PRODUCT_CATALOG.push(batch.productType);
-        customProductsRef.push(batch.productType);
+    // Save custom product if not already in catalog
+    if (batch.product && !PRODUCT_CATALOG.includes(batch.product)) {
+        PRODUCT_CATALOG.push(batch.product);
+        customProductsRef.push(batch.product);
     }
 
     batchesRef.child(id).update(batch);
@@ -1747,7 +1742,7 @@ const batchForm = document.getElementById("batch-form");
 document.getElementById("add-batch-btn").addEventListener("click", () => {
     if (!isAdmin) return;
     modalOverlay.classList.remove("hidden");
-    document.getElementById("product-name").focus();
+    document.getElementById("product-type-input").focus();
 });
 
 document.getElementById("cancel-btn").addEventListener("click", () => {
@@ -1831,8 +1826,7 @@ batchForm.addEventListener("submit", (e) => {
     e.preventDefault();
     if (!isAdmin) return;
 
-    const productType = document.getElementById("product-type-input").value.trim();
-    const product = document.getElementById("product-name").value.trim();
+    const product = document.getElementById("product-type-input").value.trim();
     const bowl = document.getElementById("bowl-select").value;
     const packaging = document.getElementById("batch-packaging").value;
     const unitCountVal = document.getElementById("batch-unit-count").value.trim();
@@ -1852,7 +1846,6 @@ batchForm.addEventListener("submit", (e) => {
         const batch = {
             id: generateId(),
             batchNumber,
-            productType: productType || null,
             product,
             bowl,
             packaging: packaging || null,
@@ -1899,10 +1892,10 @@ batchForm.addEventListener("submit", (e) => {
         }
     });
 
-    // Save custom product type if not already in catalog
-    if (productType && !PRODUCT_CATALOG.includes(productType)) {
-        PRODUCT_CATALOG.push(productType);
-        customProductsRef.push(productType);
+    // Save custom product if not already in catalog
+    if (product && !PRODUCT_CATALOG.includes(product)) {
+        PRODUCT_CATALOG.push(product);
+        customProductsRef.push(product);
     }
 
     batchForm.reset();
@@ -1939,14 +1932,10 @@ function renderNotes() {
     list.innerHTML = siteNotes.map((note) => {
         const date = new Date(note.createdAt);
         const timestamp = date.toLocaleString("en-US", { month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit" });
-        const deleteBtn = (userEmail === note.authorEmail || isAdmin)
-            ? `<button class="note-delete-btn" data-note-id="${note.id}">Delete</button>`
-            : "";
         return `
             <div class="note-card">
                 <div class="note-card-header">
                     <span class="note-subject">${formatNoteDate(note.subject)}</span>
-                    ${deleteBtn}
                 </div>
                 ${note.body ? `<div class="note-body">${escapeHtml(note.body)}</div>` : ""}
                 <div class="note-meta">
@@ -1955,15 +1944,6 @@ function renderNotes() {
             </div>
         `;
     }).join("");
-
-    list.querySelectorAll(".note-delete-btn").forEach((btn) => {
-        btn.addEventListener("click", () => {
-            const noteId = btn.dataset.noteId;
-            if (confirm("Delete this note?")) {
-                notesRef.child(noteId).remove();
-            }
-        });
-    });
 }
 
 const notesForm = document.getElementById("notes-form");
