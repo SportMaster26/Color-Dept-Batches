@@ -404,13 +404,13 @@ function updateAdminUI() {
         document.body.classList.add("viewer-mode");
         document.body.classList.remove("admin-mode", "operator-mode");
     }
-    // Latex tab: only visible to specific users
+    // Latex tab: visible to all logged-in users (except floor/platform)
     const user = auth.currentUser;
     const userEmail = user ? user.email : "";
-    tabLatex.classList.toggle("hidden", !LATEX_TAB_USERS.includes(userEmail));
+    const isFloorOrPlatform = userEmail === "floor@colordept.local" || userEmail === "platform@colordept.local";
+    tabLatex.classList.toggle("hidden", isFloorOrPlatform);
 
     // Notes tab: hide from floor and platform operators
-    const isFloorOrPlatform = userEmail === "floor@colordept.local" || userEmail === "platform@colordept.local";
     tabNotes.classList.toggle("hidden", isFloorOrPlatform);
 
     // Only TJ (tmahl) and Kevin (kherrin) can add notes
@@ -799,7 +799,7 @@ function renderLatexBoard() {
             card.addEventListener("click", (e) => {
                 if (e.target.classList.contains("tank-input")) return;
                 const user = auth.currentUser;
-                if (!user || !LATEX_TAB_USERS.includes(user.email)) return;
+                if (!user) return;
 
                 const input = card.querySelector(".tank-input");
                 input.classList.remove("hidden");
