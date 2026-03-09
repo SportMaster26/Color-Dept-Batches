@@ -1186,15 +1186,12 @@ function createBatchCard(batch) {
 
     const batchNumDisplay = batch.batchNumber ? `<span class="card-batch-number">${escapeHtml(batch.batchNumber)}</span>` : "";
 
-    const productTypeDisplay = batch.productType ? `<span class="card-product-type">${escapeHtml(batch.productType)}</span>` : "";
-
     card.innerHTML = `
         <div class="card-top">
             <span class="card-product">${batchNumDisplay}${escapeHtml(batch.product)}</span>
             <span class="card-status">${statusLabel}</span>
         </div>
         <div class="card-details">
-            ${productTypeDisplay}
             ${packagingDisplay}
             ${extraInfo}
             ${batch.notes ? `<span class="card-notes">${escapeHtml(batch.notes)}</span>` : ""}
@@ -1681,8 +1678,7 @@ function openEditModal(id) {
 
     document.getElementById("edit-batch-id").value = batch.id;
     document.getElementById("edit-batch-number").textContent = batch.batchNumber || "";
-    document.getElementById("edit-product-type").value = batch.productType || "";
-    document.getElementById("edit-product").value = batch.product || "";
+    document.getElementById("edit-product-type").value = batch.product || "";
     document.getElementById("edit-packaging").value = batch.packaging || "";
     document.getElementById("edit-unit-count").value = batch.unitCount || "";
     document.getElementById("edit-viscosity").value = batch.viscosity || "";
@@ -1708,8 +1704,7 @@ editForm.addEventListener("submit", (e) => {
     const batch = batches.find((b) => b.id === id);
     if (!batch) return;
 
-    batch.productType = document.getElementById("edit-product-type").value.trim() || null;
-    batch.product = document.getElementById("edit-product").value.trim();
+    batch.product = document.getElementById("edit-product-type").value.trim();
     batch.packaging = document.getElementById("edit-packaging").value || null;
     const uc = document.getElementById("edit-unit-count").value.trim();
     batch.unitCount = uc ? Number(uc) : null;
@@ -1718,10 +1713,10 @@ editForm.addEventListener("submit", (e) => {
     batch.pouredBy = document.getElementById("edit-poured-by").value.trim() || null;
     batch.notes = document.getElementById("edit-notes").value.trim() || null;
 
-    // Save custom product type if not already in catalog
-    if (batch.productType && !PRODUCT_CATALOG.includes(batch.productType)) {
-        PRODUCT_CATALOG.push(batch.productType);
-        customProductsRef.push(batch.productType);
+    // Save custom product if not already in catalog
+    if (batch.product && !PRODUCT_CATALOG.includes(batch.product)) {
+        PRODUCT_CATALOG.push(batch.product);
+        customProductsRef.push(batch.product);
     }
 
     batchesRef.child(id).update(batch);
@@ -1747,7 +1742,7 @@ const batchForm = document.getElementById("batch-form");
 document.getElementById("add-batch-btn").addEventListener("click", () => {
     if (!isAdmin) return;
     modalOverlay.classList.remove("hidden");
-    document.getElementById("product-name").focus();
+    document.getElementById("product-type-input").focus();
 });
 
 document.getElementById("cancel-btn").addEventListener("click", () => {
@@ -1831,8 +1826,7 @@ batchForm.addEventListener("submit", (e) => {
     e.preventDefault();
     if (!isAdmin) return;
 
-    const productType = document.getElementById("product-type-input").value.trim();
-    const product = document.getElementById("product-name").value.trim();
+    const product = document.getElementById("product-type-input").value.trim();
     const bowl = document.getElementById("bowl-select").value;
     const packaging = document.getElementById("batch-packaging").value;
     const unitCountVal = document.getElementById("batch-unit-count").value.trim();
@@ -1852,7 +1846,6 @@ batchForm.addEventListener("submit", (e) => {
         const batch = {
             id: generateId(),
             batchNumber,
-            productType: productType || null,
             product,
             bowl,
             packaging: packaging || null,
@@ -1899,10 +1892,10 @@ batchForm.addEventListener("submit", (e) => {
         }
     });
 
-    // Save custom product type if not already in catalog
-    if (productType && !PRODUCT_CATALOG.includes(productType)) {
-        PRODUCT_CATALOG.push(productType);
-        customProductsRef.push(productType);
+    // Save custom product if not already in catalog
+    if (product && !PRODUCT_CATALOG.includes(product)) {
+        PRODUCT_CATALOG.push(product);
+        customProductsRef.push(product);
     }
 
     batchForm.reset();
