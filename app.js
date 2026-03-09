@@ -396,25 +396,33 @@ let completedChart = null;
 
 const viewTableBtn = document.getElementById("view-table-btn");
 const viewChartBtn = document.getElementById("view-chart-btn");
+const viewHistoryBtn = document.getElementById("view-history-btn");
 const exportExcelBtn = document.getElementById("export-excel-btn");
 const completedTableWrap = document.getElementById("completed-table-wrap");
 const completedChartWrap = document.getElementById("completed-chart-wrap");
+const productHistoryWrap = document.getElementById("product-history-wrap");
 
-viewTableBtn.addEventListener("click", () => {
-    completedView = "table";
-    viewTableBtn.classList.add("view-btn-active");
-    viewChartBtn.classList.remove("view-btn-active");
-    completedTableWrap.classList.remove("hidden");
-    completedChartWrap.classList.add("hidden");
-});
+function setCompletedView(view) {
+    completedView = view;
+    viewTableBtn.classList.toggle("view-btn-active", view === "table");
+    viewChartBtn.classList.toggle("view-btn-active", view === "chart");
+    viewHistoryBtn.classList.toggle("view-btn-active", view === "history");
+    completedTableWrap.classList.toggle("hidden", view !== "table");
+    completedChartWrap.classList.toggle("hidden", view !== "chart");
+    productHistoryWrap.classList.toggle("hidden", view !== "history");
+}
+
+viewTableBtn.addEventListener("click", () => setCompletedView("table"));
 
 viewChartBtn.addEventListener("click", () => {
-    if (isOperator && !isAdmin) return; // operators can't access charts
-    completedView = "chart";
-    viewChartBtn.classList.add("view-btn-active");
-    viewTableBtn.classList.remove("view-btn-active");
-    completedChartWrap.classList.remove("hidden");
-    completedTableWrap.classList.add("hidden");
+    if (isOperator && !isAdmin) return;
+    setCompletedView("chart");
+});
+
+viewHistoryBtn.addEventListener("click", () => {
+    if (!canSeeProductHistory()) return;
+    setCompletedView("history");
+    populateHistoryProductList();
 });
 
 exportExcelBtn.addEventListener("click", exportToExcel);
@@ -455,10 +463,25 @@ function getCompletedRows() {
         });
 }
 
+const PRODUCT_HISTORY_USERS = [
+    "ajolly@colordept.local",
+    "jeff@colordept.local",
+    "dpanyard@colordept.local",
+    "hhudak@colordept.local",
+];
+
+function canSeeProductHistory() {
+    const user = auth.currentUser;
+    return user && PRODUCT_HISTORY_USERS.includes(user.email);
+}
+
 function renderCompleted() {
     const rows = getCompletedRows();
     const tbody = document.getElementById("completed-table-body");
     const toolbar = document.querySelector(".completed-toolbar");
+
+    // Show/hide Product History button based on user
+    viewHistoryBtn.classList.toggle("hidden", !canSeeProductHistory());
 
     if (rows.length === 0) {
         tbody.innerHTML = `<tr><td colspan="16" class="completed-empty">No completed batches</td></tr>`;
@@ -476,11 +499,7 @@ function renderCompleted() {
     }
     if (isOperator && !isAdmin) {
         // Force table view for operators
-        completedView = "table";
-        viewTableBtn.classList.add("view-btn-active");
-        viewChartBtn.classList.remove("view-btn-active");
-        completedTableWrap.classList.remove("hidden");
-        completedChartWrap.classList.add("hidden");
+        setCompletedView("table");
     }
 
     tbody.innerHTML = rows.map((r, i) => `
@@ -767,6 +786,91 @@ function exportToExcel() {
     const today = new Date().toISOString().slice(0, 10);
     XLSX.writeFile(wb, `Completed_Batches_${today}.xlsx`);
 }
+
+// ── Product History ──────────────────────────────────────────────────
+function populateHistoryProductList() {
+    const select = document.getElementById("history-product-select");
+    const products = [...new Set(
+        batches
+            .filter((b) => b.status === "batch_complete")
+            .map((b) => b.product)
+    )].sort((a, b) => a.localeCompare(b));
+
+    const current = select.value;
+    select.innerHTML = '<option value="">-- Select a product --</option>';
+    products.forEach((p) => {
+        const opt = document.createElement("option");
+        opt.value = p;
+        opt.textContent = p;
+        select.appendChild(opt);
+    });
+    if (current && products.includes(current)) {
+        select.value = current;
+    }
+}
+
+document.getElementById("history-product-select").addEventListener("change", function () {
+    const product = this.value;
+    const resultsDiv = document.getElementById("history-results");
+    const placeholder = document.getElementById("history-placeholder");
+
+    if (!product) {
+        resultsDiv.classList.add("hidden");
+        placeholder.classList.remove("hidden");
+        return;
+    }
+
+    placeholder.classList.add("hidden");
+    resultsDiv.classList.remove("hidden");
+
+    const rows = getCompletedRows().filter((r) => r.product === product);
+    const summary = document.getElementById("history-summary");
+    const tbody = document.getElementById("history-table-body");
+
+    // Summary stats
+    const totalBatches = rows.length;
+    const lastMade = rows.length > 0
+        ? new Date(Math.max(...rows.map((r) => r.completedAt))).toLocaleDateString()
+        : "—";
+    const firstMade = rows.length > 0
+        ? new Date(Math.min(...rows.filter((r) => r.completedAt > 0).map((r) => r.completedAt))).toLocaleDateString()
+        : "—";
+
+    summary.innerHTML = `
+        <div class="history-stat">
+            <div class="history-stat-label">Times Made</div>
+            <div class="history-stat-value">${totalBatches}</div>
+        </div>
+        <div class="history-stat">
+            <div class="history-stat-label">First Made</div>
+            <div class="history-stat-value">${firstMade}</div>
+        </div>
+        <div class="history-stat">
+            <div class="history-stat-label">Last Made</div>
+            <div class="history-stat-value">${lastMade}</div>
+        </div>
+    `;
+
+    // Table rows sorted newest first
+    rows.sort((a, b) => b.completedAt - a.completedAt);
+    tbody.innerHTML = rows.map((r) => `
+        <tr>
+            <td>${r.batchNumber}</td>
+            <td>${r.bowl}</td>
+            <td>${r.packaging}</td>
+            <td>${r.unitCount}</td>
+            <td>${r.viscosity}</td>
+            <td>${r.initials}</td>
+            <td>${r.pouredBy}</td>
+            <td>${r.notes}</td>
+            <td class="completed-time-cell">${r.queuedAt}</td>
+            <td class="completed-time-cell">${r.mixingStarted}</td>
+            <td class="completed-time-cell">${r.mixingComplete}</td>
+            <td class="completed-time-cell">${r.pouringStarted}</td>
+            <td class="completed-time-cell">${r.batchComplete}</td>
+        </tr>
+    `).join("");
+});
 
 function createBatchCard(batch) {
     const card = document.createElement("div");

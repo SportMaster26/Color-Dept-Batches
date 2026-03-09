@@ -648,6 +648,58 @@ header h1 {
     font-size: 0.95rem;
 }
 
+/* Product History */
+.product-history-wrap {
+    margin-top: 10px;
+}
+
+.history-search-bar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 16px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #344054;
+}
+
+.history-search-bar select {
+    padding: 8px 12px;
+    border: 2px solid #d0d5dd;
+    border-radius: 8px;
+    font-size: 0.88rem;
+    min-width: 280px;
+    background: #fff;
+}
+
+.history-summary {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 14px;
+    flex-wrap: wrap;
+}
+
+.history-stat {
+    background: #f7f8fa;
+    border: 1px solid #d0d5dd;
+    border-radius: 8px;
+    padding: 10px 18px;
+    text-align: center;
+}
+
+.history-stat-label {
+    font-size: 0.75rem;
+    color: #667788;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.history-stat-value {
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: #0065A1;
+}
+
 .compounder-stats {
     display: flex;
     gap: 10px;
