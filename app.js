@@ -18,7 +18,7 @@ const BOWLS = {
 };
 
 // Display order for the lanes
-const BOWL_ORDER = ["A", "B", "C", "D", "E", "F", "G", "H", "I", "The Hull", "Thors Hammer", "TTT", "Stubby", "Ol Iron Sides", "Latex Department"];
+const BOWL_ORDER = ["A", "B", "C", "D", "E", "F", "G", "H", "I", "The Hull", "Thors Hammer", "TTT", "Stubby", "Ol Iron Sides"];
 
 // Status flow configuration
 const STATUS_FLOW = ["queued", "mixing", "mixing_complete", "pouring", "batch_complete"];
@@ -299,10 +299,22 @@ const undoBtn = document.getElementById("undo-btn");
 const logoutBtn = document.getElementById("logout-btn");
 const roleBadge = document.getElementById("role-badge");
 const tabActive = document.getElementById("tab-active");
+const tabLatex = document.getElementById("tab-latex");
+const latexBoard = document.getElementById("latex-board");
 const tabCompleted = document.getElementById("tab-completed");
 const completedBoard = document.getElementById("completed-board");
 const tabNotes = document.getElementById("tab-notes");
 const notesBoard = document.getElementById("notes-board");
+
+// Users allowed to see the Latex Department tab
+const LATEX_TAB_USERS = [
+    "tmahl@colordept.local",
+    "kherrin@colordept.local",
+    "ajolly@colordept.local",
+    "cwood@colordept.local",
+    "hhudak@colordept.local",
+    "jeff@colordept.local",
+];
 const loginScreen = document.getElementById("login-screen");
 const appContainer = document.getElementById("app-container");
 const loginForm = document.getElementById("login-form");
@@ -349,9 +361,12 @@ function updateAdminUI() {
         document.body.classList.add("viewer-mode");
         document.body.classList.remove("admin-mode", "operator-mode");
     }
-    // Notes tab: hide from floor and platform operators
+    // Latex tab: only visible to specific users
     const user = auth.currentUser;
     const userEmail = user ? user.email : "";
+    tabLatex.classList.toggle("hidden", !LATEX_TAB_USERS.includes(userEmail));
+
+    // Notes tab: hide from floor and platform operators
     const isFloorOrPlatform = userEmail === "floor@colordept.local" || userEmail === "platform@colordept.local";
     tabNotes.classList.toggle("hidden", isFloorOrPlatform);
 
@@ -429,9 +444,11 @@ auth.onAuthStateChanged((user) => {
 function selectTab(tab) {
     activeTab = tab;
     tabActive.classList.toggle("tab-selected", tab === "active");
+    tabLatex.classList.toggle("tab-selected", tab === "latex");
     tabCompleted.classList.toggle("tab-selected", tab === "completed");
     tabNotes.classList.toggle("tab-selected", tab === "notes");
     board.classList.toggle("hidden", tab !== "active");
+    latexBoard.classList.toggle("hidden", tab !== "latex");
     completedBoard.classList.toggle("hidden", tab !== "completed");
     notesBoard.classList.toggle("hidden", tab !== "notes");
 }
@@ -439,6 +456,11 @@ function selectTab(tab) {
 tabActive.addEventListener("click", () => {
     selectTab("active");
     updateCompletedCount();
+});
+
+tabLatex.addEventListener("click", () => {
+    selectTab("latex");
+    renderLatexBoard();
 });
 
 tabCompleted.addEventListener("click", () => {
@@ -565,6 +587,7 @@ batchesRef.on("value", (snapshot) => {
         recycledNumbersRef.remove();
     }
     render();
+    if (activeTab === "latex") renderLatexBoard();
     updateCompletedCount();
     if (activeTab === "completed") renderCompleted();
 }, (error) => {
@@ -648,6 +671,58 @@ function render() {
     }
 
     updateUndoBtn();
+}
+
+// ── Latex Department Board ────────────────────────────────────────────
+function renderLatexBoard() {
+    latexBoard.innerHTML = "";
+    const bowlKey = "Latex Department";
+    const bowl = BOWLS[bowlKey];
+
+    const lane = document.createElement("div");
+    lane.className = "lane";
+    lane.dataset.bowl = bowlKey;
+
+    const header = document.createElement("div");
+    header.className = "lane-header";
+    header.innerHTML = `
+        <span class="lane-name">${bowl.name}</span>
+        <span class="lane-capacity">${bowl.group}</span>
+    `;
+    lane.appendChild(header);
+
+    const dropZone = document.createElement("div");
+    dropZone.className = "drop-zone";
+    dropZone.dataset.bowl = bowlKey;
+
+    if (isAdmin) {
+        dropZone.addEventListener("dragover", handleDragOver);
+        dropZone.addEventListener("drop", handleDrop);
+        dropZone.addEventListener("dragenter", handleDragEnter);
+        dropZone.addEventListener("dragleave", handleDragLeave);
+    }
+
+    const laneBatches = batches
+        .filter((b) => b.bowl === bowlKey && b.status !== "batch_complete")
+        .sort((a, b) => {
+            const numA = a.batchNumber ? parseInt(a.batchNumber.slice(1)) : Infinity;
+            const numB = b.batchNumber ? parseInt(b.batchNumber.slice(1)) : Infinity;
+            return numA - numB;
+        });
+
+    if (laneBatches.length === 0) {
+        const empty = document.createElement("div");
+        empty.className = "batch-card empty";
+        empty.textContent = "No batches";
+        dropZone.appendChild(empty);
+    }
+
+    for (const batch of laneBatches) {
+        dropZone.appendChild(createBatchCard(batch));
+    }
+
+    lane.appendChild(dropZone);
+    latexBoard.appendChild(lane);
 }
 
 // ── Completed Tab: Table / Chart / Export ────────────────────────────
