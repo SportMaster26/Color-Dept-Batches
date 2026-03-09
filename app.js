@@ -193,6 +193,75 @@ const PRODUCT_CATALOG = [
     "DUCK PATCH – H2986",
     "OIL SPOT PRIMER – H5900",
     "ROOF CLEANER – H3693",
+    // TRACKMASTER PRO
+    "PRO LOCK (4076) – C1742",
+    "PRO TACK (5051) – C1744",
+    "PRO TECT (TP257) – C1746",
+    // GEMSEAL PRODUCTS
+    "AQS3 – M1500",
+    "BOOST PRO – M1505P",
+    "GUARDFLEX – M1510P",
+    "RAPID SET – M1515P",
+    "ULTRA 3 – M1520",
+    // PROSTRIPE
+    "PROSTRIPE WHITE – M1600P",
+    "PROSTRIPE YELLOW – M1605P",
+    "PROSTRIPE BLUE – M1610P",
+    "PROSTRIPE BLACK – M1615P",
+    "PROSTRIPE RED – M1620P",
+    "PROSTRIPE NO FADE – M1625P",
+    // PROSTRIPE PLUS (VELOCITY)
+    "PROSTRIPE PLUS WHITE – M1630P",
+    "PROSTRIPE PLUS YELLOW – M1635P",
+    "PROSTRIPE PLUS BLUE – M1640P",
+    "PROSTRIPE PLUS BLACK – M1645P",
+    "PROSTRIPE PLUS RED – M1650P",
+    "PROSTRIPE PLUS GREEN – M1655P",
+    "PROSTRIPE PLUS HIGH PERFORMANCE – M1660P",
+    // PROSTRIPE FED
+    "PROSTRIPE FED WHITE – M1665P",
+    "PROSTRIPE FED YELLOW – M1666P",
+    "PROSTRIPE FED BLACK – M1667P",
+    "PROSTRIPE FED HANDICAP BLUE – M1668P",
+    "PROSTRIPE FED RED – M1669P",
+    // SURFACE 1
+    "SURFACE 1 LIGHT GREEN – C1630P",
+    "SURFACE 1 MEDIUM GREEN – C1631P",
+    "SURFACE 1 DARK GREEN – C1632P",
+    "SURFACE 1 RED – C1633P",
+    "SURFACE 1 BLUE – C1634P",
+    "SURFACE 1 GRAY – C1635P",
+    // DR. SHIELDS
+    "DR. SHIELDS – H3610",
+    // SEALER ADDITIVES
+    "LIQUID ROAD LATEX – R1165T",
+    "PMB PLUS – R1154T",
+    // MAINTENANCE INC.
+    "FSA – M1170P",
+    "FASS-DRI – M1178P",
+    "TARGEL – M1107P",
+    "FSA AE – M1172P",
+    "BLACK POLY – M1234T",
+    // SEALBEST SPECIAL ORDERS
+    "NEUTRAL PATCH – 8600",
+    "RED PATCH – H8601",
+    "GREEN PATCH – H8602",
+    "WHITE STRIPE – H7700",
+    "YELLOW STRIPE – H7703",
+    "FED WHITE – H7710",
+    "FED YELLOW – H7713",
+    "LINE BLOCKOUT – H7730",
+    "TEXTURED T/C LINE PAINT – H8605",
+    "HANDICAP BLUE – H7720",
+    // RV COATINGS
+    "RV 15 YEAR – H3137",
+    "RV ROOF CLEANER – H3143",
+    "RV ACTIVATOR – H3147",
+    "RV ROOF PATCH – H3141",
+    // TRACKMASTER PLUS
+    "TRACKMASTER PLUS NEUTRAL – C1740",
+    "TRACKMASTER PLUS RED – C1709",
+    "TRACKMASTER PLUS BLACK – C1708",
 ];
 
 // ── Firebase Reference ──────────────────────────────────────────────
@@ -234,6 +303,14 @@ function setRole(role) {
     isViewer = role === "viewer";
 }
 
+// ── Notes Users ─────────────────────────────────────────────────────
+const NOTES_POST_USERS = ["tmahl@colordept.local", "kherrin@colordept.local", "ajolly@colordept.local"];
+
+function canPostNotes() {
+    const user = auth.currentUser;
+    return user && NOTES_POST_USERS.includes(user.email);
+}
+
 function updateAdminUI() {
     const adminElements = document.querySelectorAll(".admin-only");
 
@@ -265,21 +342,13 @@ function updateAdminUI() {
     tabNotes.classList.toggle("hidden", isFloorOrPlatform);
 
     // Only TJ (tmahl) and Kevin (kherrin) can add notes
-    const canPostNotes = userEmail === "tmahl@colordept.local" || userEmail === "kherrin@colordept.local";
+    const canPostNotes = NOTES_POST_USERS.includes(userEmail);
     const notesAddSection = document.getElementById("notes-add-section");
     if (notesAddSection) {
         notesAddSection.classList.toggle("hidden", !canPostNotes);
     }
 
     render();
-}
-
-// ── Notes Users ─────────────────────────────────────────────────────
-const NOTES_POST_USERS = ["tmahl@colordept.local", "kherrin@colordept.local"];
-
-function canPostNotes() {
-    const user = auth.currentUser;
-    return user && NOTES_POST_USERS.includes(user.email);
 }
 
 // Login form handler
