@@ -486,6 +486,35 @@ header h1 {
     display: flex;
     gap: 6px;
     align-items: center;
+    justify-content: space-between;
+}
+
+.card-actions-left {
+    display: flex;
+    gap: 2px;
+    align-items: center;
+}
+
+.card-actions-right {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+}
+
+.btn-reorder {
+    background: #e8e8e8;
+    border: 1px solid #ccc;
+    color: #555;
+    font-size: 0.7rem;
+    padding: 4px 8px;
+    border-radius: 4px;
+    cursor: pointer;
+    line-height: 1;
+}
+
+.btn-reorder:active {
+    background: #0065A1;
+    color: #fff;
 }
 
 .modal-subtitle {

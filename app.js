@@ -1427,10 +1427,16 @@ function createBatchCard(batch) {
     if (isAdmin) {
         actionsHtml = `
             <div class="card-actions">
-                ${nextAction ? `<button class="btn btn-sm ${nextBtnClass}" data-action="advance" data-id="${batch.id}">${nextAction.label}</button>` : ""}
-                <button class="btn btn-sm btn-duplicate" data-action="duplicate" data-id="${batch.id}" title="Duplicate batch">&#x2398;</button>
-                <button class="btn btn-sm btn-edit" data-action="edit" data-id="${batch.id}">Edit</button>
-                <button class="btn btn-sm btn-delete" data-action="delete" data-id="${batch.id}">&times;</button>
+                <div class="card-actions-left">
+                    <button class="btn btn-sm btn-reorder" data-action="move-up" data-id="${batch.id}" title="Move up">&#9650;</button>
+                    <button class="btn btn-sm btn-reorder" data-action="move-down" data-id="${batch.id}" title="Move down">&#9660;</button>
+                </div>
+                <div class="card-actions-right">
+                    ${nextAction ? `<button class="btn btn-sm ${nextBtnClass}" data-action="advance" data-id="${batch.id}">${nextAction.label}</button>` : ""}
+                    <button class="btn btn-sm btn-duplicate" data-action="duplicate" data-id="${batch.id}" title="Duplicate batch">&#x2398;</button>
+                    <button class="btn btn-sm btn-edit" data-action="edit" data-id="${batch.id}">Edit</button>
+                    <button class="btn btn-sm btn-delete" data-action="delete" data-id="${batch.id}">&times;</button>
+                </div>
             </div>
         `;
     } else if (isOperator) {
@@ -1704,6 +1710,10 @@ document.addEventListener("click", (e) => {
 
     if (action === "advance" && (isAdmin || isOperator)) {
         advanceStatus(id);
+    } else if (action === "move-up" && isAdmin) {
+        moveBatch(id, -1);
+    } else if (action === "move-down" && isAdmin) {
+        moveBatch(id, 1);
     } else if (action === "edit" && isAdmin) {
         openEditModal(id);
     } else if (action === "duplicate" && isAdmin) {
@@ -1712,6 +1722,34 @@ document.addEventListener("click", (e) => {
         deleteBatch(id);
     }
 });
+
+function moveBatch(id, direction) {
+    const batch = batches.find((b) => b.id === id);
+    if (!batch) return;
+
+    const laneBatches = batches
+        .filter((b) => b.bowl === batch.bowl && b.status !== "batch_complete")
+        .sort((a, b) => {
+            const orderA = a.sortOrder != null ? a.sortOrder : a.createdAt;
+            const orderB = b.sortOrder != null ? b.sortOrder : b.createdAt;
+            return orderA - orderB;
+        });
+
+    const idx = laneBatches.findIndex((b) => b.id === id);
+    const newIdx = idx + direction;
+    if (newIdx < 0 || newIdx >= laneBatches.length) return;
+
+    // Swap the two batches
+    const temp = laneBatches[idx];
+    laneBatches[idx] = laneBatches[newIdx];
+    laneBatches[newIdx] = temp;
+
+    laneBatches.forEach((b, i) => {
+        b.sortOrder = i;
+    });
+
+    saveBatches();
+}
 
 function duplicateBatch(id) {
     const batch = batches.find((b) => b.id === id);
