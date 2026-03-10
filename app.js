@@ -1429,7 +1429,7 @@ function createBatchCard(batch) {
         : batch.status === "pouring" ? "btn-batch-complete"
         : "";
     if (isAdmin) {
-        const moveBtn = isTouchDevice ? `<button class="btn btn-sm btn-move" data-action="move" data-id="${batch.id}">Move</button>` : "";
+        const moveBtn = `<button class="btn btn-sm btn-move" data-action="move" data-id="${batch.id}">Move</button>`;
         actionsHtml = `
             <div class="card-actions">
                 ${moveBtn}
