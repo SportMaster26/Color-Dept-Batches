@@ -718,8 +718,14 @@ function render() {
 
 // ── Latex Department — Tank Level Tracker ─────────────────────────────
 
-function getTankFillColor(pct) {
+function getTankFillColor(pct, tank, gallons) {
     if (pct <= 0) return "#e0e0e0";
+    // Custom red thresholds per tank group
+    if (tank) {
+        const g = tank.group;
+        if ((g === "Color Tanks" || g === "BR Tanks") && gallons <= 1500) return "#ef4444";
+        if (g === "W Tanks" && gallons <= 5000) return "#ef4444";
+    }
     if (pct < 20) return "#ef4444";
     if (pct < 50) return "#f59e0b";
     return "#22c55e";
@@ -728,7 +734,7 @@ function getTankFillColor(pct) {
 function createTankSVG(tank, gallons) {
     const capacity = tank.capacity;
     const pct = Math.min(100, Math.max(0, (gallons / capacity) * 100));
-    const fillColor = getTankFillColor(pct);
+    const fillColor = getTankFillColor(pct, tank, gallons);
 
     if (tank.group === "Totes") {
         return createToteSVG(tank, gallons, pct, fillColor);
