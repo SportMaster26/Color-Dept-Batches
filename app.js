@@ -303,13 +303,13 @@ const LATEX_TANKS = [
     { id: "W4", name: "W#4", capacity: 10000, group: "W Tanks" },
     { id: "W5", name: "W#5", capacity: 10000, group: "W Tanks" },
     { id: "W6", name: "W#6", capacity: 10000, group: "W Tanks" },
-    { id: "CB", name: "CB", capacity: 275, group: "Totes" },
-    { id: "T1", name: "T1", capacity: 275, group: "Totes" },
-    { id: "T2", name: "T2", capacity: 275, group: "Totes" },
-    { id: "T3", name: "T3", capacity: 275, group: "Totes" },
-    { id: "T4", name: "T4", capacity: 275, group: "Totes" },
-    { id: "T5", name: "T5", capacity: 275, group: "Totes" },
-    { id: "T6", name: "T6", capacity: 275, group: "Totes" },
+    { id: "CB", name: "CB", capacity: 50, group: "Totes" },
+    { id: "T1", name: "T1", capacity: 50, group: "Totes" },
+    { id: "T2", name: "T2", capacity: 50, group: "Totes" },
+    { id: "T3", name: "T3", capacity: 50, group: "Totes" },
+    { id: "T4", name: "T4", capacity: 50, group: "Totes" },
+    { id: "T5", name: "T5", capacity: 50, group: "Totes" },
+    { id: "T6", name: "T6", capacity: 50, group: "Totes" },
 ];
 
 let latexTankLevels = {}; // { tankId: gallons }
