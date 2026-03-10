@@ -961,6 +961,12 @@ header h1 {
     color: #fff;
 }
 
+.move-option-current {
+    border-color: #0065A1;
+    background: #e8f4fc;
+    font-weight: 600;
+}
+
 /* ── Modal ──────────────────────────────────────────────────────────── */
 .modal-overlay {
     position: fixed;
