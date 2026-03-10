@@ -268,6 +268,7 @@ let PRODUCT_CATALOG = [
 const batchesRef = db.ref("batches");
 const batchCounterRef = db.ref("meta/batchCounter");
 const recycledNumbersRef = db.ref("meta/recycledNumbers");
+const MIN_BATCH_NUMBER = 322; // Batch numbers start at A0322
 const notesRef = db.ref("notes");
 const customProductsRef = db.ref("meta/customProducts");
 const latexTanksRef = db.ref("latexTanks");
@@ -612,21 +613,21 @@ batchesRef.on("value", (snapshot) => {
         batchesRef.update(migrations);
     }
 
-    // One-time reset: renumber ALL batches starting from A0001
+    // One-time reset: renumber ALL batches starting from MIN_BATCH_NUMBER
     const allSorted = [...batches].sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
-    const needsRenumber = allSorted.some((b, i) => b.batchNumber !== "A" + String(i + 1).padStart(4, "0"));
+    const needsRenumber = allSorted.some((b, i) => b.batchNumber !== "A" + String(MIN_BATCH_NUMBER + i).padStart(4, "0"));
     if (allSorted.length > 0 && needsRenumber) {
         const updates = {};
         allSorted.forEach((batch, i) => {
-            const batchNumber = "A" + String(i + 1).padStart(4, "0");
+            const batchNumber = "A" + String(MIN_BATCH_NUMBER + i).padStart(4, "0");
             batch.batchNumber = batchNumber;
             updates[batch.id + "/batchNumber"] = batchNumber;
         });
-        batchCounterRef.set(allSorted.length);
+        batchCounterRef.set(MIN_BATCH_NUMBER - 1 + allSorted.length);
         recycledNumbersRef.remove();
         batchesRef.update(updates);
     } else if (allSorted.length === 0) {
-        batchCounterRef.set(0);
+        batchCounterRef.set(MIN_BATCH_NUMBER - 1);
         recycledNumbersRef.remove();
     }
     render();
@@ -1760,18 +1761,19 @@ function duplicateBatch(id) {
 
     recycledNumbersRef.once("value", (snap) => {
         const recycled = snap.val();
-        if (recycled) {
-            const entries = Object.entries(recycled);
-            let minKey = entries[0][0];
-            let minNum = entries[0][1];
-            for (const [key, val] of entries) {
+        // Only reuse recycled numbers that are >= MIN_BATCH_NUMBER
+        const validEntries = recycled ? Object.entries(recycled).filter(([, val]) => val >= MIN_BATCH_NUMBER) : [];
+        if (validEntries.length > 0) {
+            let minKey = validEntries[0][0];
+            let minNum = validEntries[0][1];
+            for (const [key, val] of validEntries) {
                 if (val < minNum) { minKey = key; minNum = val; }
             }
             recycledNumbersRef.child(minKey).remove();
             createDuplicateWithNumber(minNum);
         } else {
             batchCounterRef.transaction((current) => {
-                return (current || 0) + 1;
+                return Math.max((current || 0) + 1, MIN_BATCH_NUMBER);
             }, (error, committed, snapshot) => {
                 if (error || !committed) {
                     alert("Failed to generate batch number. Please try again.");
@@ -2065,9 +2067,9 @@ editForm.addEventListener("submit", (e) => {
 function deleteBatch(id) {
     const batch = batches.find((b) => b.id === id);
     if (batch && batch.batchNumber) {
-        // Recycle the batch number for reuse
+        // Recycle the batch number for reuse (only if >= MIN_BATCH_NUMBER)
         const num = parseInt(batch.batchNumber.slice(1), 10);
-        if (!isNaN(num)) {
+        if (!isNaN(num) && num >= MIN_BATCH_NUMBER) {
             recycledNumbersRef.push(num);
         }
     }
@@ -2206,21 +2208,22 @@ batchForm.addEventListener("submit", (e) => {
 
     recycledNumbersRef.once("value", (snap) => {
         const recycled = snap.val();
-        if (recycled) {
-            // Find the smallest recycled number
-            const entries = Object.entries(recycled);
-            let minKey = entries[0][0];
-            let minNum = entries[0][1];
-            for (const [key, val] of entries) {
+        // Only reuse recycled numbers that are >= MIN_BATCH_NUMBER
+        const validEntries = recycled ? Object.entries(recycled).filter(([, val]) => val >= MIN_BATCH_NUMBER) : [];
+        if (validEntries.length > 0) {
+            // Find the smallest valid recycled number
+            let minKey = validEntries[0][0];
+            let minNum = validEntries[0][1];
+            for (const [key, val] of validEntries) {
                 if (val < minNum) { minKey = key; minNum = val; }
             }
             // Remove it from recycled list and use it
             recycledNumbersRef.child(minKey).remove();
             createBatchWithNumber(minNum);
         } else {
-            // No recycled numbers, increment counter
+            // No valid recycled numbers, increment counter (never below MIN_BATCH_NUMBER)
             batchCounterRef.transaction((current) => {
-                return (current || 0) + 1;
+                return Math.max((current || 0) + 1, MIN_BATCH_NUMBER);
             }, (error, committed, snapshot) => {
                 if (error || !committed) {
                     alert("Failed to generate batch number. Please try again.");
