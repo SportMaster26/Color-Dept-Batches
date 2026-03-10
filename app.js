@@ -693,9 +693,9 @@ function render() {
         const laneBatches = batches
             .filter((b) => b.bowl === bowlKey && b.status !== "batch_complete")
             .sort((a, b) => {
-                const numA = a.batchNumber ? parseInt(a.batchNumber.slice(1)) : Infinity;
-                const numB = b.batchNumber ? parseInt(b.batchNumber.slice(1)) : Infinity;
-                return numA - numB;
+                const orderA = a.sortOrder != null ? a.sortOrder : a.createdAt;
+                const orderB = b.sortOrder != null ? b.sortOrder : b.createdAt;
+                return orderA - orderB;
             });
 
         if (laneBatches.length === 0) {
