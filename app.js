@@ -1578,12 +1578,11 @@ function getDragAfterElement(dropZone, y) {
     return closest;
 }
 
-// ── Touch Drag & Drop ───────────────────────────────────────────────
+// ── Touch Drag & Drop (long-press to activate) ─────────────────────
 let touchDragEl = null;
 let touchClone = null;
-let touchStartY = 0;
-let touchStartX = 0;
-let touchMoved = false;
+let touchLongPressTimer = null;
+let touchDragActive = false;
 
 board.addEventListener("touchstart", (e) => {
     if (!isAdmin) return;
@@ -1591,22 +1590,10 @@ board.addEventListener("touchstart", (e) => {
     if (!card || e.target.closest("[data-action]")) return;
 
     touchDragEl = card;
-    touchStartY = e.touches[0].clientY;
-    touchStartX = e.touches[0].clientX;
-    touchMoved = false;
-}, { passive: true });
+    touchDragActive = false;
 
-board.addEventListener("touchmove", (e) => {
-    if (!isAdmin || !touchDragEl) return;
-
-    const dx = e.touches[0].clientX - touchStartX;
-    const dy = e.touches[0].clientY - touchStartY;
-    if (!touchMoved && Math.abs(dy) < 10 && Math.abs(dx) < 10) return;
-
-    touchMoved = true;
-    e.preventDefault();
-
-    if (!touchClone) {
+    touchLongPressTimer = setTimeout(() => {
+        touchDragActive = true;
         draggedId = touchDragEl.dataset.id;
         touchDragEl.classList.add("dragging", "touch-dragging");
 
@@ -1614,7 +1601,28 @@ board.addEventListener("touchmove", (e) => {
         touchClone.classList.add("touch-clone");
         touchClone.style.width = touchDragEl.offsetWidth + "px";
         document.body.appendChild(touchClone);
+
+        const touch = e.touches[0];
+        touchClone.style.left = touch.clientX - touchClone.offsetWidth / 2 + "px";
+        touchClone.style.top = touch.clientY - touchClone.offsetHeight / 2 + "px";
+
+        // Vibrate if supported to signal drag started
+        if (navigator.vibrate) navigator.vibrate(50);
+    }, 500);
+}, { passive: true });
+
+board.addEventListener("touchmove", (e) => {
+    if (!touchDragEl) return;
+
+    // If long press hasn't fired yet, cancel it and let the page scroll
+    if (!touchDragActive) {
+        clearTimeout(touchLongPressTimer);
+        touchLongPressTimer = null;
+        touchDragEl = null;
+        return;
     }
+
+    e.preventDefault();
 
     touchClone.style.left = e.touches[0].clientX - touchClone.offsetWidth / 2 + "px";
     touchClone.style.top = e.touches[0].clientY - touchClone.offsetHeight / 2 + "px";
@@ -1637,6 +1645,9 @@ board.addEventListener("touchmove", (e) => {
 }, { passive: false });
 
 board.addEventListener("touchend", (e) => {
+    clearTimeout(touchLongPressTimer);
+    touchLongPressTimer = null;
+
     if (!touchDragEl) return;
 
     if (touchClone) {
@@ -1678,8 +1689,11 @@ board.addEventListener("touchend", (e) => {
         touchClone = null;
     }
 
-    touchDragEl.classList.remove("dragging", "touch-dragging");
+    if (touchDragEl) {
+        touchDragEl.classList.remove("dragging", "touch-dragging");
+    }
     touchDragEl = null;
+    touchDragActive = false;
     draggedId = null;
     document.querySelectorAll(".drag-over").forEach((el) => el.classList.remove("drag-over"));
     document.querySelectorAll(".drop-indicator").forEach((el) => el.remove());
