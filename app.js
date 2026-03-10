@@ -613,31 +613,37 @@ batchesRef.on("value", (snapshot) => {
         batchesRef.update(migrations);
     }
 
-    // Renumber only active/queued batches starting from MIN_BATCH_NUMBER
+    // One-time renumber of active/queued batches starting from MIN_BATCH_NUMBER
     // Completed batches keep their existing numbers
-    const activeBatches = batches.filter(b => b.status !== "batch_complete");
-    const activeSorted = [...activeBatches].sort((a, b) => {
-        const bowlA = BOWL_ORDER.indexOf(a.bowl);
-        const bowlB = BOWL_ORDER.indexOf(b.bowl);
-        const idxA = bowlA === -1 ? 999 : bowlA;
-        const idxB = bowlB === -1 ? 999 : bowlB;
-        if (idxA !== idxB) return idxA - idxB;
-        return (a.createdAt || 0) - (b.createdAt || 0);
-    });
-    const needsRenumber = activeSorted.some((b, i) => b.batchNumber !== "A" + String(MIN_BATCH_NUMBER + i).padStart(4, "0"));
-    if (activeSorted.length > 0 && needsRenumber) {
-        const updates = {};
-        activeSorted.forEach((batch, i) => {
-            const batchNumber = "A" + String(MIN_BATCH_NUMBER + i).padStart(4, "0");
-            batch.batchNumber = batchNumber;
-            updates[batch.id + "/batchNumber"] = batchNumber;
+    if (!window._renumberDone) {
+        const activeBatches = batches.filter(b => b.status !== "batch_complete");
+        const activeSorted = [...activeBatches].sort((a, b) => {
+            const bowlA = BOWL_ORDER.indexOf(a.bowl);
+            const bowlB = BOWL_ORDER.indexOf(b.bowl);
+            const idxA = bowlA === -1 ? 999 : bowlA;
+            const idxB = bowlB === -1 ? 999 : bowlB;
+            if (idxA !== idxB) return idxA - idxB;
+            return (a.createdAt || 0) - (b.createdAt || 0);
         });
-        batchCounterRef.set(MIN_BATCH_NUMBER - 1 + activeSorted.length);
-        recycledNumbersRef.remove();
-        batchesRef.update(updates);
-    } else if (activeSorted.length === 0) {
-        batchCounterRef.set(MIN_BATCH_NUMBER - 1);
-        recycledNumbersRef.remove();
+        const needsRenumber = activeSorted.some((b, i) => b.batchNumber !== "A" + String(MIN_BATCH_NUMBER + i).padStart(4, "0"));
+        if (activeSorted.length > 0 && needsRenumber) {
+            window._renumberDone = true;
+            const updates = {};
+            activeSorted.forEach((batch, i) => {
+                const batchNumber = "A" + String(MIN_BATCH_NUMBER + i).padStart(4, "0");
+                batch.batchNumber = batchNumber;
+                updates[batch.id + "/batchNumber"] = batchNumber;
+            });
+            batchCounterRef.set(MIN_BATCH_NUMBER - 1 + activeSorted.length);
+            recycledNumbersRef.remove();
+            batchesRef.update(updates);
+        } else if (activeSorted.length === 0) {
+            batchCounterRef.set(MIN_BATCH_NUMBER - 1);
+            recycledNumbersRef.remove();
+        } else {
+            // Already in correct order, no renumber needed
+            window._renumberDone = true;
+        }
     }
     render();
     if (activeTab === "latex") renderLatexBoard();
