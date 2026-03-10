@@ -456,6 +456,17 @@ header h1 {
     letter-spacing: 0.5px;
 }
 
+.btn-duplicate {
+    background: #8e44ad;
+    color: #fff;
+    font-size: 0.85rem;
+    padding: 2px 7px;
+}
+
+.btn-duplicate:hover {
+    background: #732d91;
+}
+
 .btn-edit {
     background: #3498db;
     color: #fff;

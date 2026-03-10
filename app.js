@@ -1423,6 +1423,7 @@ function createBatchCard(batch) {
         actionsHtml = `
             <div class="card-actions">
                 ${nextAction ? `<button class="btn btn-sm ${nextBtnClass}" data-action="advance" data-id="${batch.id}">${nextAction.label}</button>` : ""}
+                <button class="btn btn-sm btn-duplicate" data-action="duplicate" data-id="${batch.id}" title="Duplicate batch">&#x2398;</button>
                 <button class="btn btn-sm btn-edit" data-action="edit" data-id="${batch.id}">Edit</button>
                 <button class="btn btn-sm btn-delete" data-action="delete" data-id="${batch.id}">&times;</button>
             </div>
@@ -1700,10 +1701,71 @@ document.addEventListener("click", (e) => {
         advanceStatus(id);
     } else if (action === "edit" && isAdmin) {
         openEditModal(id);
+    } else if (action === "duplicate" && isAdmin) {
+        duplicateBatch(id);
     } else if (action === "delete" && isAdmin) {
         deleteBatch(id);
     }
 });
+
+function duplicateBatch(id) {
+    const batch = batches.find((b) => b.id === id);
+    if (!batch) return;
+
+    const laneBatches = batches.filter((b) => b.bowl === batch.bowl);
+    const maxOrder = laneBatches.reduce((max, b) => {
+        const order = b.sortOrder != null ? b.sortOrder : b.createdAt;
+        return Math.max(max, order);
+    }, -1);
+
+    function createDuplicateWithNumber(num) {
+        const batchNumber = "A" + String(num).padStart(4, "0");
+        const newBatch = {
+            id: generateId(),
+            batchNumber,
+            product: batch.product,
+            bowl: batch.bowl,
+            packaging: batch.packaging || null,
+            unitCount: batch.unitCount || null,
+            notes: batch.notes || null,
+            status: "queued",
+            sortOrder: maxOrder + 1,
+            createdAt: Date.now(),
+            startedAt: null,
+            mixingCompleteAt: null,
+            pouringAt: null,
+            completedAt: null,
+            viscosity: null,
+            initials: null,
+            pouredBy: null,
+        };
+        batchesRef.child(newBatch.id).set(newBatch);
+    }
+
+    recycledNumbersRef.once("value", (snap) => {
+        const recycled = snap.val();
+        if (recycled) {
+            const entries = Object.entries(recycled);
+            let minKey = entries[0][0];
+            let minNum = entries[0][1];
+            for (const [key, val] of entries) {
+                if (val < minNum) { minKey = key; minNum = val; }
+            }
+            recycledNumbersRef.child(minKey).remove();
+            createDuplicateWithNumber(minNum);
+        } else {
+            batchCounterRef.transaction((current) => {
+                return (current || 0) + 1;
+            }, (error, committed, snapshot) => {
+                if (error || !committed) {
+                    alert("Failed to generate batch number. Please try again.");
+                    return;
+                }
+                createDuplicateWithNumber(snapshot.val());
+            });
+        }
+    });
+}
 
 function advanceStatus(id) {
     const batch = batches.find((b) => b.id === id);
