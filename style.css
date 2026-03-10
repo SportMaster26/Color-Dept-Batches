@@ -1314,6 +1314,13 @@ header h1 {
     height: 100%;
 }
 
+.tank-edit-date {
+    font-size: 0.65rem;
+    color: #999;
+    min-height: 14px;
+    margin-bottom: 2px;
+}
+
 .tank-label {
     font-weight: 700;
     font-size: 0.9rem;
