@@ -1,4 +1,4 @@
-const CACHE_NAME = 'colordept-shell-v1';
+const CACHE_NAME = 'colordept-shell-v2';
 const SHELL_ASSETS = [
     '/index.html',
     '/style.css',
