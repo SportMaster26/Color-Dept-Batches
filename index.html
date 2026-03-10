@@ -513,8 +513,8 @@
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
-    <script src="firebase-config.js?v=2"></script>
-    <script src="app.js?v=2"></script>
+    <script src="firebase-config.js?v=3"></script>
+    <script src="app.js?v=3"></script>
 
     <!-- Service Worker Registration -->
     <script>
@@ -526,7 +526,7 @@
             caches.keys().then(function(names) {
                 names.forEach(function(name) { caches.delete(name); });
             });
-            navigator.serviceWorker.register('sw.js?v=2')
+            navigator.serviceWorker.register('sw.js?v=3')
                 .then(() => console.log('SW registered'))
                 .catch((err) => console.log('SW registration failed:', err));
         }
