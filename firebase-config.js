@@ -31,6 +31,7 @@ const firebaseConfig = {
 // Operator (advance steps, enter viscosity/names):
 //   floor@colordept.local
 //   platform@colordept.local
+//   cwood@colordept.local    (C Wood)
 //
 // Viewer (read-only with chart access):
 //   ajolly@colordept.local   (AJ Jolly)
@@ -48,6 +49,7 @@ const ROLE_MAP = {
     "kherrin@colordept.local": "admin",
     "floor@colordept.local": "operator",
     "platform@colordept.local": "operator",
+    "cwood@colordept.local": "operator",
     "ajolly@colordept.local": "admin",
     "jeff@colordept.local": "admin",
     "dpanyard@colordept.local": "viewer",
