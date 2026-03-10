@@ -718,8 +718,14 @@ function render() {
 
 // ── Latex Department — Tank Level Tracker ─────────────────────────────
 
-function getTankFillColor(pct) {
+function getTankFillColor(pct, tank, gallons) {
     if (pct <= 0) return "#e0e0e0";
+    // Custom red thresholds per tank group
+    if (tank) {
+        const g = tank.group;
+        if ((g === "Color Tanks" || g === "BR Tanks") && gallons <= 1500) return "#ef4444";
+        if (g === "W Tanks" && gallons <= 5000) return "#ef4444";
+    }
     if (pct < 20) return "#ef4444";
     if (pct < 50) return "#f59e0b";
     return "#22c55e";
@@ -728,7 +734,7 @@ function getTankFillColor(pct) {
 function createTankSVG(tank, gallons) {
     const capacity = tank.capacity;
     const pct = Math.min(100, Math.max(0, (gallons / capacity) * 100));
-    const fillColor = getTankFillColor(pct);
+    const fillColor = getTankFillColor(pct, tank, gallons);
 
     if (tank.group === "Totes") {
         return createToteSVG(tank, gallons, pct, fillColor);
@@ -817,19 +823,26 @@ function renderLatexBoard() {
         grid.className = "tank-grid";
 
         for (const tank of tanks) {
-            const gallons = latexTankLevels[tank.id] || 0;
+            const raw = latexTankLevels[tank.id];
+            // Support both old plain number and new {value, updatedAt} format
+            const gallons = (raw && typeof raw === "object") ? (raw.value || 0) : (raw || 0);
+            const updatedAt = (raw && typeof raw === "object") ? raw.updatedAt : null;
             const pct = Math.min(100, Math.max(0, (gallons / tank.capacity) * 100));
+            const isTote = tank.group === "Totes";
+            const unit = isTote ? "qty" : "gal";
+            const dateStr = updatedAt ? new Date(updatedAt).toLocaleDateString("en-US", { month: "short", day: "numeric" }) : "";
 
             const card = document.createElement("div");
             card.className = "tank-card";
             card.innerHTML = `
+                <div class="tank-edit-date">${dateStr}</div>
                 <div class="tank-visual">
                     ${createTankSVG(tank, gallons)}
                 </div>
                 <div class="tank-label">${escapeHtml(tank.name)}</div>
-                <div class="tank-level-display">${gallons.toLocaleString()} <span class="tank-unit">gal</span></div>
-                <div class="tank-pct">${Math.round(pct)}%</div>
-                <div class="tank-capacity">${tank.capacity.toLocaleString()} gal max</div>
+                <div class="tank-level-display">${gallons.toLocaleString()} <span class="tank-unit">${unit}</span></div>
+                ${isTote ? "" : `<div class="tank-pct">${Math.round(pct)}%</div>`}
+                ${isTote ? "" : `<div class="tank-capacity">${tank.capacity.toLocaleString()} gal max</div>`}
                 <input type="number" class="tank-input hidden" min="0" max="${tank.capacity}" value="${gallons}" data-tank-id="${tank.id}">
             `;
 
@@ -871,7 +884,7 @@ function saveTankLevel(input) {
     if (val < 0) val = 0;
     if (tank && val > tank.capacity) val = tank.capacity;
     input.classList.add("hidden");
-    latexTanksRef.child(tankId).set(val);
+    latexTanksRef.child(tankId).set({ value: val, updatedAt: new Date().toISOString() });
 }
 
 // Listen for tank level changes from Firebase
