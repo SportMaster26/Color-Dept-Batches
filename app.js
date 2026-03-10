@@ -725,6 +725,11 @@ function getTankFillColor(pct, tank, gallons) {
         const g = tank.group;
         if ((g === "Color Tanks" || g === "BR Tanks") && gallons <= 1500) return "#ef4444";
         if (g === "W Tanks" && gallons <= 5000) return "#ef4444";
+        if (g === "Totes") {
+            if (gallons <= 10) return "#ef4444";
+            if (gallons <= 20) return "#f59e0b";
+            return "#22c55e";
+        }
     }
     if (pct < 20) return "#ef4444";
     if (pct < 50) return "#f59e0b";
@@ -830,7 +835,7 @@ function renderLatexBoard() {
             const pct = Math.min(100, Math.max(0, (gallons / tank.capacity) * 100));
             const isTote = tank.group === "Totes";
             const unit = isTote ? "qty" : "gal";
-            const dateStr = updatedAt ? new Date(updatedAt).toLocaleDateString("en-US", { month: "short", day: "numeric" }) : "";
+            const dateStr = updatedAt ? new Date(updatedAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "";
 
             const card = document.createElement("div");
             card.className = "tank-card";
