@@ -1608,7 +1608,7 @@ board.addEventListener("touchmove", (e) => {
 
     if (!touchClone) {
         draggedId = touchDragEl.dataset.id;
-        touchDragEl.classList.add("dragging");
+        touchDragEl.classList.add("dragging", "touch-dragging");
 
         touchClone = touchDragEl.cloneNode(true);
         touchClone.classList.add("touch-clone");
@@ -1627,7 +1627,7 @@ board.addEventListener("touchmove", (e) => {
         dropZone.classList.add("drag-over");
         const afterElement = getDragAfterElement(dropZone, e.touches[0].clientY);
         const indicator = document.createElement("div");
-        indicator.className = "drop-indicator";
+        indicator.className = "drop-indicator touch-indicator";
         if (afterElement) {
             dropZone.insertBefore(indicator, afterElement);
         } else {
@@ -1678,7 +1678,7 @@ board.addEventListener("touchend", (e) => {
         touchClone = null;
     }
 
-    touchDragEl.classList.remove("dragging");
+    touchDragEl.classList.remove("dragging", "touch-dragging");
     touchDragEl = null;
     draggedId = null;
     document.querySelectorAll(".drag-over").forEach((el) => el.classList.remove("drag-over"));
