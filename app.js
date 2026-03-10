@@ -1589,52 +1589,44 @@ function getDragAfterElement(dropZone, y) {
 }
 
 // ── Touch Move Button ───────────────────────────────────────────────
-const isTouchDevice = /iPad|iPhone|iPod|Android/i.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+const isTouchDevice = /iPad|iPhone|iPod|Android|webOS|BlackBerry|SM-|Galaxy/i.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1) || ("ontouchstart" in window && navigator.maxTouchPoints > 0 && window.matchMedia("(max-width: 1366px)").matches);
 
 function openMoveModal(batchId) {
     const batch = batches.find((b) => b.id === batchId);
     if (!batch) return;
 
-    const laneBatches = batches
-        .filter((b) => b.bowl === batch.bowl && b.status !== "batch_complete" && b.id !== batchId)
-        .sort((a, b) => {
-            const orderA = a.sortOrder != null ? a.sortOrder : a.createdAt;
-            const orderB = b.sortOrder != null ? b.sortOrder : b.createdAt;
-            return orderA - orderB;
-        });
-
-    if (laneBatches.length === 0) return;
-
     const overlay = document.createElement("div");
     overlay.className = "modal-overlay";
     const modal = document.createElement("div");
     modal.className = "modal move-modal";
-    modal.innerHTML = `<h2>Move ${escapeHtml(batch.batchNumber || "")} ${escapeHtml(batch.product)}</h2>`;
+
+    overlay.appendChild(modal);
+    overlay.addEventListener("click", (e) => {
+        if (e.target === overlay) overlay.remove();
+    });
+    document.body.appendChild(overlay);
+
+    showBowlPicker(modal, overlay, batch);
+}
+
+function showBowlPicker(modal, overlay, batch) {
+    modal.innerHTML = `<h2>Move ${escapeHtml(batch.batchNumber || "")} ${escapeHtml(batch.product)}</h2>
+        <p style="color:#666;margin-bottom:10px;">Select a bowl</p>`;
 
     const list = document.createElement("div");
     list.className = "move-list";
 
-    // "Move to top" option
-    const topBtn = document.createElement("button");
-    topBtn.className = "btn move-option";
-    topBtn.textContent = "Move to Top";
-    topBtn.addEventListener("click", () => {
-        applyMove(batch, laneBatches, 0);
-        overlay.remove();
-    });
-    list.appendChild(topBtn);
-
-    // Options: "Move after [batch]"
-    laneBatches.forEach((lb, i) => {
+    for (const bowlKey of BOWL_ORDER) {
+        const bowl = BOWLS[bowlKey];
         const btn = document.createElement("button");
         btn.className = "btn move-option";
-        btn.textContent = `Move after ${lb.batchNumber || ""} ${lb.product}`;
+        if (bowlKey === batch.bowl) btn.classList.add("move-option-current");
+        btn.textContent = bowl.name + (bowlKey === batch.bowl ? " (current)" : "");
         btn.addEventListener("click", () => {
-            applyMove(batch, laneBatches, i + 1);
-            overlay.remove();
+            showPositionPicker(modal, overlay, batch, bowlKey);
         });
         list.appendChild(btn);
-    });
+    }
 
     modal.appendChild(list);
 
@@ -1645,12 +1637,59 @@ function openMoveModal(batchId) {
     cancelBtn.textContent = "Cancel";
     cancelBtn.addEventListener("click", () => overlay.remove());
     modal.appendChild(cancelBtn);
+}
 
-    overlay.appendChild(modal);
-    overlay.addEventListener("click", (e) => {
-        if (e.target === overlay) overlay.remove();
+function showPositionPicker(modal, overlay, batch, targetBowl) {
+    const bowlName = BOWLS[targetBowl] ? BOWLS[targetBowl].name : targetBowl;
+    const laneBatches = batches
+        .filter((b) => b.bowl === targetBowl && b.status !== "batch_complete" && b.id !== batch.id)
+        .sort((a, b) => {
+            const orderA = a.sortOrder != null ? a.sortOrder : a.createdAt;
+            const orderB = b.sortOrder != null ? b.sortOrder : b.createdAt;
+            return orderA - orderB;
+        });
+
+    modal.innerHTML = `<h2>Move to ${escapeHtml(bowlName)}</h2>
+        <p style="color:#666;margin-bottom:10px;">Select position</p>`;
+
+    const list = document.createElement("div");
+    list.className = "move-list";
+
+    // "Move to top" option
+    const topBtn = document.createElement("button");
+    topBtn.className = "btn move-option";
+    topBtn.textContent = laneBatches.length === 0 ? "Place here" : "Move to Top";
+    topBtn.addEventListener("click", () => {
+        batch.bowl = targetBowl;
+        applyMove(batch, laneBatches, 0);
+        overlay.remove();
     });
-    document.body.appendChild(overlay);
+    list.appendChild(topBtn);
+
+    // Options: "Move after [batch]"
+    laneBatches.forEach((lb, i) => {
+        const btn = document.createElement("button");
+        btn.className = "btn move-option";
+        btn.textContent = `After ${lb.batchNumber || ""} ${lb.product}`;
+        btn.addEventListener("click", () => {
+            batch.bowl = targetBowl;
+            applyMove(batch, laneBatches, i + 1);
+            overlay.remove();
+        });
+        list.appendChild(btn);
+    });
+
+    modal.appendChild(list);
+
+    const backBtn = document.createElement("button");
+    backBtn.className = "btn btn-secondary";
+    backBtn.style.marginTop = "12px";
+    backBtn.style.width = "100%";
+    backBtn.textContent = "Back to Bowls";
+    backBtn.addEventListener("click", () => {
+        showBowlPicker(modal, overlay, batch);
+    });
+    modal.appendChild(backBtn);
 }
 
 function applyMove(batch, laneBatches, insertIndex) {
