@@ -1589,7 +1589,7 @@ function getDragAfterElement(dropZone, y) {
 }
 
 // ── Touch Move Button ───────────────────────────────────────────────
-const isTouchDevice = "ontouchstart" in window || navigator.maxTouchPoints > 0;
+const isTouchDevice = window.matchMedia("(pointer: coarse)").matches;
 
 function openMoveModal(batchId) {
     const batch = batches.find((b) => b.id === batchId);
