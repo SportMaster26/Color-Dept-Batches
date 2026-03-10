@@ -912,10 +912,6 @@ header h1 {
     opacity: 0.3;
 }
 
-.batch-card.dragging.touch-dragging {
-    display: none;
-}
-
 .drop-zone.drag-over {
     background: rgba(212, 149, 43, 0.08);
     border-radius: 0 0 10px 10px;
@@ -929,19 +925,40 @@ header h1 {
     transition: opacity 0.15s;
 }
 
-.drop-indicator.touch-indicator {
-    height: 6px;
+.btn-move {
     background: #0065A1;
-    box-shadow: 0 0 8px rgba(0, 101, 161, 0.5);
+    color: #fff;
+    border: none;
 }
 
-.touch-clone {
-    position: fixed;
-    z-index: 1000;
-    opacity: 0.85;
-    pointer-events: none;
-    transform: rotate(2deg);
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+.move-modal {
+    max-height: 80vh;
+    overflow-y: auto;
+}
+
+.move-modal h2 {
+    margin-bottom: 12px;
+}
+
+.move-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.move-option {
+    text-align: left;
+    padding: 10px 14px;
+    background: #f5f5f5;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    font-size: 0.95rem;
+    cursor: pointer;
+}
+
+.move-option:active {
+    background: #0065A1;
+    color: #fff;
 }
 
 /* ── Modal ──────────────────────────────────────────────────────────── */
