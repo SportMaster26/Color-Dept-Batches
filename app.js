@@ -614,7 +614,15 @@ batchesRef.on("value", (snapshot) => {
     }
 
     // One-time reset: renumber ALL batches starting from MIN_BATCH_NUMBER
-    const allSorted = [...batches].sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
+    // Sort by bowl order first (Bowl A first), then by createdAt within each bowl
+    const allSorted = [...batches].sort((a, b) => {
+        const bowlA = BOWL_ORDER.indexOf(a.bowl);
+        const bowlB = BOWL_ORDER.indexOf(b.bowl);
+        const idxA = bowlA === -1 ? 999 : bowlA;
+        const idxB = bowlB === -1 ? 999 : bowlB;
+        if (idxA !== idxB) return idxA - idxB;
+        return (a.createdAt || 0) - (b.createdAt || 0);
+    });
     const needsRenumber = allSorted.some((b, i) => b.batchNumber !== "A" + String(MIN_BATCH_NUMBER + i).padStart(4, "0"));
     if (allSorted.length > 0 && needsRenumber) {
         const updates = {};
