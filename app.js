@@ -1429,8 +1429,10 @@ function createBatchCard(batch) {
         : batch.status === "pouring" ? "btn-batch-complete"
         : "";
     if (isAdmin) {
+        const moveBtn = isTouchDevice ? `<button class="btn btn-sm btn-move" data-action="move" data-id="${batch.id}">Move</button>` : "";
         actionsHtml = `
             <div class="card-actions">
+                ${moveBtn}
                 ${nextAction ? `<button class="btn btn-sm ${nextBtnClass}" data-action="advance" data-id="${batch.id}">${nextAction.label}</button>` : ""}
                 <button class="btn btn-sm btn-duplicate" data-action="duplicate" data-id="${batch.id}" title="Duplicate batch">&#x2398;</button>
                 <button class="btn btn-sm btn-edit" data-action="edit" data-id="${batch.id}">Edit</button>
@@ -1586,133 +1588,77 @@ function getDragAfterElement(dropZone, y) {
     return closest;
 }
 
-// ── Touch Drag & Drop (long-press to activate) ─────────────────────
-let touchDragEl = null;
-let touchClone = null;
-let touchLongPressTimer = null;
-let touchDragActive = false;
+// ── Touch Move Button ───────────────────────────────────────────────
+const isTouchDevice = "ontouchstart" in window || navigator.maxTouchPoints > 0;
 
-board.addEventListener("touchstart", (e) => {
-    if (!isAdmin) return;
-    const card = e.target.closest(".batch-card:not(.empty)");
-    if (!card || e.target.closest("[data-action]")) return;
+function openMoveModal(batchId) {
+    const batch = batches.find((b) => b.id === batchId);
+    if (!batch) return;
 
-    touchDragEl = card;
-    touchDragActive = false;
+    const laneBatches = batches
+        .filter((b) => b.bowl === batch.bowl && b.status !== "batch_complete" && b.id !== batchId)
+        .sort((a, b) => {
+            const orderA = a.sortOrder != null ? a.sortOrder : a.createdAt;
+            const orderB = b.sortOrder != null ? b.sortOrder : b.createdAt;
+            return orderA - orderB;
+        });
 
-    touchLongPressTimer = setTimeout(() => {
-        touchDragActive = true;
-        draggedId = touchDragEl.dataset.id;
-        touchDragEl.classList.add("dragging", "touch-dragging");
+    if (laneBatches.length === 0) return;
 
-        touchClone = touchDragEl.cloneNode(true);
-        touchClone.classList.add("touch-clone");
-        touchClone.style.width = touchDragEl.offsetWidth + "px";
-        document.body.appendChild(touchClone);
+    const overlay = document.createElement("div");
+    overlay.className = "modal-overlay";
+    const modal = document.createElement("div");
+    modal.className = "modal move-modal";
+    modal.innerHTML = `<h2>Move ${escapeHtml(batch.batchNumber || "")} ${escapeHtml(batch.product)}</h2>`;
 
-        const touch = e.touches[0];
-        touchClone.style.left = touch.clientX - touchClone.offsetWidth / 2 + "px";
-        touchClone.style.top = touch.clientY - touchClone.offsetHeight / 2 + "px";
+    const list = document.createElement("div");
+    list.className = "move-list";
 
-        // Vibrate if supported to signal drag started
-        if (navigator.vibrate) navigator.vibrate(50);
-    }, 500);
-}, { passive: true });
+    // "Move to top" option
+    const topBtn = document.createElement("button");
+    topBtn.className = "btn move-option";
+    topBtn.textContent = "Move to Top";
+    topBtn.addEventListener("click", () => {
+        applyMove(batch, laneBatches, 0);
+        overlay.remove();
+    });
+    list.appendChild(topBtn);
 
-board.addEventListener("touchmove", (e) => {
-    if (!touchDragEl) return;
+    // Options: "Move after [batch]"
+    laneBatches.forEach((lb, i) => {
+        const btn = document.createElement("button");
+        btn.className = "btn move-option";
+        btn.textContent = `Move after ${lb.batchNumber || ""} ${lb.product}`;
+        btn.addEventListener("click", () => {
+            applyMove(batch, laneBatches, i + 1);
+            overlay.remove();
+        });
+        list.appendChild(btn);
+    });
 
-    // If long press hasn't fired yet, cancel it and let the page scroll
-    if (!touchDragActive) {
-        clearTimeout(touchLongPressTimer);
-        touchLongPressTimer = null;
-        touchDragEl = null;
-        return;
-    }
+    modal.appendChild(list);
 
-    e.preventDefault();
+    const cancelBtn = document.createElement("button");
+    cancelBtn.className = "btn btn-secondary";
+    cancelBtn.style.marginTop = "12px";
+    cancelBtn.style.width = "100%";
+    cancelBtn.textContent = "Cancel";
+    cancelBtn.addEventListener("click", () => overlay.remove());
+    modal.appendChild(cancelBtn);
 
-    touchClone.style.left = e.touches[0].clientX - touchClone.offsetWidth / 2 + "px";
-    touchClone.style.top = e.touches[0].clientY - touchClone.offsetHeight / 2 + "px";
+    overlay.appendChild(modal);
+    overlay.addEventListener("click", (e) => {
+        if (e.target === overlay) overlay.remove();
+    });
+    document.body.appendChild(overlay);
+}
 
-    const dropZone = getDropZoneAt(e.touches[0].clientX, e.touches[0].clientY);
-    document.querySelectorAll(".drop-indicator").forEach((el) => el.remove());
-    document.querySelectorAll(".drag-over").forEach((el) => el.classList.remove("drag-over"));
-
-    if (dropZone) {
-        dropZone.classList.add("drag-over");
-        const afterElement = getDragAfterElement(dropZone, e.touches[0].clientY);
-        const indicator = document.createElement("div");
-        indicator.className = "drop-indicator touch-indicator";
-        if (afterElement) {
-            dropZone.insertBefore(indicator, afterElement);
-        } else {
-            dropZone.appendChild(indicator);
-        }
-    }
-}, { passive: false });
-
-board.addEventListener("touchend", (e) => {
-    clearTimeout(touchLongPressTimer);
-    touchLongPressTimer = null;
-
-    if (!touchDragEl) return;
-
-    if (touchClone) {
-        const touch = e.changedTouches[0];
-        const dropZone = getDropZoneAt(touch.clientX, touch.clientY);
-
-        if (dropZone && draggedId) {
-            const targetBowl = dropZone.dataset.bowl;
-            const batch = batches.find((b) => b.id === draggedId);
-            if (batch) {
-                batch.bowl = targetBowl;
-
-                const afterElement = getDragAfterElement(dropZone, touch.clientY);
-                const laneBatches = batches
-                    .filter((b) => b.bowl === targetBowl && b.id !== draggedId)
-                    .sort((a, b) => {
-                        const orderA = a.sortOrder != null ? a.sortOrder : a.createdAt;
-                        const orderB = b.sortOrder != null ? b.sortOrder : b.createdAt;
-                        return orderA - orderB;
-                    });
-
-                let insertIndex = laneBatches.length;
-                if (afterElement) {
-                    const afterId = afterElement.dataset.id;
-                    insertIndex = laneBatches.findIndex((b) => b.id === afterId);
-                    if (insertIndex === -1) insertIndex = laneBatches.length;
-                }
-
-                laneBatches.splice(insertIndex, 0, batch);
-                laneBatches.forEach((b, i) => {
-                    b.sortOrder = i;
-                });
-
-                saveBatches();
-            }
-        }
-
-        touchClone.remove();
-        touchClone = null;
-    }
-
-    if (touchDragEl) {
-        touchDragEl.classList.remove("dragging", "touch-dragging");
-    }
-    touchDragEl = null;
-    touchDragActive = false;
-    draggedId = null;
-    document.querySelectorAll(".drag-over").forEach((el) => el.classList.remove("drag-over"));
-    document.querySelectorAll(".drop-indicator").forEach((el) => el.remove());
-});
-
-function getDropZoneAt(x, y) {
-    if (touchClone) touchClone.style.display = "none";
-    const el = document.elementFromPoint(x, y);
-    if (touchClone) touchClone.style.display = "";
-    if (!el) return null;
-    return el.closest(".drop-zone");
+function applyMove(batch, laneBatches, insertIndex) {
+    laneBatches.splice(insertIndex, 0, batch);
+    laneBatches.forEach((b, i) => {
+        b.sortOrder = i;
+    });
+    saveBatches();
 }
 
 // ── Actions ─────────────────────────────────────────────────────────
@@ -1726,6 +1672,8 @@ document.addEventListener("click", (e) => {
 
     if (action === "advance" && (isAdmin || isOperator)) {
         advanceStatus(id);
+    } else if (action === "move" && isAdmin) {
+        openMoveModal(id);
     } else if (action === "edit" && isAdmin) {
         openEditModal(id);
     } else if (action === "duplicate" && isAdmin) {
