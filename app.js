@@ -972,6 +972,7 @@ function getCompletedRows() {
                 unitCount: batch.unitCount || "",
                 viscosity: batch.viscosity || "",
                 initials: batch.initials || "",
+                initials2: batch.initials2 || "",
                 pouredBy: batch.pouredBy || "",
                 notes: batch.notes || "",
                 queuedAt: fmtTs(batch.createdAt),
@@ -1035,6 +1036,7 @@ function renderCompleted() {
             <td>${r.unitCount ? Number(r.unitCount).toLocaleString() : "—"}</td>
             <td>${r.viscosity ? escapeHtml(r.viscosity) + " KU" : "—"}</td>
             <td>${escapeHtml(r.initials) || "—"}</td>
+            <td>${escapeHtml(r.initials2) || "—"}</td>
             <td>${escapeHtml(r.pouredBy) || "—"}</td>
             <td>${escapeHtml(r.notes) || "—"}</td>
             <td class="completed-time-cell">${r.queuedAt}</td>
@@ -1078,7 +1080,7 @@ function getFilteredRows() {
         rows = rows.filter((r) => r.completedAt <= toTs);
     }
     if (compounder) {
-        rows = rows.filter((r) => r.initials === compounder);
+        rows = rows.filter((r) => r.initials === compounder || r.initials2 === compounder);
     }
     return rows;
 }
@@ -1284,6 +1286,7 @@ function exportToExcel() {
         "Unit Count": r.unitCount || "N/A",
         "Viscosity (KU)": r.viscosity || "N/A",
         "Mixed By": r.initials || "N/A",
+        "Mixed By 2": r.initials2 || "N/A",
         "Poured By": r.pouredBy || "N/A",
         "Notes": r.notes || "",
         "Queued": r.queuedAt,
@@ -1383,6 +1386,7 @@ document.getElementById("history-product-select").addEventListener("change", fun
             <td>${r.unitCount}</td>
             <td>${r.viscosity}</td>
             <td>${r.initials}</td>
+            <td>${r.initials2 || "—"}</td>
             <td>${r.pouredBy}</td>
             <td>${r.notes}</td>
             <td class="completed-time-cell">${r.queuedAt}</td>
@@ -1444,7 +1448,11 @@ function createBatchCard(batch) {
 
     let extraInfo = "";
     if (batch.viscosity) extraInfo += `<span class="card-viscosity">Viscosity: ${escapeHtml(batch.viscosity)} KU</span>`;
-    if (batch.initials) extraInfo += `<span class="card-initials">Mixed: ${escapeHtml(batch.initials)}</span>`;
+    if (batch.initials) {
+        let mixedLabel = escapeHtml(batch.initials);
+        if (batch.initials2) mixedLabel += ` & ${escapeHtml(batch.initials2)}`;
+        extraInfo += `<span class="card-initials">Mixed: ${mixedLabel}</span>`;
+    }
     if (batch.pouredBy) extraInfo += `<span class="card-poured-by">Poured: ${escapeHtml(batch.pouredBy)}</span>`;
 
     const batchNumDisplay = batch.batchNumber ? `<span class="card-batch-number">${escapeHtml(batch.batchNumber)}</span>` : "";
@@ -1756,6 +1764,7 @@ function duplicateBatch(id) {
             completedAt: null,
             viscosity: null,
             initials: null,
+            initials2: null,
             pouredBy: null,
         };
         batchesRef.child(newBatch.id).set(newBatch);
@@ -1837,6 +1846,7 @@ function showMixingCompleteModal(batch) {
     document.getElementById("mixing-complete-product").textContent = batch.product;
     document.getElementById("viscosity-input").value = "";
     document.getElementById("initials-input").value = "";
+    document.getElementById("initials2-input").value = "";
     mixingCompleteOverlay.classList.remove("hidden");
 }
 
@@ -1874,6 +1884,7 @@ mixingCompleteForm.addEventListener("submit", (e) => {
 
     batch.viscosity = document.getElementById("viscosity-input").value.trim();
     batch.initials = document.getElementById("initials-input").value;
+    batch.initials2 = document.getElementById("initials2-input").value || null;
 
     mixingCompleteOverlay.classList.add("hidden");
     applyStatusAdvance(batch, "mixing_complete");
@@ -2021,6 +2032,7 @@ function openEditModal(id) {
     document.getElementById("edit-unit-count").value = batch.unitCount || "";
     document.getElementById("edit-viscosity").value = batch.viscosity || "";
     document.getElementById("edit-initials").value = batch.initials || "";
+    document.getElementById("edit-initials2").value = batch.initials2 || "";
     document.getElementById("edit-poured-by").value = batch.pouredBy || "";
     document.getElementById("edit-notes").value = batch.notes || "";
 
@@ -2048,6 +2060,7 @@ editForm.addEventListener("submit", (e) => {
     batch.unitCount = uc ? Number(uc) : null;
     batch.viscosity = document.getElementById("edit-viscosity").value.trim() || null;
     batch.initials = document.getElementById("edit-initials").value || null;
+    batch.initials2 = document.getElementById("edit-initials2").value || null;
     batch.pouredBy = document.getElementById("edit-poured-by").value.trim() || null;
     batch.notes = document.getElementById("edit-notes").value.trim() || null;
 
