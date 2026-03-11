@@ -274,6 +274,7 @@ const customProductsRef = db.ref("meta/customProducts");
 const latexTanksRef = db.ref("latexTanks");
 const lockedAccountsRef = db.ref("meta/lockedAccounts");
 const failedAttemptsRef = db.ref("meta/failedAttempts");
+const loginAuditRef = db.ref("meta/loginAudit");
 
 // ── Latex Tank Configuration ─────────────────────────────────────────
 const LATEX_TANKS = [
@@ -455,6 +456,7 @@ loginForm.addEventListener("submit", (e) => {
             .then((cred) => {
                 // Clear failed attempts on success
                 failedAttemptsRef.child(emailToKey(email)).remove();
+                loginAuditRef.push({ email, event: "login_success", timestamp: Date.now() });
                 const role = ROLE_MAP[cred.user.email] || "viewer";
                 setRole(role);
                 loginScreen.classList.add("hidden");
@@ -472,8 +474,10 @@ loginForm.addEventListener("submit", (e) => {
                         // Lock the account
                         lockedAccountsRef.child(emailToKey(email)).set(true);
                         failedAttemptsRef.child(emailToKey(email)).remove();
+                        loginAuditRef.push({ email, event: "account_locked", timestamp: Date.now() });
                         loginError.textContent = "Account locked. Contact an admin to reset your password.";
                     } else {
+                        loginAuditRef.push({ email, event: "login_failed", reason: err.code, attempt: attempts, timestamp: Date.now() });
                         const remaining = MAX_ATTEMPTS - attempts;
                         loginError.textContent = err.code === "auth/invalid-credential"
                             ? `Invalid email or password. ${remaining} attempt${remaining === 1 ? "" : "s"} remaining.`

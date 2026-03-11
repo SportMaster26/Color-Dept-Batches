@@ -41,6 +41,10 @@
           ".write": "auth != null",
           ".validate": "newData.isNumber() && ((!data.exists() && newData.val() === 1) || (data.exists() && newData.val() === data.val() + 1) || !newData.exists())"
         }
+      },
+      "loginAudit": {
+        ".read": "auth != null && (auth.token.email === 'admin@colordept.local' || auth.token.email === 'tmahl@colordept.local' || auth.token.email === 'kherrin@colordept.local' || auth.token.email === 'ajolly@colordept.local' || auth.token.email === 'jeff@colordept.local')",
+        ".write": "auth != null"
       }
     }
   }
