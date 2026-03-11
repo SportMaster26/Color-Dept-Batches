@@ -274,6 +274,7 @@ const customProductsRef = db.ref("meta/customProducts");
 const latexTanksRef = db.ref("latexTanks");
 const lockedAccountsRef = db.ref("meta/lockedAccounts");
 const failedAttemptsRef = db.ref("meta/failedAttempts");
+const loginAuditRef = db.ref("meta/loginAudit");
 
 // ── Latex Tank Configuration ─────────────────────────────────────────
 const LATEX_TANKS = [
@@ -455,6 +456,7 @@ loginForm.addEventListener("submit", (e) => {
             .then((cred) => {
                 // Clear failed attempts on success
                 failedAttemptsRef.child(emailToKey(email)).remove();
+                loginAuditRef.push({ email, event: "login_success", timestamp: Date.now() });
                 const role = ROLE_MAP[cred.user.email] || "viewer";
                 setRole(role);
                 loginScreen.classList.add("hidden");
@@ -472,8 +474,10 @@ loginForm.addEventListener("submit", (e) => {
                         // Lock the account
                         lockedAccountsRef.child(emailToKey(email)).set(true);
                         failedAttemptsRef.child(emailToKey(email)).remove();
+                        loginAuditRef.push({ email, event: "account_locked", timestamp: Date.now() });
                         loginError.textContent = "Account locked. Contact an admin to reset your password.";
                     } else {
+                        loginAuditRef.push({ email, event: "login_failed", reason: err.code, attempt: attempts, timestamp: Date.now() });
                         const remaining = MAX_ATTEMPTS - attempts;
                         loginError.textContent = err.code === "auth/invalid-credential"
                             ? `Invalid email or password. ${remaining} attempt${remaining === 1 ? "" : "s"} remaining.`
@@ -499,37 +503,6 @@ logoutBtn.addEventListener("click", () => {
         loginForm.reset();
         loginError.classList.add("hidden");
         document.body.classList.remove("admin-mode", "operator-mode", "viewer-mode");
-    });
-});
-
-// Unlock accounts handler (admin only)
-document.getElementById("unlock-accounts-btn").addEventListener("click", () => {
-    if (!isAdmin) return;
-    lockedAccountsRef.once("value", (snap) => {
-        const locked = snap.val();
-        if (!locked) {
-            alert("No locked accounts.");
-            return;
-        }
-        const lockedEmails = Object.keys(locked).map((k) => k.replace(/,/g, "."));
-        const list = lockedEmails.map((e, i) => `${i + 1}. ${e}`).join("\n");
-        const choice = prompt(`Locked accounts:\n${list}\n\nEnter the number to unlock (or "all" to unlock all):`);
-        if (!choice) return;
-        if (choice.trim().toLowerCase() === "all") {
-            lockedAccountsRef.remove();
-            failedAttemptsRef.remove();
-            alert("All accounts unlocked.");
-        } else {
-            const idx = parseInt(choice) - 1;
-            if (idx >= 0 && idx < lockedEmails.length) {
-                const emailKey = emailToKey(lockedEmails[idx]);
-                lockedAccountsRef.child(emailKey).remove();
-                failedAttemptsRef.child(emailKey).remove();
-                alert(`${lockedEmails[idx]} unlocked.`);
-            } else {
-                alert("Invalid selection.");
-            }
-        }
     });
 });
 
