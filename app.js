@@ -318,8 +318,33 @@ const LATEX_TANKS = [
 
 let latexTankLevels = {}; // { tankId: gallons }
 
-// Load custom products from Firebase and merge into catalog
-customProductsRef.on("value", (snapshot) => {
+// Firebase listeners — started after auth, stopped on logout
+let listenersActive = false;
+
+function startFirebaseListeners() {
+    if (listenersActive) return;
+    listenersActive = true;
+
+    customProductsRef.on("value", onCustomProducts);
+    batchesRef.on("value", onBatches, onBatchesError);
+    latexTanksRef.on("value", onLatexTanks);
+    latexTanksRef.once("value", onLatexTanksSeed);
+    notesRef.on("value", onNotes);
+}
+
+function stopFirebaseListeners() {
+    if (!listenersActive) return;
+    listenersActive = false;
+    customProductsRef.off("value", onCustomProducts);
+    batchesRef.off("value", onBatches);
+    latexTanksRef.off("value", onLatexTanks);
+    notesRef.off("value", onNotes);
+    // Remove error banner if present
+    const errBanner = document.getElementById("firebase-error-banner");
+    if (errBanner) errBanner.remove();
+}
+
+function onCustomProducts(snapshot) {
     const data = snapshot.val();
     if (data) {
         const customs = Object.values(data);
@@ -329,13 +354,14 @@ customProductsRef.on("value", (snapshot) => {
             }
         });
     }
-});
+}
 
 // ── State ───────────────────────────────────────────────────────────
 let batches = [];
 let undoStack = []; // stores { id, prevStatus } for admin undo
 let operatorUndoStack = []; // separate undo stack for operator
 const MAX_UNDO = 20;
+let isOwner = false;
 let isAdmin = false;
 let isOperator = false;
 let isViewer = false;
@@ -371,13 +397,14 @@ const loginError = document.getElementById("login-error");
 
 function setRole(role) {
     currentRole = role;
-    isAdmin = role === "admin";
+    isOwner = role === "owner";
+    isAdmin = role === "admin" || role === "owner";
     isOperator = role === "operator";
     isViewer = role === "viewer";
 }
 
 // ── Notes Users ─────────────────────────────────────────────────────
-const NOTES_POST_USERS = ["tmahl@colordept.local", "kherrin@colordept.local", "ajolly@colordept.local"];
+const NOTES_POST_USERS = ["master@colordept.local", "tmahl@colordept.local", "kherrin@colordept.local", "ajolly@colordept.local"];
 
 function canPostNotes() {
     const user = auth.currentUser;
@@ -389,7 +416,13 @@ function updateAdminUI() {
 
     // Update role badge
     roleBadge.className = "role-badge";
-    if (isAdmin) {
+    if (isOwner) {
+        roleBadge.textContent = "Owner";
+        roleBadge.classList.add("role-owner");
+        adminElements.forEach((el) => el.classList.remove("hidden"));
+        document.body.classList.add("admin-mode");
+        document.body.classList.remove("operator-mode", "viewer-mode");
+    } else if (isAdmin) {
         roleBadge.textContent = "Admin";
         roleBadge.classList.add("role-admin");
         adminElements.forEach((el) => el.classList.remove("hidden"));
@@ -459,6 +492,7 @@ loginForm.addEventListener("submit", (e) => {
                 loginAuditRef.push({ email, event: "login_success", timestamp: Date.now() });
                 const role = ROLE_MAP[cred.user.email] || "viewer";
                 setRole(role);
+                startFirebaseListeners();
                 loginScreen.classList.add("hidden");
                 appContainer.classList.remove("hidden");
                 updateAdminUI();
@@ -467,8 +501,14 @@ loginForm.addEventListener("submit", (e) => {
                 // Increment failed attempts in Firebase
                 failedAttemptsRef.child(emailToKey(email)).transaction((count) => {
                     return (count || 0) + 1;
-                }, (error, committed, snapshot) => {
-                    if (error) return;
+                }, (txError, committed, snapshot) => {
+                    if (txError) {
+                        // Transaction failed — still show the error to user
+                        loginError.textContent = "Invalid email or password.";
+                        loginError.classList.remove("hidden");
+                        loginAuditRef.push({ email, event: "login_failed", reason: err.code, timestamp: Date.now() });
+                        return;
+                    }
                     const attempts = snapshot.val() || 0;
                     if (attempts >= MAX_ATTEMPTS) {
                         // Lock the account
@@ -495,9 +535,11 @@ loginForm.addEventListener("submit", (e) => {
 logoutBtn.addEventListener("click", () => {
     auth.signOut().then(() => {
         setRole(null);
+        isOwner = false;
         isAdmin = false;
         isOperator = false;
         isViewer = false;
+        stopFirebaseListeners();
         appContainer.classList.add("hidden");
         loginScreen.classList.remove("hidden");
         loginForm.reset();
@@ -511,10 +553,12 @@ auth.onAuthStateChanged((user) => {
     if (user) {
         const role = ROLE_MAP[user.email] || "viewer";
         setRole(role);
+        startFirebaseListeners();
         loginScreen.classList.add("hidden");
         appContainer.classList.remove("hidden");
         updateAdminUI();
     } else {
+        stopFirebaseListeners();
         setRole(null);
         appContainer.classList.add("hidden");
         loginScreen.classList.remove("hidden");
@@ -632,13 +676,10 @@ if (window.location.protocol === "file:") {
 // Render immediately so the board shows even before Firebase connects
 render();
 
-// ── Real-Time Listener ──────────────────────────────────────────────
-// This fires immediately with current data, then again on every change
-// from ANY device/tab connected to this Firebase project.
-batchesRef.on("value", (snapshot) => {
+// ── Real-Time Listener (named functions for start/stop) ─────────────
+function onBatches(snapshot) {
     const data = snapshot.val();
     batches = data ? Object.values(data) : [];
-    // Migrate old "complete" status to new name and persist
     const migrations = {};
     for (const batch of batches) {
         if (batch.status === "complete") {
@@ -649,21 +690,24 @@ batchesRef.on("value", (snapshot) => {
     if (Object.keys(migrations).length > 0) {
         batchesRef.update(migrations);
     }
-
     render();
     if (activeTab === "latex") renderLatexBoard();
     updateCompletedCount();
     if (activeTab === "completed") renderCompleted();
-}, (error) => {
-    console.error("Firebase connection error:", error);
-    // Show error to user
-    const errDiv = document.createElement("div");
-    errDiv.style.cssText = "background:#fee;color:#c00;padding:16px 24px;font-weight:600;text-align:center;border-bottom:2px solid #c00;";
-    errDiv.textContent = "Firebase error: " + error.message + " — Check your database rules in the Firebase console.";
-    document.body.prepend(errDiv);
-});
+}
 
-// Run migration after listener is set up
+function onBatchesError(error) {
+    console.error("Firebase connection error:", error);
+    if (!document.getElementById("firebase-error-banner")) {
+        const errDiv = document.createElement("div");
+        errDiv.id = "firebase-error-banner";
+        errDiv.style.cssText = "background:#fee;color:#c00;padding:16px 24px;font-weight:600;text-align:center;border-bottom:2px solid #c00;";
+        errDiv.textContent = "Firebase error: " + error.message + " — Check your database rules in the Firebase console.";
+        document.body.prepend(errDiv);
+    }
+}
+
+// Run migration after initial setup
 migrateLocalStorage();
 
 // ── Save to Firebase ────────────────────────────────────────────────
@@ -913,14 +957,13 @@ function saveTankLevel(input) {
     latexTanksRef.child(tankId).set({ value: val, updatedAt: new Date().toISOString() });
 }
 
-// Listen for tank level changes from Firebase
-latexTanksRef.on("value", (snapshot) => {
+// Named listener functions for start/stop
+function onLatexTanks(snapshot) {
     latexTankLevels = snapshot.val() || {};
     if (activeTab === "latex") renderLatexBoard();
-});
+}
 
-// Seed initial tank levels if none exist yet (one-time)
-latexTanksRef.once("value", (snapshot) => {
+function onLatexTanksSeed(snapshot) {
     if (snapshot.exists()) return;
     const seed = {
         C1: 4000, C2: 5500, C3: 4200, C4: 3100, C5: 5500, C6: 4700, C7: 2700, C8: 4500,
@@ -931,7 +974,7 @@ latexTanksRef.once("value", (snapshot) => {
         CB: 1, T1: 6, T2: 15, T3: 16, T4: 29, T5: 13, T6: 9,
     };
     latexTanksRef.set(seed);
-});
+}
 
 // ── Completed Tab: Table / Chart / Export ────────────────────────────
 let completedView = "table"; // "table" or "chart"
@@ -2268,11 +2311,11 @@ batchForm.addEventListener("submit", (e) => {
 // ── Notes ───────────────────────────────────────────────────────────
 let siteNotes = [];
 
-notesRef.on("value", (snap) => {
+function onNotes(snap) {
     const data = snap.val() || {};
     siteNotes = Object.values(data).sort((a, b) => b.createdAt - a.createdAt);
     if (activeTab === "notes") renderNotes();
-});
+}
 
 function formatNoteDate(dateStr) {
     // If it looks like a date (YYYY-MM-DD), format it nicely

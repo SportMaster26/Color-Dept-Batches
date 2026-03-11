@@ -23,19 +23,20 @@ const firebaseConfig = {
 // Roles are determined by the email used to log in.
 // Create these accounts in Firebase Console → Authentication → Users:
 //
+// Owner (unrestricted access — full control over everything):
+//   master@colordept.local
+//
 // Admin (full access — add, edit, delete, charts):
 //   admin@colordept.local
 //   tmahl@colordept.local    (TJ Mahl)
 //   kherrin@colordept.local  (Kevin Herrin)
+//   ajolly@colordept.local   (AJ Jolly)
+//   jeff@colordept.local     (Jeff Gearheart)
 //
 // Operator (advance steps, enter viscosity/names):
 //   floor@colordept.local
 //   platform@colordept.local
 //   cwood@colordept.local    (C Wood)
-//
-// Admin:
-//   ajolly@colordept.local   (AJ Jolly)
-//   jeff@colordept.local     (Jeff Gearheart)
 //
 // Viewer (read-only with chart access):
 //   dpanyard@colordept.local (Dave Panyard)
@@ -47,6 +48,7 @@ const firebaseConfig = {
 // You can change these emails to whatever you like — just update the
 // mapping below to match.
 const ROLE_MAP = {
+    "master@colordept.local": "owner",
     "admin@colordept.local": "admin",
     "tmahl@colordept.local": "admin",
     "kherrin@colordept.local": "admin",
