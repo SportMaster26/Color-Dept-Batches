@@ -462,6 +462,7 @@ function updateAdminUI() {
 
 // Login lockout after 3 failed attempts — permanent until admin unlocks
 const MAX_ATTEMPTS = 3;
+let localFailedAttempts = {}; // { email: count } — local tracker per session
 
 // Convert email to a Firebase-safe key (no dots allowed in keys)
 function emailToKey(email) {
@@ -488,8 +489,9 @@ loginForm.addEventListener("submit", (e) => {
         auth.signInWithEmailAndPassword(email, password)
             .then((cred) => {
                 // Clear failed attempts on success
-                failedAttemptsRef.child(emailToKey(email)).remove();
-                loginAuditRef.push({ email, event: "login_success", timestamp: Date.now() });
+                delete localFailedAttempts[email];
+                failedAttemptsRef.child(emailToKey(email)).remove().catch(() => {});
+                loginAuditRef.push({ email, event: "login_success", timestamp: Date.now() }).catch(() => {});
                 const role = ROLE_MAP[cred.user.email] || "viewer";
                 setRole(role);
                 startFirebaseListeners();
@@ -498,35 +500,31 @@ loginForm.addEventListener("submit", (e) => {
                 updateAdminUI();
             })
             .catch((err) => {
-                // Increment failed attempts in Firebase
+                // Track attempts locally (immediate) and in Firebase (persistent)
+                localFailedAttempts[email] = (localFailedAttempts[email] || 0) + 1;
+                const attempts = localFailedAttempts[email];
+
+                // Try to persist to Firebase (best-effort, don't block UI)
                 failedAttemptsRef.child(emailToKey(email)).transaction((count) => {
                     return (count || 0) + 1;
-                }, (txError, committed, snapshot) => {
-                    if (txError) {
-                        // Transaction failed — still show the error to user
-                        loginError.textContent = "Invalid email or password.";
-                        loginError.classList.remove("hidden");
-                        loginAuditRef.push({ email, event: "login_failed", reason: err.code, timestamp: Date.now() });
-                        return;
-                    }
-                    const attempts = snapshot.val() || 0;
-                    if (attempts >= MAX_ATTEMPTS) {
-                        // Lock the account
-                        lockedAccountsRef.child(emailToKey(email)).set(true);
-                        failedAttemptsRef.child(emailToKey(email)).remove();
-                        loginAuditRef.push({ email, event: "account_locked", timestamp: Date.now() });
-                        loginError.textContent = "Account locked. Contact an admin to reset your password.";
-                    } else {
-                        loginAuditRef.push({ email, event: "login_failed", reason: err.code, attempt: attempts, timestamp: Date.now() });
-                        const remaining = MAX_ATTEMPTS - attempts;
-                        loginError.textContent = err.code === "auth/invalid-credential"
-                            ? `Invalid email or password. ${remaining} attempt${remaining === 1 ? "" : "s"} remaining.`
-                            : err.code === "auth/too-many-requests"
-                            ? "Account locked. Contact an admin to reset your password."
-                            : `Login failed. ${remaining} attempt${remaining === 1 ? "" : "s"} remaining.`;
-                    }
-                    loginError.classList.remove("hidden");
-                });
+                }).catch(() => {});
+
+                if (attempts >= MAX_ATTEMPTS) {
+                    // Lock the account in Firebase
+                    lockedAccountsRef.child(emailToKey(email)).set(true).catch(() => {});
+                    failedAttemptsRef.child(emailToKey(email)).remove().catch(() => {});
+                    loginAuditRef.push({ email, event: "account_locked", timestamp: Date.now() }).catch(() => {});
+                    loginError.textContent = "Account locked. Contact an admin to reset your password.";
+                } else {
+                    loginAuditRef.push({ email, event: "login_failed", reason: err.code, attempt: attempts, timestamp: Date.now() }).catch(() => {});
+                    const remaining = MAX_ATTEMPTS - attempts;
+                    loginError.textContent = err.code === "auth/invalid-credential"
+                        ? `Invalid email or password. ${remaining} attempt${remaining === 1 ? "" : "s"} remaining.`
+                        : err.code === "auth/too-many-requests"
+                        ? "Account locked. Contact an admin to reset your password."
+                        : `Login failed. ${remaining} attempt${remaining === 1 ? "" : "s"} remaining.`;
+                }
+                loginError.classList.remove("hidden");
             });
     });
 });
