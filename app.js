@@ -424,9 +424,24 @@ function updateAdminUI() {
     render();
 }
 
+// Login lockout after 3 failed attempts
+let failedAttempts = 0;
+let lockoutUntil = 0;
+const MAX_ATTEMPTS = 3;
+const LOCKOUT_MINUTES = 15;
+
 // Login form handler
 loginForm.addEventListener("submit", (e) => {
     e.preventDefault();
+
+    // Check client-side lockout
+    if (Date.now() < lockoutUntil) {
+        const mins = Math.ceil((lockoutUntil - Date.now()) / 60000);
+        loginError.textContent = `Account locked. Try again in ${mins} minute${mins === 1 ? "" : "s"}.`;
+        loginError.classList.remove("hidden");
+        return;
+    }
+
     const email = document.getElementById("login-email").value.trim();
     const password = document.getElementById("login-password").value;
 
@@ -434,6 +449,8 @@ loginForm.addEventListener("submit", (e) => {
 
     auth.signInWithEmailAndPassword(email, password)
         .then((cred) => {
+            failedAttempts = 0;
+            lockoutUntil = 0;
             const role = ROLE_MAP[cred.user.email] || "viewer";
             setRole(role);
             loginScreen.classList.add("hidden");
@@ -441,15 +458,18 @@ loginForm.addEventListener("submit", (e) => {
             updateAdminUI();
         })
         .catch((err) => {
-            loginError.textContent = err.code === "auth/invalid-credential"
-                ? "Invalid email or password."
-                : err.code === "auth/user-not-found"
-                ? "No account found with that email."
-                : err.code === "auth/wrong-password"
-                ? "Incorrect password."
-                : err.code === "auth/too-many-requests"
-                ? "Too many attempts. Try again later."
-                : "Login failed. Please try again.";
+            failedAttempts++;
+            if (failedAttempts >= MAX_ATTEMPTS) {
+                lockoutUntil = Date.now() + LOCKOUT_MINUTES * 60000;
+                loginError.textContent = `Too many failed attempts. Locked out for ${LOCKOUT_MINUTES} minutes.`;
+            } else {
+                const remaining = MAX_ATTEMPTS - failedAttempts;
+                loginError.textContent = err.code === "auth/invalid-credential"
+                    ? `Invalid email or password. ${remaining} attempt${remaining === 1 ? "" : "s"} remaining.`
+                    : err.code === "auth/too-many-requests"
+                    ? "Too many attempts. Try again later."
+                    : `Login failed. ${remaining} attempt${remaining === 1 ? "" : "s"} remaining.`;
+            }
             loginError.classList.remove("hidden");
         });
 });
