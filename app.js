@@ -502,37 +502,6 @@ logoutBtn.addEventListener("click", () => {
     });
 });
 
-// Unlock accounts handler (admin only)
-document.getElementById("unlock-accounts-btn").addEventListener("click", () => {
-    if (!isAdmin) return;
-    lockedAccountsRef.once("value", (snap) => {
-        const locked = snap.val();
-        if (!locked) {
-            alert("No locked accounts.");
-            return;
-        }
-        const lockedEmails = Object.keys(locked).map((k) => k.replace(/,/g, "."));
-        const list = lockedEmails.map((e, i) => `${i + 1}. ${e}`).join("\n");
-        const choice = prompt(`Locked accounts:\n${list}\n\nEnter the number to unlock (or "all" to unlock all):`);
-        if (!choice) return;
-        if (choice.trim().toLowerCase() === "all") {
-            lockedAccountsRef.remove();
-            failedAttemptsRef.remove();
-            alert("All accounts unlocked.");
-        } else {
-            const idx = parseInt(choice) - 1;
-            if (idx >= 0 && idx < lockedEmails.length) {
-                const emailKey = emailToKey(lockedEmails[idx]);
-                lockedAccountsRef.child(emailKey).remove();
-                failedAttemptsRef.child(emailKey).remove();
-                alert(`${lockedEmails[idx]} unlocked.`);
-            } else {
-                alert("Invalid selection.");
-            }
-        }
-    });
-});
-
 // Check if already logged in (page refresh)
 auth.onAuthStateChanged((user) => {
     if (user) {
