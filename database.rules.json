@@ -1,0 +1,47 @@
+{
+  "rules": {
+    ".read": false,
+    ".write": false,
+
+    "batches": {
+      ".read": "auth != null",
+      ".write": "auth != null && (auth.token.email === 'admin@colordept.local' || auth.token.email === 'tmahl@colordept.local' || auth.token.email === 'kherrin@colordept.local' || auth.token.email === 'ajolly@colordept.local' || auth.token.email === 'jeff@colordept.local' || auth.token.email === 'floor@colordept.local' || auth.token.email === 'platform@colordept.local' || auth.token.email === 'cwood@colordept.local')"
+    },
+
+    "notes": {
+      ".read": "auth != null",
+      ".write": "auth != null && (auth.token.email === 'admin@colordept.local' || auth.token.email === 'tmahl@colordept.local' || auth.token.email === 'kherrin@colordept.local' || auth.token.email === 'ajolly@colordept.local' || auth.token.email === 'jeff@colordept.local' || auth.token.email === 'floor@colordept.local' || auth.token.email === 'platform@colordept.local' || auth.token.email === 'cwood@colordept.local')"
+    },
+
+    "latexTanks": {
+      ".read": "auth != null",
+      ".write": "auth != null && (auth.token.email === 'admin@colordept.local' || auth.token.email === 'tmahl@colordept.local' || auth.token.email === 'kherrin@colordept.local' || auth.token.email === 'ajolly@colordept.local' || auth.token.email === 'jeff@colordept.local' || auth.token.email === 'floor@colordept.local' || auth.token.email === 'platform@colordept.local' || auth.token.email === 'cwood@colordept.local')"
+    },
+
+    "meta": {
+      "batchCounter": {
+        ".read": "auth != null",
+        ".write": "auth != null && (auth.token.email === 'admin@colordept.local' || auth.token.email === 'tmahl@colordept.local' || auth.token.email === 'kherrin@colordept.local' || auth.token.email === 'ajolly@colordept.local' || auth.token.email === 'jeff@colordept.local' || auth.token.email === 'floor@colordept.local' || auth.token.email === 'platform@colordept.local' || auth.token.email === 'cwood@colordept.local')"
+      },
+      "recycledNumbers": {
+        ".read": "auth != null",
+        ".write": "auth != null && (auth.token.email === 'admin@colordept.local' || auth.token.email === 'tmahl@colordept.local' || auth.token.email === 'kherrin@colordept.local' || auth.token.email === 'ajolly@colordept.local' || auth.token.email === 'jeff@colordept.local' || auth.token.email === 'floor@colordept.local' || auth.token.email === 'platform@colordept.local' || auth.token.email === 'cwood@colordept.local')"
+      },
+      "customProducts": {
+        ".read": "auth != null",
+        ".write": "auth != null && (auth.token.email === 'admin@colordept.local' || auth.token.email === 'tmahl@colordept.local' || auth.token.email === 'kherrin@colordept.local' || auth.token.email === 'ajolly@colordept.local' || auth.token.email === 'jeff@colordept.local' || auth.token.email === 'floor@colordept.local' || auth.token.email === 'platform@colordept.local' || auth.token.email === 'cwood@colordept.local')"
+      },
+      "lockedAccounts": {
+        ".read": "auth != null && (auth.token.email === 'admin@colordept.local' || auth.token.email === 'tmahl@colordept.local' || auth.token.email === 'kherrin@colordept.local' || auth.token.email === 'ajolly@colordept.local' || auth.token.email === 'jeff@colordept.local')",
+        ".write": "auth != null && (auth.token.email === 'admin@colordept.local' || auth.token.email === 'tmahl@colordept.local' || auth.token.email === 'kherrin@colordept.local' || auth.token.email === 'ajolly@colordept.local' || auth.token.email === 'jeff@colordept.local')"
+      },
+      "failedAttempts": {
+        "$emailKey": {
+          ".read": "auth != null && (auth.token.email === 'admin@colordept.local' || auth.token.email === 'tmahl@colordept.local' || auth.token.email === 'kherrin@colordept.local' || auth.token.email === 'ajolly@colordept.local' || auth.token.email === 'jeff@colordept.local')",
+          ".write": "auth != null",
+          ".validate": "newData.isNumber() && ((!data.exists() && newData.val() === 1) || (data.exists() && newData.val() === data.val() + 1) || !newData.exists())"
+        }
+      }
+    }
+  }
+}
