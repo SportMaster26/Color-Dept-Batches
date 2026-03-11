@@ -504,6 +504,7 @@ logoutBtn.addEventListener("click", () => {
 
 // Unlock accounts handler (admin only)
 document.getElementById("unlock-accounts-btn").addEventListener("click", () => {
+    if (!isAdmin) return;
     lockedAccountsRef.once("value", (snap) => {
         const locked = snap.val();
         if (!locked) {

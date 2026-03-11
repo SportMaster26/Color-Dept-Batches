@@ -33,9 +33,11 @@ const firebaseConfig = {
 //   platform@colordept.local
 //   cwood@colordept.local    (C Wood)
 //
-// Viewer (read-only with chart access):
+// Admin:
 //   ajolly@colordept.local   (AJ Jolly)
 //   jeff@colordept.local     (Jeff Gearheart)
+//
+// Viewer (read-only with chart access):
 //   dpanyard@colordept.local (Dave Panyard)
 //   hhudak@colordept.local   (Haley Hudak)
 //   lab@colordept.local
