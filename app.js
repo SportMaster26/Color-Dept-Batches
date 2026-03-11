@@ -272,6 +272,8 @@ const MIN_BATCH_NUMBER = 1;
 const notesRef = db.ref("notes");
 const customProductsRef = db.ref("meta/customProducts");
 const latexTanksRef = db.ref("latexTanks");
+const lockedAccountsRef = db.ref("meta/lockedAccounts");
+const failedAttemptsRef = db.ref("meta/failedAttempts");
 
 // ── Latex Tank Configuration ─────────────────────────────────────────
 const LATEX_TANKS = [
@@ -424,54 +426,65 @@ function updateAdminUI() {
     render();
 }
 
-// Login lockout after 3 failed attempts
-let failedAttempts = 0;
-let lockoutUntil = 0;
+// Login lockout after 3 failed attempts — permanent until admin unlocks
 const MAX_ATTEMPTS = 3;
-const LOCKOUT_MINUTES = 15;
+
+// Convert email to a Firebase-safe key (no dots allowed in keys)
+function emailToKey(email) {
+    return email.replace(/\./g, ",");
+}
 
 // Login form handler
 loginForm.addEventListener("submit", (e) => {
     e.preventDefault();
 
-    // Check client-side lockout
-    if (Date.now() < lockoutUntil) {
-        const mins = Math.ceil((lockoutUntil - Date.now()) / 60000);
-        loginError.textContent = `Account locked. Try again in ${mins} minute${mins === 1 ? "" : "s"}.`;
-        loginError.classList.remove("hidden");
-        return;
-    }
-
-    const email = document.getElementById("login-email").value.trim();
+    const email = document.getElementById("login-email").value.trim().toLowerCase();
     const password = document.getElementById("login-password").value;
 
     loginError.classList.add("hidden");
 
-    auth.signInWithEmailAndPassword(email, password)
-        .then((cred) => {
-            failedAttempts = 0;
-            lockoutUntil = 0;
-            const role = ROLE_MAP[cred.user.email] || "viewer";
-            setRole(role);
-            loginScreen.classList.add("hidden");
-            appContainer.classList.remove("hidden");
-            updateAdminUI();
-        })
-        .catch((err) => {
-            failedAttempts++;
-            if (failedAttempts >= MAX_ATTEMPTS) {
-                lockoutUntil = Date.now() + LOCKOUT_MINUTES * 60000;
-                loginError.textContent = `Too many failed attempts. Locked out for ${LOCKOUT_MINUTES} minutes.`;
-            } else {
-                const remaining = MAX_ATTEMPTS - failedAttempts;
-                loginError.textContent = err.code === "auth/invalid-credential"
-                    ? `Invalid email or password. ${remaining} attempt${remaining === 1 ? "" : "s"} remaining.`
-                    : err.code === "auth/too-many-requests"
-                    ? "Too many attempts. Try again later."
-                    : `Login failed. ${remaining} attempt${remaining === 1 ? "" : "s"} remaining.`;
-            }
+    // Check if account is locked in Firebase
+    lockedAccountsRef.child(emailToKey(email)).once("value", (snap) => {
+        if (snap.val()) {
+            loginError.textContent = "Account locked. Contact an admin to reset your password.";
             loginError.classList.remove("hidden");
-        });
+            return;
+        }
+
+        auth.signInWithEmailAndPassword(email, password)
+            .then((cred) => {
+                // Clear failed attempts on success
+                failedAttemptsRef.child(emailToKey(email)).remove();
+                const role = ROLE_MAP[cred.user.email] || "viewer";
+                setRole(role);
+                loginScreen.classList.add("hidden");
+                appContainer.classList.remove("hidden");
+                updateAdminUI();
+            })
+            .catch((err) => {
+                // Increment failed attempts in Firebase
+                failedAttemptsRef.child(emailToKey(email)).transaction((count) => {
+                    return (count || 0) + 1;
+                }, (error, committed, snapshot) => {
+                    if (error) return;
+                    const attempts = snapshot.val() || 0;
+                    if (attempts >= MAX_ATTEMPTS) {
+                        // Lock the account
+                        lockedAccountsRef.child(emailToKey(email)).set(true);
+                        failedAttemptsRef.child(emailToKey(email)).remove();
+                        loginError.textContent = "Account locked. Contact an admin to reset your password.";
+                    } else {
+                        const remaining = MAX_ATTEMPTS - attempts;
+                        loginError.textContent = err.code === "auth/invalid-credential"
+                            ? `Invalid email or password. ${remaining} attempt${remaining === 1 ? "" : "s"} remaining.`
+                            : err.code === "auth/too-many-requests"
+                            ? "Account locked. Contact an admin to reset your password."
+                            : `Login failed. ${remaining} attempt${remaining === 1 ? "" : "s"} remaining.`;
+                    }
+                    loginError.classList.remove("hidden");
+                });
+            });
+    });
 });
 
 // Logout handler
@@ -486,6 +499,36 @@ logoutBtn.addEventListener("click", () => {
         loginForm.reset();
         loginError.classList.add("hidden");
         document.body.classList.remove("admin-mode", "operator-mode", "viewer-mode");
+    });
+});
+
+// Unlock accounts handler (admin only)
+document.getElementById("unlock-accounts-btn").addEventListener("click", () => {
+    lockedAccountsRef.once("value", (snap) => {
+        const locked = snap.val();
+        if (!locked) {
+            alert("No locked accounts.");
+            return;
+        }
+        const lockedEmails = Object.keys(locked).map((k) => k.replace(/,/g, "."));
+        const list = lockedEmails.map((e, i) => `${i + 1}. ${e}`).join("\n");
+        const choice = prompt(`Locked accounts:\n${list}\n\nEnter the number to unlock (or "all" to unlock all):`);
+        if (!choice) return;
+        if (choice.trim().toLowerCase() === "all") {
+            lockedAccountsRef.remove();
+            failedAttemptsRef.remove();
+            alert("All accounts unlocked.");
+        } else {
+            const idx = parseInt(choice) - 1;
+            if (idx >= 0 && idx < lockedEmails.length) {
+                const emailKey = emailToKey(lockedEmails[idx]);
+                lockedAccountsRef.child(emailKey).remove();
+                failedAttemptsRef.child(emailKey).remove();
+                alert(`${lockedEmails[idx]} unlocked.`);
+            } else {
+                alert("Invalid selection.");
+            }
+        }
     });
 });
 
