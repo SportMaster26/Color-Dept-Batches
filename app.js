@@ -1065,6 +1065,17 @@ function getCompletedRows() {
         });
 }
 
+const UNIT_COUNT_EDIT_USERS = [
+    "master@colordept.local",
+    "kherrin@colordept.local",
+    "ajolly@colordept.local",
+];
+
+function canEditUnitCount() {
+    const user = auth.currentUser;
+    return user && UNIT_COUNT_EDIT_USERS.includes(user.email);
+}
+
 const PRODUCT_HISTORY_USERS = [
     "ajolly@colordept.local",
     "jeff@colordept.local",
@@ -1112,7 +1123,7 @@ function renderCompleted() {
             <td>${escapeHtml(r.bowl)}</td>
             <td>${r.capacity}</td>
             <td>${escapeHtml(r.packaging)}</td>
-            <td>${r.unitCount ? Number(r.unitCount).toLocaleString() : "—"}</td>
+            <td class="${canEditUnitCount() ? 'editable-unit-count' : ''}" data-batch-id="${r.id}" data-field="unitCount">${r.unitCount ? Number(r.unitCount).toLocaleString() : "—"}</td>
             <td>${r.viscosity ? escapeHtml(r.viscosity) + " KU" : "—"}</td>
             <td>${escapeHtml(r.initials) || "—"}</td>
             <td>${escapeHtml(r.initials2) || "—"}</td>
@@ -1125,6 +1136,43 @@ function renderCompleted() {
             <td class="completed-time-cell">${r.batchComplete}${isAdmin ? ` <button class="btn btn-sm btn-delete" data-action="delete" data-id="${r.id}">&times;</button>` : ""}</td>
         </tr>
     `).join("");
+
+    // Attach inline-edit handlers for unit count cells
+    if (canEditUnitCount()) {
+        tbody.querySelectorAll(".editable-unit-count").forEach(td => {
+            td.style.cursor = "pointer";
+            td.addEventListener("click", () => {
+                if (td.querySelector("input")) return;
+                const batchId = td.dataset.batchId;
+                const batch = batches.find(b => b.id === batchId);
+                if (!batch) return;
+
+                const currentVal = batch.unitCount || "";
+                const input = document.createElement("input");
+                input.type = "number";
+                input.min = "0";
+                input.className = "tank-input";
+                input.style.width = "80px";
+                input.value = currentVal;
+                td.textContent = "";
+                td.appendChild(input);
+                input.focus();
+                input.select();
+
+                const save = () => {
+                    const val = input.value.trim();
+                    batch.unitCount = val ? Number(val) : null;
+                    batchesRef.child(batchId).update({ unitCount: batch.unitCount });
+                    td.textContent = batch.unitCount ? Number(batch.unitCount).toLocaleString() : "—";
+                };
+                input.addEventListener("blur", save);
+                input.addEventListener("keydown", (e) => {
+                    if (e.key === "Enter") { e.preventDefault(); save(); }
+                    if (e.key === "Escape") { td.textContent = currentVal ? Number(currentVal).toLocaleString() : "—"; }
+                });
+            });
+        });
+    }
 
 }
 
