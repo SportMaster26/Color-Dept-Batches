@@ -874,6 +874,7 @@ const LATEX_EDIT_USERS = [
     "cwood@colordept.local",
     "kherrin@colordept.local",
     "ajolly@colordept.local",
+    "hhudak@colordept.local",
 ];
 
 function canEditLatexTotals(email) {
