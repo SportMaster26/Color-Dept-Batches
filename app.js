@@ -869,6 +869,17 @@ function createToteSVG(tank, gallons, pct, fillColor) {
     </svg>`;
 }
 
+const LATEX_EDIT_USERS = [
+    "master@colordept.local",
+    "cwood@colordept.local",
+    "kherrin@colordept.local",
+    "ajolly@colordept.local",
+];
+
+function canEditLatexTotals(email) {
+    return LATEX_EDIT_USERS.includes(email);
+}
+
 function renderLatexBoard() {
     latexBoard.innerHTML = "";
 
@@ -914,11 +925,11 @@ function renderLatexBoard() {
                 <input type="number" class="tank-input hidden" min="0" max="${tank.capacity}" value="${gallons}" data-tank-id="${tank.id}">
             `;
 
-            // Click to edit (admins & latex tab users)
+            // Click to edit (only cwood, kherrin, ajolly, master)
             card.addEventListener("click", (e) => {
                 if (e.target.classList.contains("tank-input")) return;
                 const user = auth.currentUser;
-                if (!user) return;
+                if (!user || !canEditLatexTotals(user.email)) return;
 
                 const input = card.querySelector(".tank-input");
                 input.classList.remove("hidden");
@@ -946,6 +957,11 @@ function renderLatexBoard() {
 }
 
 function saveTankLevel(input) {
+    const user = auth.currentUser;
+    if (!user || !canEditLatexTotals(user.email)) {
+        input.classList.add("hidden");
+        return;
+    }
     const tankId = input.dataset.tankId;
     const tank = LATEX_TANKS.find(t => t.id === tankId);
     let val = parseInt(input.value) || 0;
