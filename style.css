@@ -482,6 +482,37 @@ header h1 {
     white-space: nowrap;
 }
 
+.batch-num-cell.editable-batch-num {
+    cursor: pointer;
+}
+
+.batch-num-cell.editable-batch-num:hover {
+    background: #eaf4fd;
+}
+
+.batch-search-wrap {
+    display: flex;
+    align-items: center;
+}
+
+.batch-search-input {
+    padding: 7px 12px;
+    border: 2px solid #d0d5dd;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    width: 160px;
+    outline: none;
+    transition: border-color 0.15s;
+}
+
+.batch-search-input:focus {
+    border-color: #3498db;
+}
+
+.batch-search-highlight {
+    background: #fff3cd;
+}
+
 .card-actions {
     display: flex;
     gap: 6px;
