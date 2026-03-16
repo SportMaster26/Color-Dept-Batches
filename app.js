@@ -49,6 +49,10 @@ const PACKAGING = {
     "275 Gallon Totes": { gallons: 275, unit: "Totes" },
 };
 
+// Packaging types that get a batch number immediately on creation.
+// All others get a number when "Start Mixing" is pressed.
+const IMMEDIATE_BATCH_NUM = ["Quart Bottles", "24 Oz. Jars", "1 Gallon Jugs", "1 Gallon Pails"];
+
 // ── Product Catalog (name – item number) ────────────────────────────
 let PRODUCT_CATALOG = [
     // MISCELLANEOUS PRODUCTS
@@ -1924,11 +1928,10 @@ function duplicateBatch(id) {
         return Math.max(max, order);
     }, -1);
 
-    function createDuplicateWithNumber(num) {
-        const batchNumber = "A" + String(num).padStart(4, "0");
+    function createDuplicate(batchNumber) {
         const newBatch = {
             id: generateId(),
-            batchNumber,
+            batchNumber: batchNumber || null,
             product: batch.product,
             bowl: batch.bowl,
             packaging: batch.packaging || null,
@@ -1949,28 +1952,32 @@ function duplicateBatch(id) {
         batchesRef.child(newBatch.id).set(newBatch);
     }
 
+    // Immediate-number packaging gets a batch number now; others get it at Start Mixing
+    if (batch.packaging && IMMEDIATE_BATCH_NUM.includes(batch.packaging)) {
+        assignBatchNumber((batchNumber) => createDuplicate(batchNumber));
+    } else {
+        createDuplicate(null);
+    }
+}
+
+// Reusable helper: assign a batch number (recycled first, then counter)
+function assignBatchNumber(callback) {
     recycledNumbersRef.once("value", (snap) => {
         const recycled = snap.val();
-        // Only reuse recycled numbers that are >= MIN_BATCH_NUMBER
         const validEntries = recycled ? Object.entries(recycled).filter(([, val]) => val >= MIN_BATCH_NUMBER) : [];
         if (validEntries.length > 0) {
-            let minKey = validEntries[0][0];
-            let minNum = validEntries[0][1];
+            let minKey = validEntries[0][0], minNum = validEntries[0][1];
             for (const [key, val] of validEntries) {
                 if (val < minNum) { minKey = key; minNum = val; }
             }
             recycledNumbersRef.child(minKey).remove();
-            createDuplicateWithNumber(minNum);
+            callback("A" + String(minNum).padStart(4, "0"));
         } else {
-            batchCounterRef.transaction((current) => {
-                return Math.max((current || 0) + 1, MIN_BATCH_NUMBER);
-            }, (error, committed, snapshot) => {
-                if (error || !committed) {
-                    alert("Failed to generate batch number. Please try again.");
-                    return;
-                }
-                createDuplicateWithNumber(snapshot.val());
-            });
+            batchCounterRef.transaction((current) => Math.max((current || 0) + 1, MIN_BATCH_NUMBER),
+                (error, committed, snapshot) => {
+                    if (error || !committed) { alert("Failed to generate batch number. Please try again."); return; }
+                    callback("A" + String(snapshot.val()).padStart(4, "0"));
+                });
         }
     });
 }
@@ -1981,6 +1988,16 @@ function advanceStatus(id) {
 
     const nextAction = STATUS_NEXT_ACTION[batch.status];
     if (!nextAction) return;
+
+    // If advancing from queued → mixing and batch has no number yet, assign one first
+    if (batch.status === "queued" && !batch.batchNumber) {
+        assignBatchNumber((batchNumber) => {
+            batch.batchNumber = batchNumber;
+            batchesRef.child(batch.id).update({ batchNumber });
+            applyStatusAdvance(batch, nextAction.next);
+        });
+        return;
+    }
 
     // If advancing from mixing → mixing_complete, show the viscosity/initials modal
     if (batch.status === "mixing" && nextAction.next === "mixing_complete") {
@@ -2363,7 +2380,7 @@ batchForm.addEventListener("submit", (e) => {
     const unitCountVal = document.getElementById("batch-unit-count").value.trim();
     const notes = document.getElementById("batch-notes").value.trim();
 
-    if (!product || !bowl) return;
+    if (!product || !bowl || !packaging) return;
 
     const laneBatches = batches.filter((b) => b.bowl === bowl);
     const maxOrder = laneBatches.reduce((max, b) => {
@@ -2371,15 +2388,13 @@ batchForm.addEventListener("submit", (e) => {
         return Math.max(max, order);
     }, -1);
 
-    // Generate batch number — reuse recycled numbers first, then increment counter
-    function createBatchWithNumber(num) {
-        const batchNumber = "A" + String(num).padStart(4, "0");
+    function createBatch(batchNumber) {
         const batch = {
             id: generateId(),
-            batchNumber,
+            batchNumber: batchNumber || null,
             product,
             bowl,
-            packaging: packaging || null,
+            packaging,
             unitCount: unitCountVal ? Number(unitCountVal) : null,
             notes: notes || null,
             status: "queued",
@@ -2396,33 +2411,12 @@ batchForm.addEventListener("submit", (e) => {
         batchesRef.child(batch.id).set(batch);
     }
 
-    recycledNumbersRef.once("value", (snap) => {
-        const recycled = snap.val();
-        // Only reuse recycled numbers that are >= MIN_BATCH_NUMBER
-        const validEntries = recycled ? Object.entries(recycled).filter(([, val]) => val >= MIN_BATCH_NUMBER) : [];
-        if (validEntries.length > 0) {
-            // Find the smallest valid recycled number
-            let minKey = validEntries[0][0];
-            let minNum = validEntries[0][1];
-            for (const [key, val] of validEntries) {
-                if (val < minNum) { minKey = key; minNum = val; }
-            }
-            // Remove it from recycled list and use it
-            recycledNumbersRef.child(minKey).remove();
-            createBatchWithNumber(minNum);
-        } else {
-            // No valid recycled numbers, increment counter (never below MIN_BATCH_NUMBER)
-            batchCounterRef.transaction((current) => {
-                return Math.max((current || 0) + 1, MIN_BATCH_NUMBER);
-            }, (error, committed, snapshot) => {
-                if (error || !committed) {
-                    alert("Failed to generate batch number. Please try again.");
-                    return;
-                }
-                createBatchWithNumber(snapshot.val());
-            });
-        }
-    });
+    // Immediate-number packaging gets a batch number now; others get it at Start Mixing
+    if (IMMEDIATE_BATCH_NUM.includes(packaging)) {
+        assignBatchNumber((batchNumber) => createBatch(batchNumber));
+    } else {
+        createBatch(null);
+    }
 
     // Save custom product if not already in catalog
     if (product && !PRODUCT_CATALOG.includes(product)) {
