@@ -692,10 +692,35 @@ function onBatches(snapshot) {
     if (Object.keys(migrations).length > 0) {
         batchesRef.update(migrations);
     }
+    assignNumbersToTopBatches();
     render();
     if (activeTab === "latex") renderLatexBoard();
     updateCompletedCount();
     if (activeTab === "completed") renderCompleted();
+}
+
+// Auto-assign batch numbers to large-packaging batches that are now 1st or 2nd in their bowl
+function assignNumbersToTopBatches() {
+    for (const bowlKey of BOWL_ORDER) {
+        const laneBatches = batches
+            .filter((b) => b.bowl === bowlKey && b.status !== "batch_complete")
+            .sort((a, b) => {
+                const orderA = a.sortOrder != null ? a.sortOrder : a.createdAt;
+                const orderB = b.sortOrder != null ? b.sortOrder : b.createdAt;
+                return orderA - orderB;
+            });
+
+        // Check the first 2 batches — if any lack a number, assign one
+        for (let i = 0; i < Math.min(2, laneBatches.length); i++) {
+            const batch = laneBatches[i];
+            if (!batch.batchNumber) {
+                assignBatchNumber((batchNumber) => {
+                    batch.batchNumber = batchNumber;
+                    batchesRef.child(batch.id).update({ batchNumber });
+                });
+            }
+        }
+    }
 }
 
 function onBatchesError(error) {
