@@ -1407,14 +1407,12 @@ function renderCharts() {
         },
     });
 
-    // Timeline line chart — cumulative batches/gallons over days
+    // Timeline line chart — daily batches/gallons per day
     const sortedDays = Object.keys(dayMap).slice().sort((a, b) => {
         return new Date(a + " 2026").getTime() - new Date(b + " 2026").getTime();
     });
-    let cumBatches = 0;
-    let cumGallons = 0;
-    const cumBatchData = sortedDays.map((d) => { cumBatches += dayMap[d].count; return cumBatches; });
-    const cumGallonData = sortedDays.map((d) => { cumGallons += dayMap[d].gallons; return cumGallons; });
+    const dailyBatchData = sortedDays.map((d) => dayMap[d].count);
+    const dailyGallonData = sortedDays.map((d) => dayMap[d].gallons);
 
     const timelineTitle = selectedCompounder
         ? `Production Flow — ${selectedCompounder}`
@@ -1425,8 +1423,8 @@ function renderCharts() {
         data: {
             labels: sortedDays,
             datasets: [
-                { label: "Cumulative Batches", data: cumBatchData, borderColor: "#D4952B", backgroundColor: "rgba(212,149,43,0.1)", fill: true, tension: 0.3, pointRadius: 3, borderWidth: 2 },
-                { label: "Cumulative Gallons", data: cumGallonData, borderColor: "#3498db", backgroundColor: "rgba(52,152,219,0.1)", fill: true, tension: 0.3, pointRadius: 3, borderWidth: 2, yAxisID: "y1" },
+                { label: "Batches", data: dailyBatchData, borderColor: "#D4952B", backgroundColor: "rgba(212,149,43,0.1)", fill: true, tension: 0.3, pointRadius: 3, borderWidth: 2 },
+                { label: "Gallons", data: dailyGallonData, borderColor: "#3498db", backgroundColor: "rgba(52,152,219,0.1)", fill: true, tension: 0.3, pointRadius: 3, borderWidth: 2, yAxisID: "y1" },
             ],
         },
         options: {
