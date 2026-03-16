@@ -49,10 +49,6 @@ const PACKAGING = {
     "275 Gallon Totes": { gallons: 275, unit: "Totes" },
 };
 
-// Packaging types that get a batch number immediately on creation.
-// All others get a number when "Start Mixing" is pressed.
-const IMMEDIATE_BATCH_NUM = ["Quart Bottles", "24 Oz. Jars", "1 Gallon Jugs", "1 Gallon Pails"];
-
 // ── Product Catalog (name – item number) ────────────────────────────
 let PRODUCT_CATALOG = [
     // MISCELLANEOUS PRODUCTS
@@ -1952,13 +1948,8 @@ function duplicateBatch(id) {
         batchesRef.child(newBatch.id).set(newBatch);
     }
 
-    // Small packaging always gets a number. Large packaging gets a number if 2nd+ in bowl.
-    const isSmall = batch.packaging && IMMEDIATE_BATCH_NUM.includes(batch.packaging);
-    if (isSmall || laneBatches.length > 0) {
-        assignBatchNumber((batchNumber) => createDuplicate(batchNumber));
-    } else {
-        createDuplicate(null);
-    }
+    // Always assign a batch number on creation
+    assignBatchNumber((batchNumber) => createDuplicate(batchNumber));
 }
 
 // Reusable helper: assign a batch number (recycled first, then counter)
@@ -2412,14 +2403,8 @@ batchForm.addEventListener("submit", (e) => {
         batchesRef.child(batch.id).set(batch);
     }
 
-    // Small packaging always gets a number immediately.
-    // Large packaging gets a number if it's 2nd+ in line (bowl already has batches);
-    // if it's 1st in line (empty bowl), number is assigned later at Start Mixing.
-    if (IMMEDIATE_BATCH_NUM.includes(packaging) || laneBatches.length > 0) {
-        assignBatchNumber((batchNumber) => createBatch(batchNumber));
-    } else {
-        createBatch(null);
-    }
+    // Always assign a batch number on creation
+    assignBatchNumber((batchNumber) => createBatch(batchNumber));
 
     // Save custom product if not already in catalog
     if (product && !PRODUCT_CATALOG.includes(product)) {
