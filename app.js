@@ -1380,7 +1380,7 @@ function renderCharts() {
         if (!bowlMap[r.bowl]) bowlMap[r.bowl] = { count: 0, gallons: r.capacityNum };
         bowlMap[r.bowl].count++;
     }
-    const bowlLabels = Object.keys(bowlMap);
+    const bowlLabels = Object.keys(bowlMap).sort((a, b) => BOWL_ORDER.indexOf(a) - BOWL_ORDER.indexOf(b));
     const bowlCounts = bowlLabels.map((l) => bowlMap[l].count);
     const bowlGallons = bowlLabels.map((l) => bowlMap[l].gallons * bowlMap[l].count);
 
