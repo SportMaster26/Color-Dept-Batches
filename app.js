@@ -1952,8 +1952,9 @@ function duplicateBatch(id) {
         batchesRef.child(newBatch.id).set(newBatch);
     }
 
-    // Immediate-number packaging gets a batch number now; others get it at Start Mixing
-    if (batch.packaging && IMMEDIATE_BATCH_NUM.includes(batch.packaging)) {
+    // Small packaging always gets a number. Large packaging gets a number if 2nd+ in bowl.
+    const isSmall = batch.packaging && IMMEDIATE_BATCH_NUM.includes(batch.packaging);
+    if (isSmall || laneBatches.length > 0) {
         assignBatchNumber((batchNumber) => createDuplicate(batchNumber));
     } else {
         createDuplicate(null);
@@ -2411,8 +2412,10 @@ batchForm.addEventListener("submit", (e) => {
         batchesRef.child(batch.id).set(batch);
     }
 
-    // Immediate-number packaging gets a batch number now; others get it at Start Mixing
-    if (IMMEDIATE_BATCH_NUM.includes(packaging)) {
+    // Small packaging always gets a number immediately.
+    // Large packaging gets a number if it's 2nd+ in line (bowl already has batches);
+    // if it's 1st in line (empty bowl), number is assigned later at Start Mixing.
+    if (IMMEDIATE_BATCH_NUM.includes(packaging) || laneBatches.length > 0) {
         assignBatchNumber((batchNumber) => createBatch(batchNumber));
     } else {
         createBatch(null);
