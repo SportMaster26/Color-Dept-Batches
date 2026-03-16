@@ -1065,6 +1065,23 @@ function getCompletedRows() {
         });
 }
 
+const BATCH_NUM_EDIT_USERS = [
+    "ajolly@colordept.local",
+];
+
+function canEditBatchNumber() {
+    const user = auth.currentUser;
+    return user && BATCH_NUM_EDIT_USERS.includes(user.email);
+}
+
+// Batch search state
+const batchSearchInput = document.getElementById("batch-search-input");
+let batchSearchTerm = "";
+batchSearchInput.addEventListener("input", () => {
+    batchSearchTerm = batchSearchInput.value.trim().toUpperCase();
+    if (activeTab === "completed") renderCompleted();
+});
+
 const UNIT_COUNT_EDIT_USERS = [
     "master@colordept.local",
     "kherrin@colordept.local",
@@ -1115,10 +1132,22 @@ function renderCompleted() {
         setCompletedView("table");
     }
 
-    tbody.innerHTML = rows.map((r, i) => `
-        <tr>
+    // Filter rows by search term
+    const filteredRows = batchSearchTerm
+        ? rows.filter(r => r.batchNumber && r.batchNumber.toUpperCase().includes(batchSearchTerm))
+        : rows;
+
+    const editableBatchNum = canEditBatchNumber();
+
+    tbody.innerHTML = filteredRows.map((r, i) => {
+        const batchNumHtml = escapeHtml(r.batchNumber) || "—";
+        const highlighted = batchSearchTerm && r.batchNumber
+            ? batchNumHtml.replace(new RegExp(`(${batchSearchTerm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, "gi"), `<mark class="batch-search-highlight">$1</mark>`)
+            : batchNumHtml;
+        const batchNumClass = `batch-num-cell${editableBatchNum ? ' editable-batch-num' : ''}`;
+        return `<tr>
             <td>${i + 1}</td>
-            <td class="batch-num-cell">${escapeHtml(r.batchNumber) || "—"}</td>
+            <td class="${batchNumClass}" data-batch-id="${r.id}">${highlighted}</td>
             <td>${escapeHtml(r.product)}</td>
             <td>${escapeHtml(r.bowl)}</td>
             <td>${r.capacity}</td>
@@ -1134,8 +1163,43 @@ function renderCompleted() {
             <td class="completed-time-cell">${r.mixingComplete}</td>
             <td class="completed-time-cell">${r.pouringStarted}</td>
             <td class="completed-time-cell">${r.batchComplete}${isAdmin ? ` <button class="btn btn-sm btn-delete" data-action="delete" data-id="${r.id}">&times;</button>` : ""}</td>
-        </tr>
-    `).join("");
+        </tr>`;
+    }).join("");
+
+    // Attach inline-edit handlers for batch number cells (ajolly only)
+    if (editableBatchNum) {
+        tbody.querySelectorAll(".editable-batch-num").forEach(td => {
+            td.addEventListener("click", () => {
+                if (td.querySelector("input")) return;
+                const batchId = td.dataset.batchId;
+                const batch = batches.find(b => b.id === batchId);
+                if (!batch) return;
+
+                const currentVal = batch.batchNumber || "";
+                const input = document.createElement("input");
+                input.type = "text";
+                input.className = "tank-input";
+                input.style.width = "80px";
+                input.value = currentVal;
+                td.textContent = "";
+                td.appendChild(input);
+                input.focus();
+                input.select();
+
+                const save = () => {
+                    const val = input.value.trim();
+                    batch.batchNumber = val || null;
+                    batchesRef.child(batchId).update({ batchNumber: batch.batchNumber });
+                    td.innerHTML = batch.batchNumber ? escapeHtml(batch.batchNumber) : "—";
+                };
+                input.addEventListener("blur", save);
+                input.addEventListener("keydown", (e) => {
+                    if (e.key === "Enter") { e.preventDefault(); save(); }
+                    if (e.key === "Escape") { td.innerHTML = currentVal ? escapeHtml(currentVal) : "—"; }
+                });
+            });
+        });
+    }
 
     // Attach inline-edit handlers for unit count cells
     if (canEditUnitCount()) {
