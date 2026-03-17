@@ -2757,6 +2757,504 @@ notesForm.addEventListener("submit", (e) => {
     notesForm.reset();
 });
 
+// ── 2026 Production Report Import (temporary — remove after use) ────
+const IMPORT_DATA_2026 = [
+{bn:"A0001",d:"2026-01-06",p:"DUCK COAT",g:230,pk:"DRUMS"},
+{bn:"A0002",d:"2026-01-05",p:"FP 300",g:2500,pk:"DRUMS"},
+{bn:"A0003",d:"2026-01-05",p:"LT GRN SURFACE ONE",g:250,pk:"PAILS"},
+{bn:"A0004",d:"2026-01-05",p:"ULTRA 3",g:1209,pk:"TOTES"},
+{bn:"A0005",d:"2026-01-06",p:"ACR RES W/S",g:900,pk:"DRUMS"},
+{bn:"A0006",d:"2026-01-06",p:"APB",g:150,pk:"KEGS"},
+{bn:"A0007",d:"2026-01-06",p:"FP 300",g:2500,pk:"DRUMS"},
+{bn:"A0008",d:"2026-01-06",p:"NEU CONC W/S",g:1040,pk:"KEGS"},
+{bn:"A0009",d:"2026-01-06",p:"FASS DRI",g:575,pk:"GALLONS"},
+{bn:"A0010",d:"2026-01-06",p:"RTU BASE",g:1120,pk:"PAILS"},
+{bn:"A0011",d:"2026-01-06",p:"NEU CONC",g:2920,pk:"DRUMS"},
+{bn:"A0012",d:"2026-01-06",p:"BLUE SURFACE ONE",g:250,pk:"PAILS"},
+{bn:"A0013",d:"2026-01-06",p:"ACR ADH PROMO",g:575,pk:"DRUMS"},
+{bn:"A0014",d:"2026-01-06",p:"NEU CONC",g:2920,pk:"KEGS"},
+{bn:"A0015",d:"2026-01-06",p:"EQUICLEAR",g:5,pk:"PAILS"},
+{bn:"A0016",d:"2026-01-06",p:"NEU READY MIX",g:1120,pk:"PAILS"},
+{bn:"A0017",d:"2026-01-06",p:"BLUE SURFACE ONE",g:250,pk:"PAILS"},
+{bn:"A0018",d:"2026-01-06",p:"FP 300",g:2500,pk:"DRUMS"},
+{bn:"A0019",d:"2026-01-07",p:"PROLOCK",g:7875,pk:"TOTES"},
+{bn:"A0020",d:"2026-01-07",p:"TOP TUFF",g:1200,pk:"PAILS"},
+{bn:"A0021",d:"2026-01-07",p:"FP 300",g:2500,pk:"DRUMS"},
+{bn:"A0022",d:"2025-01-07",p:"ACR RES W/S",g:900,pk:"DRUMS"},
+{bn:"A0023",d:"2026-01-07",p:"VELOCITY YELLOW",g:575,pk:"PAILS"},
+{bn:"A0024",d:"2026-01-07",p:"FP 300",g:2500,pk:"PAILS"},
+{bn:"A0025",d:"2026-01-07",p:"ACR RES W/S",g:900,pk:"DRUMS"},
+{bn:"A0026",d:"2026-01-08",p:"PBK DK BLUE",g:575,pk:"PAILS"},
+{bn:"A0027",d:"2026-01-08",p:"NEU CONC",g:230,pk:"PAILS"},
+{bn:"A0028",d:"2026-01-08",p:"THERMO RED",g:230,pk:"PAILS"},
+{bn:"A0029",d:"2026-01-08",p:"FLEX CONC",g:2900,pk:"DRUMS"},
+{bn:"A0030",d:"2026-01-08",p:"ACR RES",g:575,pk:"PAILS"},
+{bn:"A0031",d:"2026-01-08",p:"ACR RES",g:1120,pk:"KEGS"},
+{bn:"A0032",d:"2026-01-08",p:"THERMO BLUE",g:230,pk:"PAILS"},
+{bn:"A0033",d:"2026-01-09",p:"ACR RES",g:575,pk:"KEGS"},
+{bn:"A0034",d:"2026-01-09",p:"CUSHION 2",g:1040,pk:"DRUMS"},
+{bn:"A0035",d:"2026-01-12",p:"MED GRN SURFACE ONE",g:250,pk:"PAILS"},
+{bn:"A0036",d:"2026-01-12",p:"PAVE GEL",g:1120,pk:"PAILS"},
+{bn:"A0037",d:"2026-01-12",p:"PRO STRIPE PLUS BLUE",g:230,pk:"PAILS"},
+{bn:"A0038",d:"2026-01-12",p:"PRO STRIPE PLUS BLUE",g:230,pk:"PAILS"},
+{bn:"A0039",d:"2026-01-13",p:"THERMO WHITE",g:1120,pk:"PAILS"},
+{bn:"A0040",d:"2026-01-13",p:"PRO STRIPE PLUS YELLOW",g:575,pk:"PAILS"},
+{bn:"A0041",d:"2026-01-13",p:"PRO STRIPE PLUS WHITE",g:1120,pk:"PAILS"},
+{bn:"A0042",d:"2026-01-13",p:"PRO STRIPE PLUS WHITE",g:1120,pk:"PAILS"},
+{bn:"A0043",d:"2026-01-13",p:"PRO STRIPE PLUS YELLOW",g:575,pk:"PAILS"},
+{bn:"A0044",d:"2026-01-14",p:"BROWN B/F",g:230,pk:"DRUMS"},
+{bn:"A0045",d:"2026-01-14",p:"PRO STRIPE PLUS BLACK",g:230,pk:"PAILS"},
+{bn:"A0046",d:"2026-01-14",p:"FIRELANE RED",g:575,pk:"PAILS"},
+{bn:"A0047",d:"2026-01-15",p:"ACR RES W/S",g:900,pk:"PAILS"},
+{bn:"A0048",d:"2026-01-15",p:"TEXT T/C",g:1040,pk:"GALLONS"},
+{bn:"A0049",d:"2026-01-14",p:"FST GRN FLEX",g:580,pk:"KEGS"},
+{bn:"A0050",d:"2026-01-14",p:"ACR RES W/S",g:900,pk:"PAILS"},
+{bn:"A0051",d:"2026-01-14",p:"BLUE FLEX",g:225,pk:"KEGS"},
+{bn:"A0052",d:"2026-01-15",p:"CUSHION 2",g:1040,pk:"KEGS"},
+{bn:"A0053",d:"2026-01-15",p:"BLUE FLEX",g:225,pk:"KEGS"},
+{bn:"A0054",d:"2026-01-15",p:"BLUE FLEX",g:225,pk:"KEGS"},
+{bn:"A0055",d:"2026-01-16",p:"LT GRN COLORPLUS",g:1040,pk:"GALLONS"},
+{bn:"A0056",d:"2026-01-16",p:"LT GRN COLORPLUS",g:1040,pk:"GALLONS"},
+{bn:"A0057",d:"2026-01-16",p:"FLEX RES",g:575,pk:"KEGS"},
+{bn:"A0058",d:"2026-01-19",p:"LT GRN COLORPLUS",g:1040,pk:"GALLONS"},
+{bn:"A0059",d:"2026-01-20",p:"FASS DRI",g:575,pk:"PAILS"},
+{bn:"A0060",d:"2026-01-20",p:"FASS DRI",g:1040,pk:"PAILS"},
+{bn:"A0061",d:"2026-01-20",p:"GRAY SURFACE ONE",g:250,pk:"DRUMS"},
+{bn:"A0062",d:"2026-01-20",p:"FASS DRI",g:575,pk:"PAILS"},
+{bn:"A0063",d:"2026-01-20",p:"GRAY SURFACE ONE",g:250,pk:"PAILS"},
+{bn:"A0064",d:"2026-01-20",p:"MED GRN SURFACE ONE",g:250,pk:"PAILS"},
+{bn:"A0065",d:"2026-01-21",p:"FP 300",g:2500,pk:"PAILS"},
+{bn:"A0066",d:"2026-01-21",p:"BLUE CONC",g:230,pk:"KEGS"},
+{bn:"A0067",d:"2026-01-21",p:"FASS DRI",g:575,pk:"PAILS"},
+{bn:"A0068",d:"2026-01-21",p:"FP 300",g:2500,pk:"PAILS"},
+{bn:"A0069",d:"2026-01-21",p:"BLUE SURFACE ONE",g:250,pk:"PAILS"},
+{bn:"A0070",d:"2026-01-21",p:"RED B/F",g:575,pk:"DRUMS"},
+{bn:"A0071",d:"2026-01-21",p:"BLUE SURFACE ONE",g:250,pk:"PAILS"},
+{bn:"A0072",d:"2026-01-21",p:"FP 300",g:2500,pk:"PAILS"},
+{bn:"A0073",d:"2026-01-21",p:"DUST SUPRESSANT",g:280,pk:"DRUMS"},
+{bn:"A0074",d:"2026-01-21",p:"FLEX RES",g:1120,pk:"DRUMS"},
+{bn:"A0075",d:"2026-01-22",p:"CLEAR CRACK SEALANT",g:223,pk:"DRUMS"},
+{bn:"A0076",d:"2026-01-22",p:"LIQUID ROAD LATEX",g:3575,pk:"TOTES"},
+{bn:"A0077",d:"2026-01-22",p:"NEU CONC",g:1120,pk:"KEGS"},
+{bn:"A0078",d:"2026-01-22",p:"NEU CONC",g:575,pk:"KEGS"},
+{bn:"A0079",d:"2026-01-22",p:"ULTRA GLOSS",g:1120,pk:"PAILS"},
+{bn:"A0080",d:"2026-01-23",p:"TOP TUFF",g:1200,pk:"PAILS"},
+{bn:"A0081",d:"2026-01-23",p:"10 YEAR",g:1120,pk:"PAILS"},
+{bn:"A0082",d:"2026-01-23",p:"LIQUID FENCE",g:230,pk:"PAILS"},
+{bn:"A0083",d:"2026-01-23",p:"TOP TUFF",g:1200,pk:"PAILS"},
+{bn:"A0084",d:"2026-01-23",p:"FED WHITE",g:230,pk:"PAILS"},
+{bn:"A0085",d:"2026-01-23",p:"TOP TUFF",g:1200,pk:"PAILS"},
+{bn:"A0086",d:"2026-01-25",p:"NEU TRACKMASTER",g:1040,pk:"DRUMS"},
+{bn:"A0087",d:"2026-01-23",p:"TOP TUFF",g:1200,pk:"PAILS"},
+{bn:"A0088",d:"2026-01-27",p:"WHITE DUCK COAT",g:575,pk:"PAILS"},
+{bn:"A0089",d:"2026-01-27",p:"ULTRA 3",g:1209,pk:"TOTES"},
+{bn:"A0090",d:"2026-01-27",p:"WHITE STRIPE",g:230,pk:"PAILS"},
+{bn:"A0091",d:"2026-01-27",p:"WHITE DUCK COAT",g:1120,pk:"PAILS"},
+{bn:"A0092",d:"2026-01-27",p:"BLACK DUCK COAT",g:1120,pk:"PAILS"},
+{bn:"A0093",d:"2026-01-27",p:"BLACK DUCK COAT",g:575,pk:"PAILS"},
+{bn:"A0094",d:"2026-02-02",p:"APB",g:2000,pk:"DRUMS/PAILS"},
+{bn:"A0095",d:"2026-02-02",p:"BLUE CONC",g:230,pk:"KEGS"},
+{bn:"A0096",d:"2026-02-03",p:"NEU READY MIX",g:1120,pk:"PAILS"},
+{bn:"A0097",d:"2026-02-03",p:"NEU READY MIX",g:1120,pk:"PAILS"},
+{bn:"A0098",d:"2026-02-03",p:"FASS DRI",g:575,pk:"PAILS"},
+{bn:"A0099",d:"2026-02-03",p:"RED SURFACE ONE",g:250,pk:"PAILS"},
+{bn:"A0100",d:"2026-02-03",p:"TOP TUFF",g:1200,pk:"PAILS"},
+{bn:"A0101",d:"2025-02-03",p:"NEU READY MIX",g:1120,pk:"PAILS"},
+{bn:"A0102",d:"2026-02-03",p:"NEU READY MIX",g:1120,pk:"PAILS"},
+{bn:"A0103",d:"2026-02-03",p:"WHITE B/F",g:230,pk:"PAILS"},
+{bn:"A0104",d:"2026-02-03",p:"RTU BASE",g:575,pk:"PAILS"},
+{bn:"A0105",d:"2026-02-03",p:"NATROSOL SOLUTION",g:250,pk:"TOTES"},
+{bn:"A0106",d:"2026-02-03",p:"NATROSOL SOLUTION",g:250,pk:"TOTES"},
+{bn:"A0107",d:"2026-02-03",p:"RTU BASE",g:575,pk:"PAILS"},
+{bn:"A0108",d:"2026-02-04",p:"OIL SPOT PRIMER",g:256,pk:"QUARTS"},
+{bn:"A0109",d:"2026-02-04",p:"ROOF CLEANER",g:541,pk:"QUARTS"},
+{bn:"A0110",d:"2026-02-04",p:"ROOF CLEANER",g:541,pk:"QUARTS"},
+{bn:"A0111",d:"2026-02-04",p:"OIL SPOT PRIMER",g:256,pk:"QUARTS"},
+{bn:"A0112",d:"2026-02-04",p:"FST GRN CONC",g:230,pk:"KEGS"},
+{bn:"A0113",d:"2026-02-10",p:"ROOF CLEANER",g:522,pk:"GALLONS"},
+{bn:"A0114",d:"2026-02-05",p:"FST GRN CONC",g:230,pk:"KEGS"},
+{bn:"A0115",d:"2026-02-05",p:"OIL SPOT PRIMER",g:256,pk:"QUARTS"},
+{bn:"A0116",d:"2026-02-06",p:"ACR ADH PROMO",g:1120,pk:"PAILS"},
+{bn:"A0117",d:"2026-02-06",p:"TOP TUFF",g:4356,pk:"TOTES"},
+{bn:"A0118",d:"2026-02-06",p:"RTU BASE",g:1120,pk:"PAILS"},
+{bn:"A0119",d:"2026-02-06",p:"CUSHION 1",g:1040,pk:"DRUMS"},
+{bn:"A0120",d:"2026-02-06",p:"CUSHION 2",g:1040,pk:"DRUMS"},
+{bn:"A0121",d:"2026-02-09",p:"GRAY SHIELD",g:575,pk:"PAILS"},
+{bn:"A0122",d:"2026-02-09",p:"GRAY SHIELD",g:575,pk:"PAILS"},
+{bn:"A0123",d:"2026-02-10",p:"10 YEAR",g:1120,pk:"PAILS"},
+{bn:"A0124",d:"2026-02-10",p:"ROOF CLEANER",g:542,pk:"GALLONS"},
+{bn:"A0125",d:"2026-02-10",p:"GRAY SHIELD",g:1120,pk:"PAILS"},
+{bn:"A0126",d:"2026-02-10",p:"GRAY SHIELD",g:230,pk:"PAILS"},
+{bn:"A0127",d:"2026-02-10",p:"10 YEAR",g:1120,pk:"PAILS"},
+{bn:"A0128",d:"2026-02-10",p:"15 YEAR",g:575,pk:"PAILS"},
+{bn:"A0129",d:"2026-02-10",p:"GRAY SHIELD",g:1120,pk:"PAILS"},
+{bn:"A0130",d:"2026-02-10",p:"10 YEAR",g:1120,pk:"PAILS"},
+{bn:"A0131",d:"2026-02-10",p:"NEU TRACKMASTER",g:230,pk:"DRUMS"},
+{bn:"A0132",d:"2026-02-10",p:"10 YEAR",g:1120,pk:"PAILS"},
+{bn:"A0133",d:"2026-02-10",p:"BLACK DUCK COAT",g:1120,pk:"PAILS"},
+{bn:"A0134",d:"2026-02-10",p:"15 YEAR",g:575,pk:"PAILS"},
+{bn:"A0135",d:"2026-02-10",p:"WHITE DUCK COAT",g:1120,pk:"PAILS"},
+{bn:"A0136",d:"2026-02-10",p:"BLACK DUCK COAT",g:1120,pk:"PAILS"},
+{bn:"A0137",d:"2026-02-10",p:"NEU TRACKMASTER",g:230,pk:"DRUMS"},
+{bn:"A0138",d:"2026-02-10",p:"15 YEAR",g:575,pk:"PAILS"},
+{bn:"A0139",d:"2026-02-10",p:"WHITE DUCK COAT",g:1120,pk:"PAILS"},
+{bn:"A0140",d:"2026-02-11",p:"ROOF PATCH",g:1040,pk:"GALLONS"},
+{bn:"A0141",d:"2026-02-11",p:"FP 300",g:2920,pk:"DRUMS"},
+{bn:"A0142",d:"2026-02-11",p:"SHINGLE SAVER",g:230,pk:"GALLONS"},
+{bn:"A0143",d:"2026-02-11",p:"NEU CONC",g:2920,pk:"KEGS"},
+{bn:"A0144",d:"2026-02-11",p:"NEU CONC",g:1120,pk:"DRUMS"},
+{bn:"A0145",d:"2026-02-11",p:"NEU CONC",g:1120,pk:"DRUMS"},
+{bn:"A0146",d:"2026-02-11",p:"FP 300",g:2920,pk:"PAILS"},
+{bn:"A0147",d:"2026-02-11",p:"NEU CONC",g:2920,pk:"DRUMS"},
+{bn:"A0148",d:"2026-02-11",p:"FP 300",g:2920,pk:"PAILS"},
+{bn:"A0149",d:"2026-02-12",p:"SHINGLE SAVER",g:230,pk:"GALLONS"},
+{bn:"A0150",d:"2026-02-12",p:"ACR RES",g:1120,pk:"KEGS"},
+{bn:"A0151",d:"2026-01-12",p:"ACR RES",g:230,pk:"KEGS"},
+{bn:"A0152",d:"2026-02-12",p:"15 YEAR",g:575,pk:"PAILS"},
+{bn:"A0153",d:"2026-02-12",p:"FST GRN COLORPLUS",g:1040,pk:"GALLONS"},
+{bn:"A0154",d:"2026-02-12",p:"ACR RES",g:230,pk:"KEGS"},
+{bn:"A0155",d:"2026-02-12",p:"FST GRN CONC",g:575,pk:"KEGS"},
+{bn:"A0156",d:"2026-02-12",p:"BLUE CONC",g:575,pk:"KEGS"},
+{bn:"A0157",d:"2026-02-12",p:"NEU CONC",g:2920,pk:"DRUMS"},
+{bn:"A0158",d:"2026-02-12",p:"ORANGE COLORPLUS",g:30,pk:"JARS"},
+{bn:"A0159",d:"2026-02-12",p:"ACR RES",g:230,pk:"KEGS"},
+{bn:"A0160",d:"2026-02-13",p:"FST GRN COLORPLUS",g:1040,pk:"GALLONS"},
+{bn:"A0161",d:"2026-02-13",p:"BLUE CONC",g:230,pk:"KEGS"},
+{bn:"A0162",d:"2026-02-13",p:"LT GRN CONC",g:230,pk:"KEGS"},
+{bn:"A0163",d:"2026-02-16",p:"FST GRN COLORPLUS",g:1040,pk:"GALLONS"},
+{bn:"A0164",d:"2026-02-17",p:"RED SURFACE ONE TINT",g:30,pk:"JARS"},
+{bn:"A0165",d:"2026-02-17",p:"BLUE SURFACE ONE TINT",g:30,pk:"JARS"},
+{bn:"A0166",d:"2026-02-17",p:"LT GRN SURFACE ONE TINT",g:30,pk:"JARS"},
+{bn:"A0167",d:"2026-02-16",p:"NEU CONC W/S",g:575,pk:"KEGS"},
+{bn:"A0168",d:"2026-02-16",p:"ACR RES",g:1120,pk:"KEGS"},
+{bn:"A0169",d:"2026-02-16",p:"NEU CONC W/S",g:575,pk:"KEGS"},
+{bn:"A0170",d:"2026-02-16",p:"ULTRA GLOSS",g:1120,pk:"PAILS"},
+{bn:"A0171",d:"2026-02-16",p:"BLUE CONC",g:230,pk:"KEGS"},
+{bn:"A0172",d:"2026-02-16",p:"BLUE CONC",g:230,pk:"KEGS"},
+{bn:"A0173",d:"2026-02-17",p:"ACR RES SURFACE ONE",g:1085,pk:"PAILS"},
+{bn:"A0174",d:"2026-02-17",p:"ROOF CLEANER",g:541,pk:"GALLONS"},
+{bn:"A0175",d:"2026-02-17",p:"ULTRA GLOSS",g:1120,pk:"PAILS"},
+{bn:"A0176",d:"2026-02-17",p:"DUST SUPPRESSANT",g:280,pk:"TOTES"},
+{bn:"A0177",d:"2026-02-18",p:"DK GRN SURFACE ONE TINT",g:30,pk:"JARS"},
+{bn:"A0178",d:"2026-02-18",p:"LT BLUE SURFACE ONE TINT",g:30,pk:"JARS"},
+{bn:"A0179",d:"2026-02-17",p:"ROOF CLEANER",g:541,pk:"GALLONS"},
+{bn:"A0180",d:"2026-02-18",p:"GRAY SURFACE ONE TINT",g:30,pk:"JARS"},
+{bn:"A0181",d:"2026-02-17",p:"SURFACE ONE COATING BASE",g:1120,pk:"PAILS"},
+{bn:"A0182",d:"2026-02-17",p:"NEU CONC",g:1120,pk:"DRUMS"},
+{bn:"A0183",d:"2026-02-17",p:"ULTRA GLOSS",g:1120,pk:"GALLONS"},
+{bn:"A0184",d:"2026-02-17",p:"NEU CONC",g:1120,pk:"DRUMS"},
+{bn:"A0185",d:"2026-02-18",p:"PAVE GEL",g:1120,pk:"TOTES"},
+{bn:"A0186",d:"2026-02-18",p:"15 YEAR",g:230,pk:"DRUMS"},
+{bn:"A0187",d:"2026-02-18",p:"NEU ACR RES",g:2920,pk:"DRUMS"},
+{bn:"A0188",d:"2026-02-18",p:"NEU CONC",g:2920,pk:"DRUMS"},
+{bn:"A0189",d:"2026-02-18",p:"CONCRETE SEALER",g:1120,pk:"PAILS"},
+{bn:"A0190",d:"2026-02-19",p:"FED WHITE",g:575,pk:"PAILS"},
+{bn:"A0191",d:"2026-02-19",p:"VELOCITY WHITE",g:1120,pk:"PAILS"},
+{bn:"A0192",d:"2026-02-19",p:"THRMO YELLOW",g:1120,pk:"PAILS"},
+{bn:"A0193",d:"2026-02-19",p:"WHITE STRIPE",g:575,pk:"PAILS"},
+{bn:"A0194",d:"2026-02-19",p:"FED YELLOW",g:575,pk:"PAILS"},
+{bn:"A0195",d:"2026-02-19",p:"CONCRETE SEALER",g:1120,pk:"PAILS"},
+{bn:"A0196",d:"2026-02-19",p:"THERMO WHITE",g:1120,pk:"PAILS"},
+{bn:"A0197",d:"2026-02-19",p:"VELOCITY YELLOW",g:1120,pk:"PAILS"},
+{bn:"A0198",d:"2026-02-19",p:"NEU ACR RES W/S",g:525,pk:"PAILS"},
+{bn:"A0199",d:"2026-02-19",p:"NEU CONC W/S",g:1040,pk:"KEGS"},
+{bn:"A0200",d:"2026-02-19",p:"CONCRETE SEALER",g:1120,pk:"PAILS"},
+{bn:"A0201",d:"2026-02-19",p:"NEU CONC W/S",g:1040,pk:"DRUMS"},
+{bn:"A0202",d:"2026-02-20",p:"GRN B/F",g:230,pk:"PAILS"},
+{bn:"A0203",d:"2026-02-20",p:"CONCRETE SEALER",g:1120,pk:"PAILS"},
+{bn:"A0204",d:"2026-02-20",p:"NEU CONC W/S",g:575,pk:"PAILS"},
+{bn:"A0205",d:"2026-02-20",p:"WHITE DUCK COAT",g:1120,pk:"PAILS"},
+{bn:"A0206",d:"2026-02-20",p:"10 YEAR",g:1120,pk:"GALLONS"},
+{bn:"A0207",d:"2026-02-20",p:"NEU CONC W/S",g:575,pk:"PAILS"},
+{bn:"A0208",d:"2026-02-20",p:"GRN B/F",g:230,pk:"PAILS"},
+{bn:"A0209",d:"2026-02-20",p:"10 YEAR",g:1120,pk:"GALLONS"},
+{bn:"A0210",d:"2026-02-20",p:"10 YEAR",g:1120,pk:"PAILS"},
+{bn:"A0211",d:"2026-02-20",p:"CONCRETE SEALER",g:1120,pk:"GALLONS"},
+{bn:"A0212",d:"2026-02-24",p:"10 YEAR",g:1120,pk:"PAILS"},
+{bn:"A0213",d:"2026-02-24",p:"BLACK DUCK COAT",g:1120,pk:"PAILS"},
+{bn:"A0214",d:"2026-02-24",p:"10 YEAR",g:1120,pk:"PAILS"},
+{bn:"A0215",d:"2026-02-24",p:"NEU CRACK PATCH",g:315,pk:"GALLONS"},
+{bn:"A0216",d:"2026-02-24",p:"BLACK DUCK COAT",g:1120,pk:"PAILS"},
+{bn:"A0217",d:"2026-02-24",p:"ORANGE COLORPLUS",g:165,pk:"JARS"},
+{bn:"A0218",d:"2026-02-24",p:"DUCK COAT",g:1040,pk:"PAILS"},
+{bn:"A0219",d:"2026-02-24",p:"NEU READY MIX",g:1120,pk:"PAILS"},
+{bn:"A0220",d:"2026-02-24",p:"NEU CRACK PATCH",g:315,pk:"GALLONS"},
+{bn:"A0221",d:"2026-02-24",p:"APB",g:2700,pk:"PAILS"},
+{bn:"A0222",d:"2026-02-24",p:"DUCK COAT",g:1040,pk:"PAILS"},
+{bn:"A0223",d:"2026-02-25",p:"ULTRA 3",g:1099,pk:"TOTES"},
+{bn:"A0224",d:"2026-02-25",p:"FP 300",g:2920,pk:"PAILS"},
+{bn:"A0225",d:"2026-02-25",p:"NEU CONC W/S",g:1040,pk:"DRUMS"},
+{bn:"A0226",d:"2026-02-25",p:"TOP TUFF",g:1200,pk:"PAILS"},
+{bn:"A0227",d:"2026-02-25",p:"NEU CRACK PATCH",g:315,pk:"GALLONS"},
+{bn:"A0228",d:"2026-02-25",p:"PREP SEAL",g:1120,pk:"PAILS"},
+{bn:"A0229",d:"2026-02-25",p:"RTU BASE",g:575,pk:"PAILS"},
+{bn:"A0230",d:"2026-02-25",p:"APB",g:1320,pk:"DRUMS"},
+{bn:"A0231",d:"2026-02-25",p:"NEU CONC W/S",g:1040,pk:"KEGS"},
+{bn:"A0232",d:"2026-02-25",p:"TEXT T/C",g:1040,pk:"GALLONS"},
+{bn:"A0233",d:"2026-02-25",p:"NEU ACR RES",g:2920,pk:"DRUMS"},
+{bn:"A0234",d:"2026-02-25",p:"VELOCITY BLUE",g:575,pk:"PAILS"},
+{bn:"A0235",d:"2026-02-26",p:"VELOCITY WHITE",g:1120,pk:"PAILS"},
+{bn:"A0236",d:"2026-02-26",p:"VELOCITY YELLOW",g:1120,pk:"PAILS"},
+{bn:"A0237",d:"2026-02-26",p:"THERMO WHITE",g:575,pk:"PAILS"},
+{bn:"A0238",d:"2026-02-26",p:"15 YEAR",g:230,pk:"DRUMS"},
+{bn:"A0239",d:"2026-02-26",p:"PROSTRIPE PLUS WHITE",g:1120,pk:"PAILS"},
+{bn:"A0240",d:"2026-02-26",p:"PRO STRIPE PLUS YELLOW",g:1120,pk:"PAILS"},
+{bn:"A0241",d:"2026-02-26",p:"THERMO WHITE",g:575,pk:"PAILS"},
+{bn:"A0242",d:"2026-02-26",p:"10 YEAR",g:1120,pk:"GALLONS"},
+{bn:"A0243",d:"2026-02-26",p:"BLACK DUCK COAT",g:230,pk:"DRUMS"},
+{bn:"A0244",d:"2026-02-26",p:"THRMO YELLOW",g:575,pk:"PAILS"},
+{bn:"A0245",d:"2026-02-27",p:"PRO STRIPE PLUS BLUE",g:230,pk:"PAILS"},
+{bn:"A0246",d:"2026-02-27",p:"THRMO YELLOW",g:575,pk:"PAILS"},
+{bn:"A0247",d:"2026-02-27",p:"PRO STRIPE PLUS BLUE",g:230,pk:"PAILS"},
+{bn:"A0248",d:"2026-03-02",p:"10 YEAR",g:1120,pk:"PAILS"},
+{bn:"A0249",d:"2026-03-02",p:"10 YEAR",g:1120,pk:"PAILS"},
+{bn:"A0250",d:"2026-03-02",p:"10 YEAR",g:1120,pk:"PAILS"},
+{bn:"A0251",d:"2026-03-02",p:"LT BLUE COLORPLUS",g:1080,pk:"GALLONS"},
+{bn:"A0252",d:"2026-03-03",p:"LT BLUE COLORPLUS",g:1080,pk:"GALLONS"},
+{bn:"A0253",d:"2026-03-03",p:"NEU CONC",g:2920,pk:"TOTES"},
+{bn:"A0254",d:"2026-03-03",p:"PMB PLUS",g:1120,pk:"TOTES"},
+{bn:"A0255",d:"2026-03-03",p:"FSA",g:1120,pk:"PAILS"},
+{bn:"A0256",d:"2026-03-03",p:"FP 300",g:2920,pk:"DRUMS"},
+{bn:"A0257",d:"2026-03-03",p:"FSA",g:1120,pk:"PAILS"},
+{bn:"A0258",d:"2026-03-03",p:"PROSTRIPE PLUS WHITE",g:1120,pk:"PAILS"},
+{bn:"A0259",d:"2026-03-03",p:"NATROSOL SOLUTION",g:250,pk:"TOTES"},
+{bn:"A0260",d:"2026-03-03",p:"NATROSOL SOLUTION",g:250,pk:"TOTES"},
+{bn:"A0261",d:"2026-03-04",p:"PRO STRIPE PLUS WHITE",g:1120,pk:"PAILS"},
+{bn:"A0262",d:"2026-03-04",p:"CONCRETE SEALER",g:1120,pk:"PAILS"},
+{bn:"A0263",d:"2026-03-04",p:"COLORPAVE CONC",g:2920,pk:"DRUMS"},
+{bn:"A0264",d:"2026-03-04",p:"NATROSOL SOLUTION",g:250,pk:"TOTES"},
+{bn:"A0265",d:"2026-03-04",p:"LT BLUE COLORPLUS",g:1080,pk:"GALLONS"},
+{bn:"A0266",d:"2026-03-04",p:"CONCRETE SEALER",g:1120,pk:"PAILS"},
+{bn:"A0267",d:"2026-03-04",p:"ACR RES W/S",g:900,pk:"PAILS"},
+{bn:"A0268",d:"2026-03-04",p:"FED WHITE",g:575,pk:"PAILS"},
+{bn:"A0269",d:"2026-03-04",p:"NATROSOL SOLUTION",g:250,pk:"TOTES"},
+{bn:"A0270",d:"2026-03-04",p:"ACR RES W/S",g:900,pk:"PAILS"},
+{bn:"A0271",d:"2026-03-04",p:"CONCRETE SEALER",g:1120,pk:"PAILS"},
+{bn:"A0272",d:"2026-03-04",p:"FED WHITE",g:575,pk:"PAILS"},
+{bn:"A0273",d:"2026-03-04",p:"FASS DRI",g:230,pk:"PAILS"},
+{bn:"A0274",d:"2026-03-04",p:"ACR RES",g:1120,pk:"DRUMS"},
+{bn:"A0275",d:"2026-03-04",p:"FASS DRI",g:575,pk:"PAILS"},
+{bn:"A0276",d:"2026-03-05",p:"ACR RES",g:1120,pk:"PAILS"},
+{bn:"A0277",d:"2026-03-05",p:"ACR RES",g:2920,pk:"DRUMS"},
+{bn:"A0278",d:"2026-03-05",p:"FASS DRI",g:230,pk:"PAILS"},
+{bn:"A0279",d:"2026-03-05",p:"CONCRETE SEALER",g:1120,pk:"PAILS"},
+{bn:"A0280",d:"2026-03-05",p:"5 YEAR",g:575,pk:"PAILS"},
+{bn:"A0281",d:"2026-03-05",p:"HD 500",g:1040,pk:"PAILS"},
+{bn:"A0282",d:"2026-03-05",p:"RED B/F",g:1120,pk:"PAILS"},
+{bn:"A0283",d:"2026-03-05",p:"FASS DRI",g:230,pk:"PAILS"},
+{bn:"A0284",d:"2026-03-05",p:"10 YEAR",g:230,pk:"DRUMS"},
+{bn:"A0285",d:"2026-03-05",p:"PENSOL",g:10,pk:"PAILS"},
+{bn:"A0286",d:"2026-03-05",p:"NEU CONC W/S",g:1040,pk:"DRUMS"},
+{bn:"A0287",d:"2026-03-05",p:"WHITE B/F",g:1120,pk:"PAILS"},
+{bn:"A0288",d:"2026-03-05",p:"PAVE GEL",g:1120,pk:"TOTES"},
+{bn:"A0289",d:"2026-03-04",p:"ACR RES",g:2920,pk:"DRUMS"},
+{bn:"A0290",d:"2026-03-04",p:"ORANGE POLY",g:1120,pk:"TOTES"},
+{bn:"A0291",d:"2026-03-05",p:"FLEX CONC",g:575,pk:"KEGS"},
+{bn:"A0292",d:"2026-03-05",p:"CUSHION 2",g:1040,pk:"DRUMS"},
+{bn:"A0293",d:"2026-03-05",p:"PROSTRIPE PLUS YELLOW",g:230,pk:"PAILS"},
+{bn:"A0294",d:"2026-03-06",p:"PROSTRIPE PLUS BLACK",g:575,pk:"PAILS"},
+{bn:"A0295",d:"2026-03-06",p:"PROSTRIPE PLUS YELLOW",g:1120,pk:"PAILS"},
+{bn:"A0296",d:"2026-03-06",p:"PROSTRIPE PLUS WHITE",g:1120,pk:"PAILS"},
+{bn:"A0297",d:"2026-03-06",p:"ULTRA 3",g:1099,pk:"TOTES"},
+{bn:"A0298",d:"2026-03-06",p:"GRN COURTFLEX",g:575,pk:"GALLONS"},
+{bn:"A0299",d:"2026-03-06",p:"CUSHION 1",g:1040,pk:"DRUMS"},
+{bn:"A0300",d:"2026-03-06",p:"FASS DRI",g:575,pk:"PAILS"},
+{bn:"A0301",d:"2026-03-06",p:"BLACK DISP",g:550,pk:"PAILS"},
+{bn:"A0302",d:"2026-03-06",p:"APB",g:550,pk:"TOTES"},
+{bn:"A0303",d:"2026-03-06",p:"PROSTRIPE RED",g:167,pk:"PAILS"},
+{bn:"A0304",d:"2026-03-04",p:"PAVE GEL",g:1120,pk:"TOTES"},
+{bn:"A0305",d:"2026-03-09",p:"FST GRN READY MIX",g:250,pk:"PAILS"},
+{bn:"A0306",d:"2026-03-09",p:"ACR RES",g:2920,pk:"DRUMS"},
+{bn:"A0307",d:"2026-03-09",p:"NEU CONC W/S",g:1040,pk:"DRUMS"},
+{bn:"A0308",d:"2026-03-09",p:"APB",g:4560,pk:"PAILS"},
+{bn:"A0309",d:"2026-03-09",p:"BLUE READY MIX",g:250,pk:"PAILS"},
+{bn:"A0310",d:"2026-03-09",p:"HANDICAP BLUE",g:575,pk:"PAILS"},
+{bn:"A0311",d:"2026-03-09",p:"ACR RES",g:2920,pk:"DRUMS"},
+{bn:"A0312",d:"2026-03-09",p:"ACR RES",g:1120,pk:"DRUMS"},
+{bn:"A0313",d:"2026-03-09",p:"ACR RES",g:1120,pk:"DRUMS"},
+{bn:"A0314",d:"2026-03-09",p:"ACR RES",g:1120,pk:"DRUMS"},
+{bn:"A0315",d:"2026-03-09",p:"ACR RES",g:1120,pk:"DRUMS"},
+{bn:"A0316",d:"2026-03-09",p:"MED GRN PICKLE PLAY",g:250,pk:"PAILS"},
+{bn:"A0317",d:"2026-03-10",p:"COLORPAVE READY MIX",g:1040,pk:"PAILS"},
+{bn:"A0318",d:"2026-03-10",p:"DK GRN COLORPLUS",g:1040,pk:"GALLONS"},
+{bn:"A0319",d:"2026-03-10",p:"LT GRN CONC",g:230,pk:"DRUMS"},
+{bn:"A0320",d:"2026-03-10",p:"FASS DRI",g:1040,pk:"PAILS"},
+{bn:"A0321",d:"2026-03-10",p:"BEIGE COLORPLLUS",g:230,pk:"GALLONS"},
+{bn:"A0322",d:"2026-03-10",p:"ACR CRACK FILLER",g:575,pk:"GALLONS"},
+{bn:"A0323",d:"2026-03-10",p:"ACR RES",g:2920,pk:"DRUMS"},
+{bn:"A0324",d:"2026-03-10",p:"FASS DRI",g:575,pk:"PAILS"},
+{bn:"A0325",d:"2026-03-10",p:"ACR RES",g:2920,pk:"DRUMS"},
+{bn:"A0326",d:"2026-03-10",p:"GRAY B/F",g:575,pk:"PAILS"},
+{bn:"A0327",d:"2026-03-10",p:"10 YEAR",g:1120,pk:"PAILS"},
+{bn:"A0328",d:"2026-03-11",p:"LIQUID RD",g:9000,pk:"TOTES"},
+{bn:"A0329",d:"2026-03-11",p:"7 YEAR",g:575,pk:"PAILS"},
+{bn:"A0330",d:"2026-03-11",p:"VELOCITY WHITE",g:1120,pk:"PAILS"},
+{bn:"A0331",d:"2026-03-11",p:"PROSTRIPE PLUS RED",g:230,pk:"PAILS"},
+{bn:"A0332",d:"2026-03-11",p:"VELOCITY WHITE",g:1120,pk:"PAILS"},
+{bn:"A0333",d:"2026-03-11",p:"10 YEAR",g:1120,pk:"PAILS"},
+{bn:"A0334",d:"2026-03-11",p:"BLACK DISP",g:55,pk:"PAILS"},
+{bn:"A0335",d:"2026-03-11",p:"15 YEAR",g:1120,pk:"PAILS"},
+{bn:"A0336",d:"2026-03-11",p:"ROOF PATCH",g:1040,pk:"GALLONS"},
+{bn:"A0337",d:"2026-03-11",p:"ACR RES",g:2920,pk:"DRUMS"},
+{bn:"A0338",d:"2026-03-11",p:"ULTRA 3",g:1099,pk:"TOTES"},
+{bn:"A0339",d:"2026-03-11",p:"PROSTRIPE PLUS BLUE",g:230,pk:"PAILS"},
+{bn:"A0340",d:"2026-03-11",p:"FP 300",g:2920,pk:"PAILS"},
+{bn:"A0341",d:"2026-03-11",p:"RTU BASE",g:1120,pk:"PAILS"},
+{bn:"A0342",d:"2026-03-11",p:"RED B/F",g:575,pk:"DRUMS"},
+{bn:"A0343",d:"2026-03-11",p:"PMB PLUS",g:1120,pk:"TOTES"},
+{bn:"A0344",d:"2026-03-11",p:"CONCRETE SEALER",g:230,pk:"PAILS"},
+{bn:"A0345",d:"2026-03-11",p:"BLUE SURFACE ONE",g:575,pk:"PAILS"},
+{bn:"A0346",d:"2026-03-12",p:"PAVE GEL",g:1120,pk:"PAILS"},
+{bn:"A0347",d:"2026-03-12",p:"SURFACE ONE COATING BASE",g:1120,pk:"PAILS"},
+{bn:"A0348",d:"2026-03-12",p:"DUST SUPPRESSANT",g:280,pk:"TOTES"},
+{bn:"A0349",d:"2026-03-12",p:"ULTRA GLOSS",g:230,pk:"PAILS"},
+{bn:"A0350",d:"2026-03-12",p:"ACR RES",g:2920,pk:"DRUMS"},
+{bn:"A0351",d:"2026-03-12",p:"JETCOAT WHITE",g:230,pk:"PAILS"},
+{bn:"A0352",d:"2026-03-12",p:"RAPID SET",g:1101,pk:"PAILS"},
+{bn:"A0353",d:"2026-03-12",p:"NEU READYMIX",g:1120,pk:"PAILS"},
+{bn:"A0354",d:"2026-03-12",p:"ACR RES W/S",g:900,pk:"DRUMS"},
+{bn:"A0355",d:"2026-03-12",p:"GURADFLEX",g:1120,pk:"PAILS"},
+{bn:"A0356",d:"2026-03-12",p:"5 YEAR",g:230,pk:"PAILS"},
+{bn:"A0357",d:"2026-03-12",p:"PICKLEMASTER",g:575,pk:"KEGS"},
+{bn:"A0358",d:"2026-03-12",p:"FLEXABLE MEMBRANE ADH",g:730,pk:"PAILS"},
+{bn:"A0359",d:"2026-03-12",p:"CUSHION 1",g:1040,pk:"DRUMS"},
+{bn:"A0360",d:"2026-03-12",p:"OIL SPOT PRIMER",g:256,pk:"QUARTS"},
+{bn:"A0361",d:"2026-03-13",p:"FASS DRI",g:1040,pk:"PAILS"},
+{bn:"A0362",d:"2026-03-12",p:"FP 300",g:2920,pk:"PAILS"},
+{bn:"A0363",d:"2026-03-13",p:"ROOF PATCH",g:230,pk:"GALLONS"},
+{bn:"A0364",d:"2026-03-13",p:"FASS DRI",g:1040,pk:"PAILS"},
+{bn:"A0365",d:"2026-03-13",p:"NEU CONC W/S",g:575,pk:"PAILS"},
+{bn:"A0366",d:"2026-03-13",p:"NEU ACR RES W/S",g:900,pk:"PAILS"},
+{bn:"A0367",d:"2026-03-13",p:"FASS DRI",g:575,pk:"GALLONS"},
+{bn:"A0368",d:"2026-03-13",p:"THERMO WHITE",g:1120,pk:"PAILS"},
+];
+
+const IMPORT_MATCH_DATES = ["2026-03-10","2026-03-11","2026-03-12","2026-03-13"];
+
+function importProductionData() {
+    const user = auth.currentUser;
+    if (!user || user.email !== "master@colordept.local") {
+        alert("Only master@ can run this import.");
+        return;
+    }
+
+    const completed = batches.filter(b => b.status === "batch_complete");
+    // Check ALL batches (including queued/active) for existing batch numbers
+    const allBatchNums = new Set(batches.map(b => b.batchNumber).filter(Boolean));
+    // Track which active/queued batches have numbers that conflict with the import
+    const activeBatchesWithConflict = batches.filter(b => b.status !== "batch_complete" && b.batchNumber && IMPORT_DATA_2026.some(r => r.bn === b.batchNumber));
+
+    // Check if import was already run
+    const alreadyImported = IMPORT_DATA_2026.filter(row => allBatchNums.has(row.bn));
+    if (alreadyImported.length > 50) {
+        alert("It looks like the import was already run (" + alreadyImported.length + " of " + IMPORT_DATA_2026.length + " batch numbers already exist). Aborting to prevent duplicates.");
+        return;
+    }
+
+    // Clear batch numbers from active/queued batches that conflict with import data
+    if (activeBatchesWithConflict.length > 0) {
+        if (!confirm(activeBatchesWithConflict.length + " active/queued batch(es) have batch numbers that conflict with the import data (e.g. " + activeBatchesWithConflict.slice(0,3).map(b => b.batchNumber).join(", ") + ").\n\nTheir batch numbers will be cleared so the import can assign them correctly.\n\nProceed?")) {
+            return;
+        }
+    }
+
+    if (!confirm("This will import " + IMPORT_DATA_2026.length + " batches from the 2026 Production Report into Completed.\n\nFor March 10-13, it will try to match existing completed batches by product name + date and update their batch numbers.\n\nFor all other entries, new completed batch records will be created.\n\nProceed?")) {
+        return;
+    }
+
+    const matchedIds = new Set();
+    let matchCount = 0;
+    let createCount = 0;
+    const updates = {};
+
+    for (const row of IMPORT_DATA_2026) {
+        const rowDate = row.d;
+        const rowProduct = row.p.trim().toUpperCase();
+
+        // Skip if this batch number already exists in a completed batch (not an active one we're about to clear)
+        const isInCompleted = completed.some(b => b.batchNumber === row.bn);
+        if (isInCompleted) continue;
+
+        // Try to match for Mar 10-13
+        let matched = false;
+        if (IMPORT_MATCH_DATES.includes(rowDate)) {
+            const rowDateObj = new Date(rowDate + "T12:00:00");
+            const dayStart = new Date(rowDateObj.getFullYear(), rowDateObj.getMonth(), rowDateObj.getDate()).getTime();
+            const dayEnd = dayStart + 86400000;
+
+            for (const eb of completed) {
+                if (matchedIds.has(eb.id)) continue;
+
+                const ebProduct = (eb.product || "").trim().toUpperCase();
+                const ebDate = eb.completedAt || eb.createdAt;
+
+                if (ebProduct === rowProduct && ebDate >= dayStart && ebDate < dayEnd) {
+                    updates["batches/" + eb.id + "/batchNumber"] = row.bn;
+                    matchedIds.add(eb.id);
+                    matchCount++;
+                    matched = true;
+                    break;
+                }
+            }
+        }
+
+        if (!matched) {
+            const ts = new Date(rowDate + "T12:00:00").getTime();
+            const id = generateId();
+            updates["batches/" + id] = {
+                id: id,
+                batchNumber: row.bn,
+                product: row.p,
+                bowl: null,
+                packaging: row.pk,
+                unitCount: null,
+                notes: null,
+                status: "batch_complete",
+                sortOrder: ts,
+                createdAt: ts,
+                startedAt: null,
+                mixingCompleteAt: null,
+                pouringAt: null,
+                completedAt: ts,
+                viscosity: null,
+                initials: null,
+                initials2: null,
+                pouredBy: null,
+            };
+            createCount++;
+        }
+    }
+
+    // Clear batch numbers from active/queued batches that conflict
+    for (const ab of activeBatchesWithConflict) {
+        updates["batches/" + ab.id + "/batchNumber"] = null;
+    }
+
+    // Update batch counter to highest number
+    const highestNum = Math.max(...IMPORT_DATA_2026.map(r => parseInt(r.bn.slice(1))));
+    updates["meta/batchCounter"] = highestNum;
+
+    db.ref().update(updates).then(() => {
+        // Clear recycled numbers to avoid conflicts
+        recycledNumbersRef.remove();
+        alert("Import complete!\n\nMatched & updated: " + matchCount + "\nNewly created: " + createCount + "\nActive batch numbers cleared: " + activeBatchesWithConflict.length + "\nBatch counter set to: " + highestNum);
+    }).catch(err => {
+        alert("Import failed: " + err.message);
+        console.error("Import error:", err);
+    });
+}
+
+// Show import button for master@ only
+const importBtn = document.getElementById("import-production-btn");
+if (importBtn) {
+    auth.onAuthStateChanged(user => {
+        if (user && user.email === "master@colordept.local") {
+            importBtn.classList.remove("hidden");
+        }
+    });
+    importBtn.addEventListener("click", importProductionData);
+}
+
 // ── Helpers ─────────────────────────────────────────────────────────
 function generateId() {
     return Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
