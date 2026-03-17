@@ -1160,6 +1160,7 @@ function getCompletedRows() {
                 pouringStarted: fmtTs(batch.pouringAt),
                 batchComplete: fmtTs(batch.completedAt),
                 completedAt: batch.completedAt || 0,
+                mixingCompleteAt: batch.mixingCompleteAt || 0,
                 id: batch.id,
             };
         });
@@ -1353,11 +1354,34 @@ const chartDateTo = document.getElementById("chart-date-to");
 let dailyChart = null;
 let timelineChart = null;
 let comparisonChart = null;
+let chartDateMode = "completedAt"; // "completedAt" or "mixingCompleteAt"
+
+const modeBatchCompleteBtn = document.getElementById("mode-batch-complete");
+const modeMixingCompleteBtn = document.getElementById("mode-mixing-complete");
+
+modeBatchCompleteBtn.addEventListener("click", () => {
+    chartDateMode = "completedAt";
+    modeBatchCompleteBtn.className = "btn btn-sm btn-primary";
+    modeMixingCompleteBtn.className = "btn btn-sm btn-secondary";
+    renderCharts();
+});
+modeMixingCompleteBtn.addEventListener("click", () => {
+    chartDateMode = "mixingCompleteAt";
+    modeMixingCompleteBtn.className = "btn btn-sm btn-primary";
+    modeBatchCompleteBtn.className = "btn btn-sm btn-secondary";
+    renderCharts();
+});
 
 chartSearchBtn.addEventListener("click", renderCharts);
 
 function getFilteredRows() {
-    let rows = getCompletedRows();
+    let rows;
+    if (chartDateMode === "mixingCompleteAt") {
+        rows = getMixingCompleteRows();
+    } else {
+        rows = getCompletedRows();
+    }
+    const tsField = chartDateMode;
     const from = chartDateFrom.value;
     const to = chartDateTo.value;
     const compounder = compounderSelect.value;
@@ -1365,17 +1389,50 @@ function getFilteredRows() {
     if (from) {
         const [y, m, d] = from.split("-").map(Number);
         const fromTs = new Date(y, m - 1, d, 0, 0, 0, 0).getTime();
-        rows = rows.filter((r) => r.completedAt >= fromTs);
+        rows = rows.filter((r) => r[tsField] >= fromTs);
     }
     if (to) {
         const [y, m, d] = to.split("-").map(Number);
         const toTs = new Date(y, m - 1, d, 23, 59, 59, 999).getTime();
-        rows = rows.filter((r) => r.completedAt <= toTs);
+        rows = rows.filter((r) => r[tsField] <= toTs);
     }
     if (compounder) {
         rows = rows.filter((r) => r.initials === compounder || r.initials2 === compounder);
     }
     return rows;
+}
+
+function getMixingCompleteRows() {
+    const validStatuses = ["mixing_complete", "pouring", "batch_complete"];
+    return batches
+        .filter((b) => validStatuses.includes(b.status) && b.mixingCompleteAt)
+        .sort((a, b) => {
+            const numA = a.batchNumber ? parseInt(a.batchNumber.slice(1)) : Infinity;
+            const numB = b.batchNumber ? parseInt(b.batchNumber.slice(1)) : Infinity;
+            return numA - numB;
+        })
+        .map((batch) => {
+            const bowlInfo = BOWLS[batch.bowl];
+            const bowlName = bowlInfo ? bowlInfo.name : batch.bowl;
+            const bowlCap = bowlInfo ? bowlInfo.capacity : null;
+            return {
+                batchNumber: batch.batchNumber || "",
+                product: batch.product,
+                bowl: bowlName,
+                capacity: bowlCap ? bowlCap.toLocaleString() + " gal" : "N/A",
+                capacityNum: bowlCap || 0,
+                packaging: batch.packaging || "",
+                unitCount: batch.unitCount || "",
+                viscosity: batch.viscosity || "",
+                initials: batch.initials || "",
+                initials2: batch.initials2 || "",
+                pouredBy: batch.pouredBy || "",
+                notes: batch.notes || "",
+                completedAt: batch.completedAt || 0,
+                mixingCompleteAt: batch.mixingCompleteAt || 0,
+                id: batch.id,
+            };
+        });
 }
 
 function renderCharts() {
@@ -1412,10 +1469,14 @@ function renderCharts() {
 
     if (rows.length === 0) return;
 
-    // Group by day
+    // Group by day using selected date mode
+    const tsField = chartDateMode;
+    const modeLabel = chartDateMode === "mixingCompleteAt" ? "Mixing Completed" : "Batch Complete";
     const dayMap = {};
     for (const r of rows) {
-        const day = new Date(r.completedAt).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+        const ts = r[tsField];
+        if (!ts) continue;
+        const day = new Date(ts).toLocaleDateString("en-US", { month: "short", day: "numeric" });
         if (!dayMap[day]) dayMap[day] = { count: 0, gallons: 0 };
         dayMap[day].count++;
         dayMap[day].gallons += r.capacityNum;
@@ -1425,8 +1486,8 @@ function renderCharts() {
     const dayGallons = dayLabels.map((d) => dayMap[d].gallons);
 
     const dailyTitle = selectedCompounder
-        ? `Daily — ${selectedCompounder}`
-        : "Daily — All Compounders";
+        ? `Daily (${modeLabel}) — ${selectedCompounder}`
+        : `Daily (${modeLabel}) — All Compounders`;
 
     dailyChart = new Chart(document.getElementById("daily-chart").getContext("2d"), {
         type: "bar",
@@ -1464,8 +1525,8 @@ function renderCharts() {
     const bowlGallons = bowlLabels.map((l) => bowlMap[l].gallons * bowlMap[l].count);
 
     const bowlTitle = selectedCompounder
-        ? `By Bowl — ${selectedCompounder}`
-        : "By Bowl — All Compounders";
+        ? `By Bowl (${modeLabel}) — ${selectedCompounder}`
+        : `By Bowl (${modeLabel}) — All Compounders`;
 
     completedChart = new Chart(document.getElementById("completed-chart").getContext("2d"), {
         type: "bar",
@@ -1494,8 +1555,8 @@ function renderCharts() {
     const dailyGallonData = sortedDays.map((d) => dayMap[d].gallons);
 
     const timelineTitle = selectedCompounder
-        ? `Production Flow — ${selectedCompounder}`
-        : "Production Flow — All";
+        ? `Production Flow (${modeLabel}) — ${selectedCompounder}`
+        : `Production Flow (${modeLabel}) — All`;
 
     timelineChart = new Chart(document.getElementById("timeline-chart").getContext("2d"), {
         type: "line",
@@ -1517,18 +1578,18 @@ function renderCharts() {
     });
 
     // Compounder comparison — get ALL rows in date range (ignore compounder filter)
-    let allRows = getCompletedRows();
+    let allRows = chartDateMode === "mixingCompleteAt" ? getMixingCompleteRows() : getCompletedRows();
     const from = chartDateFrom.value;
     const to = chartDateTo.value;
     if (from) {
         const [fy, fm, fd] = from.split("-").map(Number);
         const fromTs = new Date(fy, fm - 1, fd, 0, 0, 0, 0).getTime();
-        allRows = allRows.filter((r) => r.completedAt >= fromTs);
+        allRows = allRows.filter((r) => r[tsField] >= fromTs);
     }
     if (to) {
         const [ty, tm, td] = to.split("-").map(Number);
         const toTs = new Date(ty, tm - 1, td, 23, 59, 59, 999).getTime();
-        allRows = allRows.filter((r) => r.completedAt <= toTs);
+        allRows = allRows.filter((r) => r[tsField] <= toTs);
     }
 
     const compMap = {};
