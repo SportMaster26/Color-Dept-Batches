@@ -50,7 +50,7 @@ const PACKAGING = {
 };
 
 // Packaging types that always get a batch number immediately on creation.
-// All others only get a number if 1st or 2nd in line for their bowl.
+// (Legacy — no longer used; all batches now get numbers only when 2nd in line.)
 const IMMEDIATE_BATCH_NUM = ["Quart Bottles", "24 Oz. Jars", "1 Gallon Jugs", "1 Gallon Pails"];
 
 // ── Product Catalog (name – item number) ────────────────────────────
@@ -699,7 +699,7 @@ function onBatches(snapshot) {
     if (activeTab === "completed") renderCompleted();
 }
 
-// Auto-assign batch numbers to large-packaging batches that are now 1st or 2nd in their bowl
+// Auto-assign batch numbers to batches that are 2nd in line for their bowl
 function assignNumbersToTopBatches() {
     for (const bowlKey of BOWL_ORDER) {
         const laneBatches = batches
@@ -710,15 +710,13 @@ function assignNumbersToTopBatches() {
                 return orderA - orderB;
             });
 
-        // Check the first 2 batches — if any lack a number, assign one
-        for (let i = 0; i < Math.min(2, laneBatches.length); i++) {
-            const batch = laneBatches[i];
-            if (!batch.batchNumber) {
-                assignBatchNumber((batchNumber) => {
-                    batch.batchNumber = batchNumber;
-                    batchesRef.child(batch.id).update({ batchNumber });
-                });
-            }
+        // Assign a number to the 2nd batch in line (index 1) if it doesn't have one yet
+        if (laneBatches.length >= 2 && !laneBatches[1].batchNumber) {
+            const batch = laneBatches[1];
+            assignBatchNumber((batchNumber) => {
+                batch.batchNumber = batchNumber;
+                batchesRef.child(batch.id).update({ batchNumber });
+            });
         }
     }
 }
@@ -2115,10 +2113,9 @@ function duplicateBatch(id) {
         batchesRef.child(newBatch.id).set(newBatch);
     }
 
-    // Small packaging always gets a number.
-    // Large packaging only gets a number if 1st or 2nd in line.
-    const isSmall = batch.packaging && IMMEDIATE_BATCH_NUM.includes(batch.packaging);
-    if (isSmall || laneBatches.length < 2) {
+    // Only assign a batch number if the duplicate will be 2nd in line.
+    const activeLaneBatches = laneBatches.filter((b) => b.status !== "batch_complete");
+    if (activeLaneBatches.length === 1) {
         assignBatchNumber((batchNumber) => createDuplicate(batchNumber));
     } else {
         createDuplicate(null);
@@ -2547,8 +2544,9 @@ batchForm.addEventListener("submit", (e) => {
 
     if (!product || !bowl || !packaging) return;
 
-    const laneBatches = batches.filter((b) => b.bowl === bowl);
-    const maxOrder = laneBatches.reduce((max, b) => {
+    const laneBatches = batches.filter((b) => b.bowl === bowl && b.status !== "batch_complete");
+    const allLaneBatches = batches.filter((b) => b.bowl === bowl);
+    const maxOrder = allLaneBatches.reduce((max, b) => {
         const order = b.sortOrder != null ? b.sortOrder : b.createdAt;
         return Math.max(max, order);
     }, -1);
@@ -2576,9 +2574,8 @@ batchForm.addEventListener("submit", (e) => {
         batchesRef.child(batch.id).set(batch);
     }
 
-    // Small packaging always gets a number.
-    // Large packaging only gets a number if 1st or 2nd in line (0 or 1 batches already in bowl).
-    if (IMMEDIATE_BATCH_NUM.includes(packaging) || laneBatches.length < 2) {
+    // Only assign a batch number if this batch will be 2nd in line (exactly 1 batch already in bowl).
+    if (laneBatches.length === 1) {
         assignBatchNumber((batchNumber) => createBatch(batchNumber));
     } else {
         createBatch(null);
