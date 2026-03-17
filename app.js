@@ -1921,7 +1921,7 @@ function escapeHtml(str) {
 
 // ── Drag & Drop Handlers ────────────────────────────────────────────
 function handleDragStart(e) {
-    if (!isAdmin) return;
+    if (!isAdmin && !isPlatformOrFloor()) return;
     draggedId = e.target.dataset.id;
     e.target.classList.add("dragging");
     e.dataTransfer.effectAllowed = "move";
@@ -1935,7 +1935,7 @@ function handleDragEnd(e) {
 }
 
 function handleDragOver(e) {
-    if (!isAdmin) return;
+    if (!isAdmin && !isPlatformOrFloor()) return;
     e.preventDefault();
     e.dataTransfer.dropEffect = "move";
 
@@ -1958,7 +1958,7 @@ function handleDragOver(e) {
 }
 
 function handleDragEnter(e) {
-    if (!isAdmin) return;
+    if (!isAdmin && !isPlatformOrFloor()) return;
     e.preventDefault();
     e.currentTarget.classList.add("drag-over");
 }
