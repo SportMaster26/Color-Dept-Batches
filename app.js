@@ -1289,6 +1289,14 @@ function renderCompleted() {
 
                 const save = () => {
                     const val = input.value.trim();
+                    if (val && val !== currentVal) {
+                        const dup = batches.find(b => b.id !== batchId && b.batchNumber && b.batchNumber === val);
+                        if (dup) {
+                            alert("Batch number \"" + val + "\" is already in use by another batch.");
+                            input.focus();
+                            return;
+                        }
+                    }
                     batch.batchNumber = val || null;
                     batchesRef.child(batchId).update({ batchNumber: batch.batchNumber });
                     td.innerHTML = batch.batchNumber ? escapeHtml(batch.batchNumber) : "—";
@@ -1813,7 +1821,10 @@ function createBatchCard(batch) {
     }
     if (batch.pouredBy) extraInfo += `<span class="card-poured-by">Poured: ${escapeHtml(batch.pouredBy)}</span>`;
 
-    const batchNumDisplay = batch.batchNumber ? `<span class="card-batch-number">${escapeHtml(batch.batchNumber)}</span>` : "";
+    const editableBatchNum = canEditBatchNumber();
+    const batchNumText = batch.batchNumber ? escapeHtml(batch.batchNumber) : (editableBatchNum ? "[#]" : "");
+    const batchNumClass = editableBatchNum ? "card-batch-number editable-card-batch-num" : "card-batch-number";
+    const batchNumDisplay = (batch.batchNumber || editableBatchNum) ? `<span class="${batchNumClass}" data-batch-id="${batch.id}">${batchNumText}</span>` : "";
 
     card.innerHTML = `
         <div class="card-top">
@@ -1827,6 +1838,47 @@ function createBatchCard(batch) {
         </div>
         ${actionsHtml}
     `;
+
+    // Inline edit for batch number on kanban card
+    if (editableBatchNum) {
+        const batchNumSpan = card.querySelector(".editable-card-batch-num");
+        if (batchNumSpan) {
+            batchNumSpan.addEventListener("click", (e) => {
+                e.stopPropagation();
+                if (batchNumSpan.querySelector("input")) return;
+                const currentVal = batch.batchNumber || "";
+                const input = document.createElement("input");
+                input.type = "text";
+                input.className = "tank-input";
+                input.style.cssText = "width:70px;font-size:11px;padding:1px 4px;";
+                input.value = currentVal;
+                batchNumSpan.textContent = "";
+                batchNumSpan.appendChild(input);
+                input.focus();
+                input.select();
+
+                const save = () => {
+                    const val = input.value.trim();
+                    if (val && val !== currentVal) {
+                        const dup = batches.find(b => b.id !== batch.id && b.batchNumber && b.batchNumber === val);
+                        if (dup) {
+                            alert("Batch number \"" + val + "\" is already in use by another batch.");
+                            input.focus();
+                            return;
+                        }
+                    }
+                    batch.batchNumber = val || null;
+                    batchesRef.child(batch.id).update({ batchNumber: batch.batchNumber });
+                    renderBoard();
+                };
+                input.addEventListener("blur", save);
+                input.addEventListener("keydown", (ev) => {
+                    if (ev.key === "Enter") { ev.preventDefault(); save(); }
+                    if (ev.key === "Escape") { renderBoard(); }
+                });
+            });
+        }
+    }
 
     return card;
 }
