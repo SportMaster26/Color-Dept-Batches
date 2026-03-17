@@ -1083,12 +1083,25 @@ viewProdRecordBtn.addEventListener("click", () => {
 
 exportExcelBtn.addEventListener("click", exportToExcel);
 
+const prodRecordFrom = document.getElementById("prod-record-from");
+const prodRecordTo = document.getElementById("prod-record-to");
+const prodRecordSearchBtn = document.getElementById("prod-record-search-btn");
+
+prodRecordSearchBtn.addEventListener("click", renderProductionRecordChart);
+
 function renderProductionRecordChart() {
     if (productionRecordChart) { productionRecordChart.destroy(); productionRecordChart = null; }
 
-    const labels = PRODUCTION_RECORD_DATA.map((r) => r.d);
-    const batchCounts = PRODUCTION_RECORD_DATA.map((r) => r.c);
-    const gallons = PRODUCTION_RECORD_DATA.map((r) => r.g);
+    const from = prodRecordFrom.value;
+    const to = prodRecordTo.value;
+
+    let filtered = PRODUCTION_RECORD_DATA;
+    if (from) filtered = filtered.filter((r) => r.d >= from);
+    if (to) filtered = filtered.filter((r) => r.d <= to);
+
+    const labels = filtered.map((r) => r.d);
+    const batchCounts = filtered.map((r) => r.c);
+    const gallons = filtered.map((r) => r.g);
     const totalBatches = batchCounts.reduce((s, v) => s + v, 0);
     const totalGallons = gallons.reduce((s, v) => s + v, 0);
 
