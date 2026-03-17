@@ -17,6 +17,19 @@ const BOWLS = {
     "Latex Department": { name: "Latex Department", capacity: null, group: "Latex Department" },
 };
 
+// Bowl move groups for platform/floor operators (restricted movement)
+const BOWL_MOVE_GROUPS = {
+    A: ["A", "B"],
+    B: ["A", "B"],
+    C: ["C", "D"],
+    D: ["C", "D"],
+    E: ["E", "F"],
+    F: ["E", "F"],
+    G: ["G", "H", "I"],
+    H: ["G", "H", "I"],
+    I: ["G", "H", "I"],
+};
+
 // Display order for the lanes
 const BOWL_ORDER = ["A", "B", "C", "D", "E", "F", "G", "H", "I", "The Hull", "Thors Hammer", "TTT", "Stubby", "Ol Iron Sides", "Latex Department"];
 
@@ -406,6 +419,16 @@ function setRole(role) {
     isAdmin = role === "admin" || role === "owner";
     isOperator = role === "operator";
     isViewer = role === "viewer";
+}
+
+function isPlatformOrFloor() {
+    const user = auth.currentUser;
+    const email = user ? user.email : "";
+    return email === "platform@colordept.local" || email === "floor@colordept.local";
+}
+
+function getAllowedMoveBowls(sourceBowl) {
+    return BOWL_MOVE_GROUPS[sourceBowl] || [];
 }
 
 // ── Notes Users ─────────────────────────────────────────────────────
@@ -1807,12 +1830,16 @@ function createBatchCard(batch) {
             </div>
         `;
     } else if (isOperator) {
-        // Operators can only advance status (click through steps)
-        actionsHtml = nextAction ? `
+        const canMove = isPlatformOrFloor() && BOWL_MOVE_GROUPS[batch.bowl];
+        const moveBtn = canMove && isTouchDevice
+            ? `<button class="btn btn-sm btn-move" data-action="move" data-id="${batch.id}">Move</button>`
+            : "";
+        actionsHtml = `
             <div class="card-actions">
-                <button class="btn btn-sm ${nextBtnClass}" data-action="advance" data-id="${batch.id}">${nextAction.label}</button>
+                ${moveBtn}
+                ${nextAction ? `<button class="btn btn-sm ${nextBtnClass}" data-action="advance" data-id="${batch.id}">${nextAction.label}</button>` : ""}
             </div>
-        ` : "";
+        `;
     }
 
     let extraInfo = "";
@@ -1944,7 +1971,7 @@ function handleDragLeave(e) {
 }
 
 function handleDrop(e) {
-    if (!isAdmin) return;
+    if (!isAdmin && !isPlatformOrFloor()) return;
     e.preventDefault();
     const dropZone = e.currentTarget;
     dropZone.classList.remove("drag-over");
@@ -1955,6 +1982,12 @@ function handleDrop(e) {
     const targetBowl = dropZone.dataset.bowl;
     const batch = batches.find((b) => b.id === draggedId);
     if (!batch) return;
+
+    // Enforce bowl pairing for platform/floor
+    if (!isAdmin) {
+        const allowed = getAllowedMoveBowls(batch.bowl);
+        if (!allowed.includes(targetBowl)) return;
+    }
 
     batch.bowl = targetBowl;
 
@@ -2028,7 +2061,10 @@ function showBowlPicker(modal, overlay, batch) {
     const list = document.createElement("div");
     list.className = "move-list";
 
+    const allowedBowls = isPlatformOrFloor() ? getAllowedMoveBowls(batch.bowl) : null;
+
     for (const bowlKey of BOWL_ORDER) {
+        if (allowedBowls && !allowedBowls.includes(bowlKey)) continue;
         const bowl = BOWLS[bowlKey];
         const btn = document.createElement("button");
         btn.className = "btn move-option";
@@ -2123,7 +2159,7 @@ document.addEventListener("click", (e) => {
 
     if (action === "advance" && (isAdmin || isOperator)) {
         advanceStatus(id);
-    } else if (action === "move" && isAdmin) {
+    } else if (action === "move" && (isAdmin || isPlatformOrFloor())) {
         openMoveModal(id);
     } else if (action === "edit" && isAdmin) {
         openEditModal(id);
