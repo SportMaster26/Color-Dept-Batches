@@ -387,6 +387,7 @@ const notesBoard = document.getElementById("notes-board");
 const LATEX_TAB_USERS = [
     "tmahl@colordept.local",
     "kherrin@colordept.local",
+    "matt@colordept.local",
     "ajolly@colordept.local",
     "cwood@colordept.local",
     "hhudak@colordept.local",
@@ -408,7 +409,7 @@ function setRole(role) {
 }
 
 // ── Notes Users ─────────────────────────────────────────────────────
-const NOTES_POST_USERS = ["master@colordept.local", "tmahl@colordept.local", "kherrin@colordept.local", "ajolly@colordept.local"];
+const NOTES_POST_USERS = ["master@colordept.local", "tmahl@colordept.local", "kherrin@colordept.local", "matt@colordept.local", "ajolly@colordept.local"];
 
 function canPostNotes() {
     const user = auth.currentUser;
@@ -900,6 +901,7 @@ const LATEX_EDIT_USERS = [
     "master@colordept.local",
     "cwood@colordept.local",
     "kherrin@colordept.local",
+    "matt@colordept.local",
     "ajolly@colordept.local",
     "hhudak@colordept.local",
 ];
@@ -1184,6 +1186,7 @@ batchSearchInput.addEventListener("input", () => {
 const UNIT_COUNT_EDIT_USERS = [
     "master@colordept.local",
     "kherrin@colordept.local",
+    "matt@colordept.local",
     "ajolly@colordept.local",
 ];
 

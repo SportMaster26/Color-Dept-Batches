@@ -53,6 +53,7 @@ const ROLE_MAP = {
     "admin@colordept.local": "admin",
     "tmahl@colordept.local": "admin",
     "kherrin@colordept.local": "admin",
+    "matt@colordept.local": "admin",
     "floor@colordept.local": "operator",
     "platform@colordept.local": "operator",
     "cwood@colordept.local": "operator",
