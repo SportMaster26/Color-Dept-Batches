@@ -481,12 +481,23 @@
             </div>
         </div>
 
-        <!-- Production Record view (owner + Jeff only) -->
+        <!-- Production Record view (owner + Jeff + ajolly only) -->
         <div id="production-record-wrap" class="completed-chart-wrap hidden">
-            <div class="chart-grid">
-                <div class="chart-box" style="grid-column: 1 / -1;">
-                    <canvas id="production-record-chart"></canvas>
+            <div class="chart-filters">
+                <div class="chart-filter-row">
+                    <div class="filter-group">
+                        <label for="prod-record-from">From:</label>
+                        <input type="date" id="prod-record-from">
+                    </div>
+                    <div class="filter-group">
+                        <label for="prod-record-to">To:</label>
+                        <input type="date" id="prod-record-to">
+                    </div>
+                    <button id="prod-record-search-btn" class="btn btn-primary btn-sm">Search</button>
                 </div>
+            </div>
+            <div class="chart-box chart-box-full">
+                <canvas id="production-record-chart"></canvas>
             </div>
         </div>
     </div>
