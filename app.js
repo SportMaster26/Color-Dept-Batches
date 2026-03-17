@@ -1042,6 +1042,7 @@ const PRODUCTION_RECORD_DATA = [{"d":"2025-01-07","c":1,"g":900},{"d":"2025-02-0
 const PRODUCTION_RECORD_USERS = [
     "master@colordept.local",
     "jeff@colordept.local",
+    "ajolly@colordept.local",
 ];
 
 function canSeeProductionRecord() {

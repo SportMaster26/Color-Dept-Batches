@@ -798,6 +798,17 @@ header h1 {
     gap: 12px;
 }
 
+.chart-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.chart-box-full {
+    width: 100%;
+    height: 380px;
+}
+
 .chart-box {
     background: #f9fafb;
     border: 1px solid #e0e4ea;

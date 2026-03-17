@@ -424,19 +424,17 @@
             </div>
             <div id="chart-results" class="hidden">
                 <div id="compounder-stats" class="compounder-stats"></div>
-                <div class="chart-grid">
-                    <div class="chart-box">
-                        <canvas id="daily-chart"></canvas>
-                    </div>
-                    <div class="chart-box">
-                        <canvas id="completed-chart"></canvas>
-                    </div>
-                </div>
-                <div class="chart-grid" style="margin-top:12px;">
-                    <div class="chart-box">
+                <div class="chart-stack">
+                    <div class="chart-box chart-box-full">
                         <canvas id="timeline-chart"></canvas>
                     </div>
-                    <div class="chart-box">
+                    <div class="chart-box chart-box-full">
+                        <canvas id="daily-chart"></canvas>
+                    </div>
+                    <div class="chart-box chart-box-full">
+                        <canvas id="completed-chart"></canvas>
+                    </div>
+                    <div class="chart-box chart-box-full">
                         <canvas id="comparison-chart"></canvas>
                     </div>
                 </div>
