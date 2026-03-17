@@ -1032,14 +1032,34 @@ const completedTableWrap = document.getElementById("completed-table-wrap");
 const completedChartWrap = document.getElementById("completed-chart-wrap");
 const productHistoryWrap = document.getElementById("product-history-wrap");
 
+const viewProdRecordBtn = document.getElementById("view-production-record-btn");
+const productionRecordWrap = document.getElementById("production-record-wrap");
+let productionRecordChart = null;
+
+// Daily production data from 2026 PRODUCTION RECORD.xlsx
+const PRODUCTION_RECORD_DATA = [{"d":"2025-01-07","c":1,"g":900},{"d":"2025-02-03","c":1,"g":1120},{"d":"2026-01-05","c":3,"g":3959},{"d":"2026-01-06","c":15,"g":17055},{"d":"2026-01-07","c":6,"g":15550},{"d":"2026-01-08","c":7,"g":5860},{"d":"2026-01-09","c":2,"g":1615},{"d":"2026-01-12","c":5,"g":2060},{"d":"2026-01-13","c":5,"g":4510},{"d":"2026-01-14","c":6,"g":2740},{"d":"2026-01-15","c":5,"g":3430},{"d":"2026-01-16","c":3,"g":2655},{"d":"2026-01-19","c":1,"g":1040},{"d":"2026-01-20","c":6,"g":2940},{"d":"2026-01-21","c":10,"g":10780},{"d":"2026-01-22","c":5,"g":6613},{"d":"2026-01-23","c":7,"g":6380},{"d":"2026-01-25","c":1,"g":1040},{"d":"2026-01-27","c":6,"g":4829},{"d":"2026-02-02","c":2,"g":2230},{"d":"2026-02-03","c":11,"g":7265},{"d":"2026-02-04","c":5,"g":1824},{"d":"2026-02-05","c":2,"g":486},{"d":"2026-02-06","c":5,"g":8676},{"d":"2026-02-09","c":2,"g":1150},{"d":"2026-02-10","c":18,"g":14679},{"d":"2026-02-11","c":9,"g":18110},{"d":"2026-02-12","c":10,"g":7525},{"d":"2026-02-13","c":3,"g":1500},{"d":"2026-02-16","c":7,"g":4890},{"d":"2026-02-17","c":12,"g":8137},{"d":"2026-02-18","c":8,"g":8400},{"d":"2026-02-19","c":12,"g":11050},{"d":"2026-02-20","c":10,"g":8330},{"d":"2026-02-24","c":11,"g":11175},{"d":"2026-02-25","c":12,"g":15164},{"d":"2026-02-26","c":10,"g":7785},{"d":"2026-02-27","c":3,"g":1035},{"d":"2026-03-02","c":4,"g":4440},{"d":"2026-03-03","c":9,"g":11900},{"d":"2026-03-04","c":18,"g":19015},{"d":"2026-03-05","c":16,"g":13720},{"d":"2026-03-06","c":10,"g":7371},{"d":"2026-03-09","c":12,"g":17245},{"d":"2026-03-10","c":11,"g":12265},{"d":"2026-03-11","c":18,"g":26169},{"d":"2026-03-12","c":16,"g":15892},{"d":"2026-03-13","c":6,"g":4440}];
+
+const PRODUCTION_RECORD_USERS = [
+    "master@colordept.local",
+    "jeff@colordept.local",
+];
+
+function canSeeProductionRecord() {
+    const user = auth.currentUser;
+    return user && PRODUCTION_RECORD_USERS.includes(user.email);
+}
+
 function setCompletedView(view) {
     completedView = view;
     viewTableBtn.classList.toggle("view-btn-active", view === "table");
     viewChartBtn.classList.toggle("view-btn-active", view === "chart");
     viewHistoryBtn.classList.toggle("view-btn-active", view === "history");
+    viewProdRecordBtn.classList.toggle("view-btn-active", view === "production-record");
     completedTableWrap.classList.toggle("hidden", view !== "table");
     completedChartWrap.classList.toggle("hidden", view !== "chart");
     productHistoryWrap.classList.toggle("hidden", view !== "history");
+    productionRecordWrap.classList.toggle("hidden", view !== "production-record");
+    if (view === "production-record") renderProductionRecordChart();
 }
 
 viewTableBtn.addEventListener("click", () => setCompletedView("table"));
@@ -1055,7 +1075,44 @@ viewHistoryBtn.addEventListener("click", () => {
     populateHistoryProductList();
 });
 
+viewProdRecordBtn.addEventListener("click", () => {
+    if (!canSeeProductionRecord()) return;
+    setCompletedView("production-record");
+});
+
 exportExcelBtn.addEventListener("click", exportToExcel);
+
+function renderProductionRecordChart() {
+    if (productionRecordChart) { productionRecordChart.destroy(); productionRecordChart = null; }
+
+    const labels = PRODUCTION_RECORD_DATA.map((r) => r.d);
+    const batchCounts = PRODUCTION_RECORD_DATA.map((r) => r.c);
+    const gallons = PRODUCTION_RECORD_DATA.map((r) => r.g);
+    const totalBatches = batchCounts.reduce((s, v) => s + v, 0);
+    const totalGallons = gallons.reduce((s, v) => s + v, 0);
+
+    productionRecordChart = new Chart(document.getElementById("production-record-chart").getContext("2d"), {
+        type: "line",
+        data: {
+            labels,
+            datasets: [
+                { label: "Batches", data: batchCounts, borderColor: "#D4952B", backgroundColor: "rgba(212,149,43,0.1)", fill: true, tension: 0.3, pointRadius: 3, borderWidth: 2 },
+                { label: "Gallons", data: gallons, borderColor: "#3498db", backgroundColor: "rgba(52,152,219,0.1)", fill: true, tension: 0.3, pointRadius: 3, borderWidth: 2, yAxisID: "y1" },
+            ],
+        },
+        options: {
+            responsive: true, maintainAspectRatio: false,
+            plugins: {
+                title: { display: true, text: `Production Record — ${totalBatches} Batches / ${totalGallons.toLocaleString()} Gallons`, font: { size: 14 } },
+                legend: { labels: { boxWidth: 12, font: { size: 11 } } },
+            },
+            scales: {
+                y: { beginAtZero: true, ticks: { stepSize: 1, font: { size: 10 } }, title: { display: true, text: "Batches", font: { size: 11 } } },
+                y1: { position: "right", beginAtZero: true, grid: { drawOnChartArea: false }, ticks: { font: { size: 10 } }, title: { display: true, text: "Gallons", font: { size: 11 } } },
+            },
+        },
+    });
+}
 
 function getCompletedRows() {
     return batches
@@ -1141,6 +1198,8 @@ function renderCompleted() {
 
     // Show/hide Product History button based on user
     viewHistoryBtn.classList.toggle("hidden", !canSeeProductHistory());
+    // Show/hide Production Record button based on user
+    viewProdRecordBtn.classList.toggle("hidden", !canSeeProductionRecord());
 
     if (rows.length === 0) {
         tbody.innerHTML = `<tr><td colspan="16" class="completed-empty">No completed batches</td></tr>`;
