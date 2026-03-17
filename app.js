@@ -795,8 +795,8 @@ function render() {
         dropZone.className = "drop-zone";
         dropZone.dataset.bowl = bowlKey;
 
-        // Only allow dropping if admin
-        if (isAdmin) {
+        // Allow dropping if admin or platform/floor operator
+        if (isAdmin || isPlatformOrFloor()) {
             dropZone.addEventListener("dragover", handleDragOver);
             dropZone.addEventListener("drop", handleDrop);
             dropZone.addEventListener("dragenter", handleDragEnter);
@@ -1793,8 +1793,8 @@ function createBatchCard(batch) {
     card.className = `batch-card status-${batch.status}`;
     card.dataset.id = batch.id;
 
-    // Only make draggable if admin
-    if (isAdmin) {
+    // Make draggable if admin, or platform/floor with allowed bowl group
+    if (isAdmin || (isPlatformOrFloor() && BOWL_MOVE_GROUPS[batch.bowl])) {
         card.draggable = true;
         card.addEventListener("dragstart", handleDragStart);
         card.addEventListener("dragend", handleDragEnd);
