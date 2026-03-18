@@ -55,6 +55,7 @@ const PACKAGING = {
     "24 Oz. Jars":      { gallons: 24 / 128, unit: "Jars" },
     "1 Gallon Jugs":    { gallons: 1, unit: "Jugs" },
     "1 Gallon Pails":   { gallons: 1, unit: "Pails" },
+    "2 Gallon Pails":   { gallons: 2, unit: "Pails" },
     "4.5 Gallon Pails": { gallons: 4.5, unit: "Pails" },
     "5 Gallon Pails":   { gallons: 5, unit: "Pails" },
     "30 Gallon Kegs":   { gallons: 30, unit: "Kegs" },
