@@ -1284,18 +1284,16 @@ function renderCompleted() {
             ? batchNumHtml.replace(new RegExp(`(${batchSearchTerm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, "gi"), `<mark class="batch-search-highlight">$1</mark>`)
             : batchNumHtml;
         const batchNumClass = `batch-num-cell${editableBatchNum ? ' editable-batch-num' : ''}`;
-        const capClass = editableCompleted ? 'editable-completed-field' : '';
-        const viscClass = editableCompleted ? 'editable-completed-field' : '';
-        const dateClass = editableCompleted ? 'editable-completed-field' : '';
+        const ecf = editableCompleted ? 'editable-completed-field' : '';
         return `<tr>
             <td>${i + 1}</td>
             <td class="${batchNumClass}" data-batch-id="${r.id}">${highlighted}</td>
             <td>${escapeHtml(r.product)}</td>
-            <td>${escapeHtml(r.bowl)}</td>
-            <td class="${capClass}" data-batch-id="${r.id}" data-field="capacity">${r.capacity}</td>
-            <td>${escapeHtml(r.packaging)}</td>
+            <td class="${ecf}" data-batch-id="${r.id}" data-field="bowl">${escapeHtml(r.bowl)}</td>
+            <td class="${ecf}" data-batch-id="${r.id}" data-field="capacity">${r.capacity}</td>
+            <td class="${ecf}" data-batch-id="${r.id}" data-field="packaging">${escapeHtml(r.packaging)}</td>
             <td class="${canEditUnitCount() ? 'editable-unit-count' : ''}" data-batch-id="${r.id}" data-field="unitCount">${r.unitCount ? Number(r.unitCount).toLocaleString() : "—"}</td>
-            <td class="${viscClass}" data-batch-id="${r.id}" data-field="viscosity">${r.viscosity ? escapeHtml(r.viscosity) + " KU" : "—"}</td>
+            <td class="${ecf}" data-batch-id="${r.id}" data-field="viscosity">${r.viscosity ? escapeHtml(r.viscosity) + " KU" : "—"}</td>
             <td>${escapeHtml(r.initials) || "—"}</td>
             <td>${escapeHtml(r.initials2) || "—"}</td>
             <td>${escapeHtml(r.pouredBy) || "—"}</td>
@@ -1304,7 +1302,7 @@ function renderCompleted() {
             <td class="completed-time-cell">${r.mixingStarted}</td>
             <td class="completed-time-cell">${r.mixingComplete}</td>
             <td class="completed-time-cell">${r.pouringStarted}</td>
-            <td class="completed-time-cell ${dateClass}" data-batch-id="${r.id}" data-field="completedAt">${r.batchComplete}${isAdmin ? ` <button class="btn btn-sm btn-delete" data-action="delete" data-id="${r.id}">&times;</button>` : ""}</td>
+            <td class="completed-time-cell ${ecf}" data-batch-id="${r.id}" data-field="completedAt">${r.batchComplete}${isAdmin ? ` <button class="btn btn-sm btn-delete" data-action="delete" data-id="${r.id}">&times;</button>` : ""}</td>
         </tr>`;
     }).join("");
 
@@ -1388,8 +1386,92 @@ function renderCompleted() {
         });
     }
 
-    // Attach inline-edit handlers for capacity, viscosity, and date (ajolly)
+    // Attach inline-edit handlers for bowl, packaging, capacity, viscosity, and date (ajolly)
     if (editableCompleted) {
+        // Bowl editing (dropdown)
+        tbody.querySelectorAll('.editable-completed-field[data-field="bowl"]').forEach(td => {
+            td.addEventListener("click", () => {
+                if (td.querySelector("select")) return;
+                const batchId = td.dataset.batchId;
+                const batch = batches.find(b => b.id === batchId);
+                if (!batch) return;
+
+                const currentVal = batch.bowl || "";
+                const select = document.createElement("select");
+                select.className = "tank-input";
+                select.style.width = "140px";
+                BOWL_ORDER.forEach(key => {
+                    const opt = document.createElement("option");
+                    opt.value = key;
+                    opt.textContent = BOWLS[key].name;
+                    if (key === currentVal) opt.selected = true;
+                    select.appendChild(opt);
+                });
+                td.textContent = "";
+                td.appendChild(select);
+                select.focus();
+
+                const save = () => {
+                    const val = select.value;
+                    batch.bowl = val;
+                    const newBowlInfo = BOWLS[val];
+                    batchesRef.child(batchId).update({ bowl: val });
+                    td.textContent = newBowlInfo ? newBowlInfo.name : val;
+                    // Also update the capacity cell in the same row
+                    const capTd = td.parentElement.querySelector('[data-field="capacity"]');
+                    if (capTd && !capTd.querySelector("input")) {
+                        const cap = batch.capacityOverride != null ? batch.capacityOverride : (newBowlInfo ? newBowlInfo.capacity : null);
+                        capTd.textContent = cap ? Number(cap).toLocaleString() + " gal" : "N/A";
+                    }
+                };
+                select.addEventListener("blur", save);
+                select.addEventListener("change", save);
+                select.addEventListener("keydown", (e) => {
+                    if (e.key === "Escape") {
+                        const bowlInfo = BOWLS[currentVal];
+                        td.textContent = bowlInfo ? bowlInfo.name : currentVal;
+                    }
+                });
+            });
+        });
+
+        // Packaging editing (dropdown)
+        tbody.querySelectorAll('.editable-completed-field[data-field="packaging"]').forEach(td => {
+            td.addEventListener("click", () => {
+                if (td.querySelector("select")) return;
+                const batchId = td.dataset.batchId;
+                const batch = batches.find(b => b.id === batchId);
+                if (!batch) return;
+
+                const currentVal = batch.packaging || "";
+                const select = document.createElement("select");
+                select.className = "tank-input";
+                select.style.width = "150px";
+                Object.keys(PACKAGING).forEach(key => {
+                    const opt = document.createElement("option");
+                    opt.value = key;
+                    opt.textContent = key;
+                    if (key === currentVal) opt.selected = true;
+                    select.appendChild(opt);
+                });
+                td.textContent = "";
+                td.appendChild(select);
+                select.focus();
+
+                const save = () => {
+                    const val = select.value;
+                    batch.packaging = val;
+                    batchesRef.child(batchId).update({ packaging: val });
+                    td.textContent = val;
+                };
+                select.addEventListener("blur", save);
+                select.addEventListener("change", save);
+                select.addEventListener("keydown", (e) => {
+                    if (e.key === "Escape") { td.textContent = currentVal || "—"; }
+                });
+            });
+        });
+
         // Capacity editing
         tbody.querySelectorAll('.editable-completed-field[data-field="capacity"]').forEach(td => {
             td.addEventListener("click", () => {
