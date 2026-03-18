@@ -432,7 +432,7 @@ function getAllowedMoveBowls(sourceBowl) {
 }
 
 // ── Notes Users ─────────────────────────────────────────────────────
-const NOTES_POST_USERS = ["master@colordept.local", "tmahl@colordept.local", "kherrin@colordept.local", "matt@colordept.local", "ajolly@colordept.local"];
+const NOTES_POST_USERS = ["master@colordept.local", "tmahl@colordept.local", "kherrin@colordept.local", "matt@colordept.local", "ajolly@colordept.local", "floor@colordept.local"];
 
 function canPostNotes() {
     const user = auth.currentUser;
@@ -475,8 +475,8 @@ function updateAdminUI() {
     const isFloorOrPlatform = userEmail === "floor@colordept.local" || userEmail === "platform@colordept.local";
     tabLatex.classList.toggle("hidden", isFloorOrPlatform);
 
-    // Notes tab: hide from floor and platform operators
-    tabNotes.classList.toggle("hidden", isFloorOrPlatform);
+    // Notes tab: hide from platform only (floor can post notes)
+    tabNotes.classList.toggle("hidden", userEmail === "platform@colordept.local");
 
     // Only TJ (tmahl) and Kevin (kherrin) can add notes
     const canPostNotes = NOTES_POST_USERS.includes(userEmail);
