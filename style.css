@@ -655,6 +655,13 @@ header h1 {
     background: #e8f0fe;
     border-radius: 4px;
 }
+.editable-completed-field {
+    cursor: pointer;
+}
+.editable-completed-field:hover {
+    background: #e8f0fe;
+    border-radius: 4px;
+}
 
 /* Chart view */
 .completed-chart-wrap {

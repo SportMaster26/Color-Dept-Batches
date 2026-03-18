@@ -1163,14 +1163,15 @@ function getCompletedRows() {
         .map((batch) => {
             const bowlInfo = BOWLS[batch.bowl];
             const bowlName = bowlInfo ? bowlInfo.name : batch.bowl;
-            const bowlCap = bowlInfo ? bowlInfo.capacity : null;
+            const bowlCap = batch.capacityOverride != null ? batch.capacityOverride : (bowlInfo ? bowlInfo.capacity : null);
             const fmtTs = (ts) => ts ? new Date(ts).toLocaleString() : "—";
             return {
                 batchNumber: batch.batchNumber || "",
                 product: batch.product,
                 bowl: bowlName,
-                capacity: bowlCap ? bowlCap.toLocaleString() + " gal" : "N/A",
+                capacity: bowlCap ? Number(bowlCap).toLocaleString() + " gal" : "N/A",
                 capacityNum: bowlCap || 0,
+                capacityRaw: bowlCap,
                 packaging: batch.packaging || "",
                 unitCount: batch.unitCount || "",
                 viscosity: batch.viscosity || "",
@@ -1217,6 +1218,15 @@ const UNIT_COUNT_EDIT_USERS = [
 function canEditUnitCount() {
     const user = auth.currentUser;
     return user && UNIT_COUNT_EDIT_USERS.includes(user.email);
+}
+
+const COMPLETED_FIELD_EDIT_USERS = [
+    "ajolly@colordept.local",
+];
+
+function canEditCompletedFields() {
+    const user = auth.currentUser;
+    return user && COMPLETED_FIELD_EDIT_USERS.includes(user.email);
 }
 
 const PRODUCT_HISTORY_USERS = [
@@ -1266,6 +1276,7 @@ function renderCompleted() {
         : rows;
 
     const editableBatchNum = canEditBatchNumber();
+    const editableCompleted = canEditCompletedFields();
 
     tbody.innerHTML = filteredRows.map((r, i) => {
         const batchNumHtml = escapeHtml(r.batchNumber) || "—";
@@ -1273,15 +1284,18 @@ function renderCompleted() {
             ? batchNumHtml.replace(new RegExp(`(${batchSearchTerm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, "gi"), `<mark class="batch-search-highlight">$1</mark>`)
             : batchNumHtml;
         const batchNumClass = `batch-num-cell${editableBatchNum ? ' editable-batch-num' : ''}`;
+        const capClass = editableCompleted ? 'editable-completed-field' : '';
+        const viscClass = editableCompleted ? 'editable-completed-field' : '';
+        const dateClass = editableCompleted ? 'editable-completed-field' : '';
         return `<tr>
             <td>${i + 1}</td>
             <td class="${batchNumClass}" data-batch-id="${r.id}">${highlighted}</td>
             <td>${escapeHtml(r.product)}</td>
             <td>${escapeHtml(r.bowl)}</td>
-            <td>${r.capacity}</td>
+            <td class="${capClass}" data-batch-id="${r.id}" data-field="capacity">${r.capacity}</td>
             <td>${escapeHtml(r.packaging)}</td>
             <td class="${canEditUnitCount() ? 'editable-unit-count' : ''}" data-batch-id="${r.id}" data-field="unitCount">${r.unitCount ? Number(r.unitCount).toLocaleString() : "—"}</td>
-            <td>${r.viscosity ? escapeHtml(r.viscosity) + " KU" : "—"}</td>
+            <td class="${viscClass}" data-batch-id="${r.id}" data-field="viscosity">${r.viscosity ? escapeHtml(r.viscosity) + " KU" : "—"}</td>
             <td>${escapeHtml(r.initials) || "—"}</td>
             <td>${escapeHtml(r.initials2) || "—"}</td>
             <td>${escapeHtml(r.pouredBy) || "—"}</td>
@@ -1290,7 +1304,7 @@ function renderCompleted() {
             <td class="completed-time-cell">${r.mixingStarted}</td>
             <td class="completed-time-cell">${r.mixingComplete}</td>
             <td class="completed-time-cell">${r.pouringStarted}</td>
-            <td class="completed-time-cell">${r.batchComplete}${isAdmin ? ` <button class="btn btn-sm btn-delete" data-action="delete" data-id="${r.id}">&times;</button>` : ""}</td>
+            <td class="completed-time-cell ${dateClass}" data-batch-id="${r.id}" data-field="completedAt">${r.batchComplete}${isAdmin ? ` <button class="btn btn-sm btn-delete" data-action="delete" data-id="${r.id}">&times;</button>` : ""}</td>
         </tr>`;
     }).join("");
 
@@ -1374,6 +1388,128 @@ function renderCompleted() {
         });
     }
 
+    // Attach inline-edit handlers for capacity, viscosity, and date (ajolly)
+    if (editableCompleted) {
+        // Capacity editing
+        tbody.querySelectorAll('.editable-completed-field[data-field="capacity"]').forEach(td => {
+            td.addEventListener("click", () => {
+                if (td.querySelector("input")) return;
+                const batchId = td.dataset.batchId;
+                const batch = batches.find(b => b.id === batchId);
+                if (!batch) return;
+
+                const bowlInfo = BOWLS[batch.bowl];
+                const currentVal = batch.capacityOverride != null ? batch.capacityOverride : (bowlInfo ? bowlInfo.capacity : "");
+                const input = document.createElement("input");
+                input.type = "number";
+                input.min = "0";
+                input.className = "tank-input";
+                input.style.width = "90px";
+                input.value = currentVal || "";
+                td.textContent = "";
+                td.appendChild(input);
+                input.focus();
+                input.select();
+
+                const save = () => {
+                    const val = input.value.trim();
+                    const numVal = val ? Number(val) : null;
+                    batch.capacityOverride = numVal;
+                    batchesRef.child(batchId).update({ capacityOverride: numVal });
+                    td.textContent = numVal ? Number(numVal).toLocaleString() + " gal" : "N/A";
+                };
+                input.addEventListener("blur", save);
+                input.addEventListener("keydown", (e) => {
+                    if (e.key === "Enter") { e.preventDefault(); save(); }
+                    if (e.key === "Escape") { td.textContent = currentVal ? Number(currentVal).toLocaleString() + " gal" : "N/A"; }
+                });
+            });
+        });
+
+        // Viscosity editing
+        tbody.querySelectorAll('.editable-completed-field[data-field="viscosity"]').forEach(td => {
+            td.addEventListener("click", () => {
+                if (td.querySelector("input")) return;
+                const batchId = td.dataset.batchId;
+                const batch = batches.find(b => b.id === batchId);
+                if (!batch) return;
+
+                const currentVal = batch.viscosity || "";
+                const input = document.createElement("input");
+                input.type = "text";
+                input.className = "tank-input";
+                input.style.width = "70px";
+                input.value = currentVal;
+                td.textContent = "";
+                td.appendChild(input);
+                input.focus();
+                input.select();
+
+                const save = () => {
+                    const val = input.value.trim();
+                    batch.viscosity = val || null;
+                    batchesRef.child(batchId).update({ viscosity: batch.viscosity });
+                    td.textContent = batch.viscosity ? escapeHtml(batch.viscosity) + " KU" : "—";
+                };
+                input.addEventListener("blur", save);
+                input.addEventListener("keydown", (e) => {
+                    if (e.key === "Enter") { e.preventDefault(); save(); }
+                    if (e.key === "Escape") { td.textContent = currentVal ? escapeHtml(currentVal) + " KU" : "—"; }
+                });
+            });
+        });
+
+        // Completed date editing
+        tbody.querySelectorAll('.editable-completed-field[data-field="completedAt"]').forEach(td => {
+            td.addEventListener("click", (e) => {
+                if (e.target.closest("button")) return; // don't trigger on delete button
+                if (td.querySelector("input")) return;
+                const batchId = td.dataset.batchId;
+                const batch = batches.find(b => b.id === batchId);
+                if (!batch) return;
+
+                const currentTs = batch.completedAt || null;
+                const deleteBtn = td.querySelector(".btn-delete");
+                const input = document.createElement("input");
+                input.type = "datetime-local";
+                input.className = "tank-input";
+                input.style.width = "200px";
+                if (currentTs) {
+                    const d = new Date(currentTs);
+                    const pad = (n) => String(n).padStart(2, "0");
+                    input.value = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+                }
+                td.textContent = "";
+                td.appendChild(input);
+                if (deleteBtn) td.appendChild(deleteBtn);
+                input.focus();
+
+                const save = () => {
+                    const val = input.value;
+                    const newTs = val ? new Date(val).getTime() : null;
+                    batch.completedAt = newTs;
+                    batchesRef.child(batchId).update({ completedAt: newTs });
+                    const display = newTs ? new Date(newTs).toLocaleString() : "—";
+                    input.remove();
+                    td.childNodes.forEach(n => { if (n.nodeType === 3) n.remove(); });
+                    const textNode = document.createTextNode(display + " ");
+                    td.insertBefore(textNode, td.firstChild);
+                };
+                input.addEventListener("blur", save);
+                input.addEventListener("keydown", (e) => {
+                    if (e.key === "Enter") { e.preventDefault(); save(); }
+                    if (e.key === "Escape") {
+                        const display = currentTs ? new Date(currentTs).toLocaleString() : "—";
+                        input.remove();
+                        td.childNodes.forEach(n => { if (n.nodeType === 3) n.remove(); });
+                        const textNode = document.createTextNode(display + " ");
+                        td.insertBefore(textNode, td.firstChild);
+                    }
+                });
+            });
+        });
+    }
+
 }
 
 // ── Chart View ──────────────────────────────────────────────────────
@@ -1447,12 +1583,12 @@ function getMixingCompleteRows() {
         .map((batch) => {
             const bowlInfo = BOWLS[batch.bowl];
             const bowlName = bowlInfo ? bowlInfo.name : batch.bowl;
-            const bowlCap = bowlInfo ? bowlInfo.capacity : null;
+            const bowlCap = batch.capacityOverride != null ? batch.capacityOverride : (bowlInfo ? bowlInfo.capacity : null);
             return {
                 batchNumber: batch.batchNumber || "",
                 product: batch.product,
                 bowl: bowlName,
-                capacity: bowlCap ? bowlCap.toLocaleString() + " gal" : "N/A",
+                capacity: bowlCap ? Number(bowlCap).toLocaleString() + " gal" : "N/A",
                 capacityNum: bowlCap || 0,
                 packaging: batch.packaging || "",
                 unitCount: batch.unitCount || "",
