@@ -340,6 +340,129 @@
         </div>
     </div>
 
+    <!-- Modal for adding a completed batch manually (AJOLLY only) -->
+    <div id="add-completed-overlay" class="modal-overlay hidden">
+        <div class="modal">
+            <h2>Add Completed Batch</h2>
+            <form id="add-completed-form">
+                <div class="form-group">
+                    <label for="ac-batch-number">Batch #</label>
+                    <input type="text" id="ac-batch-number" placeholder="e.g. A0100">
+                </div>
+                <div class="form-group product-type-group">
+                    <label for="ac-product">Product Name</label>
+                    <input type="text" id="ac-product" autocomplete="off" required placeholder="Start typing to search products...">
+                    <div id="ac-product-list" class="autocomplete-list hidden"></div>
+                </div>
+                <div class="form-group">
+                    <label for="ac-bowl">Bowl</label>
+                    <select id="ac-bowl" required>
+                        <option value="">-- Select Bowl --</option>
+                        <optgroup label="575 Gallon">
+                            <option value="A">Bowl A (575 gal)</option>
+                            <option value="B">Bowl B (575 gal)</option>
+                        </optgroup>
+                        <optgroup label="230 Gallon">
+                            <option value="E">Bowl E (230 gal)</option>
+                            <option value="F">Bowl F (230 gal)</option>
+                        </optgroup>
+                        <optgroup label="1,120 Gallon">
+                            <option value="C">Bowl C (1,120 gal)</option>
+                            <option value="D">Bowl D (1,120 gal)</option>
+                            <option value="G">Bowl G (1,120 gal)</option>
+                            <option value="H">Bowl H (1,120 gal)</option>
+                            <option value="I">Bowl I (1,120 gal)</option>
+                        </optgroup>
+                        <optgroup label="30 Gallon">
+                            <option value="Stubby">Stubby (30 gal)</option>
+                        </optgroup>
+                        <optgroup label="2,920 Gallon">
+                            <option value="The Hull">The Hull (2,920 gal)</option>
+                            <option value="Thors Hammer">Thor's Hammer (2,920 gal)</option>
+                        </optgroup>
+                        <optgroup label="4,300 Gallon">
+                            <option value="TTT">TTT (4,300 gal)</option>
+                        </optgroup>
+                        <optgroup label="Ribbon Mixer">
+                            <option value="Ol Iron Sides">Ol' Iron Sides</option>
+                        </optgroup>
+                        <optgroup label="Latex Department">
+                            <option value="Latex Department">Latex Department</option>
+                        </optgroup>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="ac-packaging">Packaging</label>
+                    <select id="ac-packaging">
+                        <option value="">-- Select Packaging --</option>
+                        <option value="Quart Bottles">Quart Bottles</option>
+                        <option value="24 Oz. Jars">24 Oz. Jars</option>
+                        <option value="1 Gallon Jugs">1 Gallon Jugs</option>
+                        <option value="1 Gallon Pails">1 Gallon Pails</option>
+                        <option value="2 Gallon Pails">2 Gallon Pails</option>
+                        <option value="4.5 Gallon Pails">4.5 Gallon Pails</option>
+                        <option value="5 Gallon Pails">5 Gallon Pails</option>
+                        <option value="30 Gallon Kegs">30 Gallon Kegs</option>
+                        <option value="55 Gallon Drums">55 Gallon Drums</option>
+                        <option value="275 Gallon Totes">275 Gallon Totes</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="ac-unit-count">Unit Count</label>
+                    <input type="number" id="ac-unit-count" placeholder="e.g. 500" min="0">
+                </div>
+                <div class="form-group">
+                    <label for="ac-viscosity">Viscosity (KU)</label>
+                    <input type="text" id="ac-viscosity" placeholder="e.g. 85">
+                </div>
+                <div class="form-group">
+                    <label for="ac-initials">Mixed By</label>
+                    <select id="ac-initials">
+                        <option value="">-- Select Name --</option>
+                        <option value="Matt Huff">Matt Huff</option>
+                        <option value="Peyton Smith">Peyton Smith</option>
+                        <option value="Brandon Jones">Brandon Jones</option>
+                        <option value="Josh James">Josh James</option>
+                        <option value="Josh Wimer">Josh Wimer</option>
+                        <option value="Elijah Baker">Elijah Baker</option>
+                        <option value="Kevin Alexander">Kevin Alexander</option>
+                        <option value="Chris Wood">Chris Wood</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="ac-initials2">Mixed By 2 (optional)</label>
+                    <select id="ac-initials2">
+                        <option value="">-- None --</option>
+                        <option value="Matt Huff">Matt Huff</option>
+                        <option value="Peyton Smith">Peyton Smith</option>
+                        <option value="Brandon Jones">Brandon Jones</option>
+                        <option value="Josh James">Josh James</option>
+                        <option value="Josh Wimer">Josh Wimer</option>
+                        <option value="Elijah Baker">Elijah Baker</option>
+                        <option value="Kevin Alexander">Kevin Alexander</option>
+                        <option value="Chris Wood">Chris Wood</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="ac-poured-by">Poured By</label>
+                    <input type="text" id="ac-poured-by" placeholder="Name">
+                </div>
+                <div class="form-group">
+                    <label for="ac-notes">Notes (optional)</label>
+                    <input type="text" id="ac-notes" placeholder="Any notes...">
+                </div>
+                <div class="form-group">
+                    <label for="ac-completed-date">Completed Date</label>
+                    <input type="datetime-local" id="ac-completed-date">
+                </div>
+                <div class="form-actions">
+                    <button type="button" id="ac-cancel-btn" class="btn btn-secondary">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Add to Completed</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <!-- Board layout (active batches) -->
     <main id="board">
         <!-- Bowl lanes get rendered by JS -->
@@ -365,6 +488,7 @@
             </div>
             <button id="export-excel-btn" class="btn btn-primary btn-export">Export to Excel</button>
             <button id="import-production-btn" class="btn btn-primary btn-export hidden">Import 2026 Production</button>
+            <button id="add-completed-btn" class="btn btn-primary btn-export hidden">+ Add Completed</button>
         </div>
 
         <!-- Table view -->

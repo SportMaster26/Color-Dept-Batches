@@ -1163,14 +1163,15 @@ function getCompletedRows() {
         .map((batch) => {
             const bowlInfo = BOWLS[batch.bowl];
             const bowlName = bowlInfo ? bowlInfo.name : batch.bowl;
-            const bowlCap = bowlInfo ? bowlInfo.capacity : null;
+            const bowlCap = batch.capacityOverride != null ? batch.capacityOverride : (bowlInfo ? bowlInfo.capacity : null);
             const fmtTs = (ts) => ts ? new Date(ts).toLocaleString() : "—";
             return {
                 batchNumber: batch.batchNumber || "",
                 product: batch.product,
                 bowl: bowlName,
-                capacity: bowlCap ? bowlCap.toLocaleString() + " gal" : "N/A",
+                capacity: bowlCap ? Number(bowlCap).toLocaleString() + " gal" : "N/A",
                 capacityNum: bowlCap || 0,
+                capacityRaw: bowlCap,
                 packaging: batch.packaging || "",
                 unitCount: batch.unitCount || "",
                 viscosity: batch.viscosity || "",
@@ -1217,6 +1218,15 @@ const UNIT_COUNT_EDIT_USERS = [
 function canEditUnitCount() {
     const user = auth.currentUser;
     return user && UNIT_COUNT_EDIT_USERS.includes(user.email);
+}
+
+const COMPLETED_FIELD_EDIT_USERS = [
+    "ajolly@colordept.local",
+];
+
+function canEditCompletedFields() {
+    const user = auth.currentUser;
+    return user && COMPLETED_FIELD_EDIT_USERS.includes(user.email);
 }
 
 const PRODUCT_HISTORY_USERS = [
@@ -1266,6 +1276,7 @@ function renderCompleted() {
         : rows;
 
     const editableBatchNum = canEditBatchNumber();
+    const editableCompleted = canEditCompletedFields();
 
     tbody.innerHTML = filteredRows.map((r, i) => {
         const batchNumHtml = escapeHtml(r.batchNumber) || "—";
@@ -1273,24 +1284,25 @@ function renderCompleted() {
             ? batchNumHtml.replace(new RegExp(`(${batchSearchTerm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, "gi"), `<mark class="batch-search-highlight">$1</mark>`)
             : batchNumHtml;
         const batchNumClass = `batch-num-cell${editableBatchNum ? ' editable-batch-num' : ''}`;
+        const ecf = editableCompleted ? 'editable-completed-field' : '';
         return `<tr>
             <td>${i + 1}</td>
             <td class="${batchNumClass}" data-batch-id="${r.id}">${highlighted}</td>
-            <td>${escapeHtml(r.product)}</td>
-            <td>${escapeHtml(r.bowl)}</td>
-            <td>${r.capacity}</td>
-            <td>${escapeHtml(r.packaging)}</td>
+            <td class="${ecf}" data-batch-id="${r.id}" data-field="product">${escapeHtml(r.product)}</td>
+            <td class="${ecf}" data-batch-id="${r.id}" data-field="bowl">${escapeHtml(r.bowl)}</td>
+            <td class="${ecf}" data-batch-id="${r.id}" data-field="capacity">${r.capacity}</td>
+            <td class="${ecf}" data-batch-id="${r.id}" data-field="packaging">${escapeHtml(r.packaging)}</td>
             <td class="${canEditUnitCount() ? 'editable-unit-count' : ''}" data-batch-id="${r.id}" data-field="unitCount">${r.unitCount ? Number(r.unitCount).toLocaleString() : "—"}</td>
-            <td>${r.viscosity ? escapeHtml(r.viscosity) + " KU" : "—"}</td>
-            <td>${escapeHtml(r.initials) || "—"}</td>
-            <td>${escapeHtml(r.initials2) || "—"}</td>
-            <td>${escapeHtml(r.pouredBy) || "—"}</td>
-            <td>${escapeHtml(r.notes) || "—"}</td>
-            <td class="completed-time-cell">${r.queuedAt}</td>
-            <td class="completed-time-cell">${r.mixingStarted}</td>
-            <td class="completed-time-cell">${r.mixingComplete}</td>
-            <td class="completed-time-cell">${r.pouringStarted}</td>
-            <td class="completed-time-cell">${r.batchComplete}${isAdmin ? ` <button class="btn btn-sm btn-delete" data-action="delete" data-id="${r.id}">&times;</button>` : ""}</td>
+            <td class="${ecf}" data-batch-id="${r.id}" data-field="viscosity">${r.viscosity ? escapeHtml(r.viscosity) + " KU" : "—"}</td>
+            <td class="${ecf}" data-batch-id="${r.id}" data-field="initials">${escapeHtml(r.initials) || "—"}</td>
+            <td class="${ecf}" data-batch-id="${r.id}" data-field="initials2">${escapeHtml(r.initials2) || "—"}</td>
+            <td class="${ecf}" data-batch-id="${r.id}" data-field="pouredBy">${escapeHtml(r.pouredBy) || "—"}</td>
+            <td class="${ecf}" data-batch-id="${r.id}" data-field="notes">${escapeHtml(r.notes) || "—"}</td>
+            <td class="completed-time-cell ${ecf}" data-batch-id="${r.id}" data-field="createdAt">${r.queuedAt}</td>
+            <td class="completed-time-cell ${ecf}" data-batch-id="${r.id}" data-field="startedAt">${r.mixingStarted}</td>
+            <td class="completed-time-cell ${ecf}" data-batch-id="${r.id}" data-field="mixingCompleteAt">${r.mixingComplete}</td>
+            <td class="completed-time-cell ${ecf}" data-batch-id="${r.id}" data-field="pouringAt">${r.pouringStarted}</td>
+            <td class="completed-time-cell ${ecf}" data-batch-id="${r.id}" data-field="completedAt">${r.batchComplete}${isAdmin ? ` <button class="btn btn-sm btn-delete" data-action="delete" data-id="${r.id}">&times;</button>` : ""}</td>
         </tr>`;
     }).join("");
 
@@ -1374,6 +1386,391 @@ function renderCompleted() {
         });
     }
 
+    // Attach inline-edit handlers for bowl, packaging, capacity, viscosity, and date (ajolly)
+    if (editableCompleted) {
+        // Bowl editing (dropdown)
+        tbody.querySelectorAll('.editable-completed-field[data-field="bowl"]').forEach(td => {
+            td.addEventListener("click", () => {
+                if (td.querySelector("select")) return;
+                const batchId = td.dataset.batchId;
+                const batch = batches.find(b => b.id === batchId);
+                if (!batch) return;
+
+                const currentVal = batch.bowl || "";
+                const select = document.createElement("select");
+                select.className = "tank-input";
+                select.style.width = "140px";
+                BOWL_ORDER.forEach(key => {
+                    const opt = document.createElement("option");
+                    opt.value = key;
+                    opt.textContent = BOWLS[key].name;
+                    if (key === currentVal) opt.selected = true;
+                    select.appendChild(opt);
+                });
+                td.textContent = "";
+                td.appendChild(select);
+                select.focus();
+
+                const save = () => {
+                    const val = select.value;
+                    batch.bowl = val;
+                    const newBowlInfo = BOWLS[val];
+                    batchesRef.child(batchId).update({ bowl: val });
+                    td.textContent = newBowlInfo ? newBowlInfo.name : val;
+                    // Also update the capacity cell in the same row
+                    const capTd = td.parentElement.querySelector('[data-field="capacity"]');
+                    if (capTd && !capTd.querySelector("input")) {
+                        const cap = batch.capacityOverride != null ? batch.capacityOverride : (newBowlInfo ? newBowlInfo.capacity : null);
+                        capTd.textContent = cap ? Number(cap).toLocaleString() + " gal" : "N/A";
+                    }
+                };
+                select.addEventListener("blur", save);
+                select.addEventListener("change", save);
+                select.addEventListener("keydown", (e) => {
+                    if (e.key === "Escape") {
+                        const bowlInfo = BOWLS[currentVal];
+                        td.textContent = bowlInfo ? bowlInfo.name : currentVal;
+                    }
+                });
+            });
+        });
+
+        // Packaging editing (dropdown)
+        tbody.querySelectorAll('.editable-completed-field[data-field="packaging"]').forEach(td => {
+            td.addEventListener("click", () => {
+                if (td.querySelector("select")) return;
+                const batchId = td.dataset.batchId;
+                const batch = batches.find(b => b.id === batchId);
+                if (!batch) return;
+
+                const currentVal = batch.packaging || "";
+                const select = document.createElement("select");
+                select.className = "tank-input";
+                select.style.width = "150px";
+                Object.keys(PACKAGING).forEach(key => {
+                    const opt = document.createElement("option");
+                    opt.value = key;
+                    opt.textContent = key;
+                    if (key === currentVal) opt.selected = true;
+                    select.appendChild(opt);
+                });
+                td.textContent = "";
+                td.appendChild(select);
+                select.focus();
+
+                const save = () => {
+                    const val = select.value;
+                    batch.packaging = val;
+                    batchesRef.child(batchId).update({ packaging: val });
+                    td.textContent = val;
+                };
+                select.addEventListener("blur", save);
+                select.addEventListener("change", save);
+                select.addEventListener("keydown", (e) => {
+                    if (e.key === "Escape") { td.textContent = currentVal || "—"; }
+                });
+            });
+        });
+
+        // Capacity editing
+        tbody.querySelectorAll('.editable-completed-field[data-field="capacity"]').forEach(td => {
+            td.addEventListener("click", () => {
+                if (td.querySelector("input")) return;
+                const batchId = td.dataset.batchId;
+                const batch = batches.find(b => b.id === batchId);
+                if (!batch) return;
+
+                const bowlInfo = BOWLS[batch.bowl];
+                const currentVal = batch.capacityOverride != null ? batch.capacityOverride : (bowlInfo ? bowlInfo.capacity : "");
+                const input = document.createElement("input");
+                input.type = "number";
+                input.min = "0";
+                input.className = "tank-input";
+                input.style.width = "90px";
+                input.value = currentVal || "";
+                td.textContent = "";
+                td.appendChild(input);
+                input.focus();
+                input.select();
+
+                const save = () => {
+                    const val = input.value.trim();
+                    const numVal = val ? Number(val) : null;
+                    batch.capacityOverride = numVal;
+                    batchesRef.child(batchId).update({ capacityOverride: numVal });
+                    td.textContent = numVal ? Number(numVal).toLocaleString() + " gal" : "N/A";
+                };
+                input.addEventListener("blur", save);
+                input.addEventListener("keydown", (e) => {
+                    if (e.key === "Enter") { e.preventDefault(); save(); }
+                    if (e.key === "Escape") { td.textContent = currentVal ? Number(currentVal).toLocaleString() + " gal" : "N/A"; }
+                });
+            });
+        });
+
+        // Viscosity editing
+        tbody.querySelectorAll('.editable-completed-field[data-field="viscosity"]').forEach(td => {
+            td.addEventListener("click", () => {
+                if (td.querySelector("input")) return;
+                const batchId = td.dataset.batchId;
+                const batch = batches.find(b => b.id === batchId);
+                if (!batch) return;
+
+                const currentVal = batch.viscosity || "";
+                const input = document.createElement("input");
+                input.type = "text";
+                input.className = "tank-input";
+                input.style.width = "70px";
+                input.value = currentVal;
+                td.textContent = "";
+                td.appendChild(input);
+                input.focus();
+                input.select();
+
+                const save = () => {
+                    const val = input.value.trim();
+                    batch.viscosity = val || null;
+                    batchesRef.child(batchId).update({ viscosity: batch.viscosity });
+                    td.textContent = batch.viscosity ? escapeHtml(batch.viscosity) + " KU" : "—";
+                };
+                input.addEventListener("blur", save);
+                input.addEventListener("keydown", (e) => {
+                    if (e.key === "Enter") { e.preventDefault(); save(); }
+                    if (e.key === "Escape") { td.textContent = currentVal ? escapeHtml(currentVal) + " KU" : "—"; }
+                });
+            });
+        });
+
+        // Datetime editing for all timestamp fields (completedAt, createdAt, startedAt, mixingCompleteAt, pouringAt)
+        ["completedAt", "createdAt", "startedAt", "mixingCompleteAt", "pouringAt"].forEach(field => {
+            tbody.querySelectorAll(`.editable-completed-field[data-field="${field}"]`).forEach(td => {
+                td.addEventListener("click", (e) => {
+                    if (e.target.closest("button")) return;
+                    if (td.querySelector("input")) return;
+                    const batchId = td.dataset.batchId;
+                    const batch = batches.find(b => b.id === batchId);
+                    if (!batch) return;
+
+                    const currentTs = batch[field] || null;
+                    const deleteBtn = td.querySelector(".btn-delete");
+                    const input = document.createElement("input");
+                    input.type = "datetime-local";
+                    input.className = "tank-input";
+                    input.style.width = "200px";
+                    if (currentTs) {
+                        const d = new Date(currentTs);
+                        const pad = (n) => String(n).padStart(2, "0");
+                        input.value = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+                    }
+                    td.textContent = "";
+                    td.appendChild(input);
+                    if (deleteBtn) td.appendChild(deleteBtn);
+                    input.focus();
+
+                    const save = () => {
+                        const val = input.value;
+                        const newTs = val ? new Date(val).getTime() : null;
+                        batch[field] = newTs;
+                        batchesRef.child(batchId).update({ [field]: newTs });
+                        const display = newTs ? new Date(newTs).toLocaleString() : "—";
+                        input.remove();
+                        td.childNodes.forEach(n => { if (n.nodeType === 3) n.remove(); });
+                        const textNode = document.createTextNode(display + " ");
+                        td.insertBefore(textNode, td.firstChild);
+                    };
+                    input.addEventListener("blur", save);
+                    input.addEventListener("keydown", (e) => {
+                        if (e.key === "Enter") { e.preventDefault(); save(); }
+                        if (e.key === "Escape") {
+                            const display = currentTs ? new Date(currentTs).toLocaleString() : "—";
+                            input.remove();
+                            td.childNodes.forEach(n => { if (n.nodeType === 3) n.remove(); });
+                            const textNode = document.createTextNode(display + " ");
+                            td.insertBefore(textNode, td.firstChild);
+                        }
+                    });
+                });
+            });
+        });
+
+        // Product name editing (text input)
+        tbody.querySelectorAll('.editable-completed-field[data-field="product"]').forEach(td => {
+            td.addEventListener("click", () => {
+                if (td.querySelector("input")) return;
+                const batchId = td.dataset.batchId;
+                const batch = batches.find(b => b.id === batchId);
+                if (!batch) return;
+
+                const currentVal = batch.product || "";
+                const input = document.createElement("input");
+                input.type = "text";
+                input.className = "tank-input";
+                input.style.width = "200px";
+                input.value = currentVal;
+                td.textContent = "";
+                td.appendChild(input);
+                input.focus();
+                input.select();
+
+                const save = () => {
+                    const val = input.value.trim();
+                    if (val) {
+                        batch.product = val;
+                        batchesRef.child(batchId).update({ product: val });
+                    }
+                    td.textContent = batch.product ? escapeHtml(batch.product) : "—";
+                };
+                input.addEventListener("blur", save);
+                input.addEventListener("keydown", (e) => {
+                    if (e.key === "Enter") { e.preventDefault(); save(); }
+                    if (e.key === "Escape") { td.textContent = currentVal ? escapeHtml(currentVal) : "—"; }
+                });
+            });
+        });
+
+        // Mixed By editing (dropdown)
+        tbody.querySelectorAll('.editable-completed-field[data-field="initials"]').forEach(td => {
+            td.addEventListener("click", () => {
+                if (td.querySelector("select")) return;
+                const batchId = td.dataset.batchId;
+                const batch = batches.find(b => b.id === batchId);
+                if (!batch) return;
+
+                const currentVal = batch.initials || "";
+                const select = document.createElement("select");
+                select.className = "tank-input";
+                select.style.width = "150px";
+                const names = ["", "Matt Huff", "Peyton Smith", "Brandon Jones", "Josh James", "Josh Wimer", "Elijah Baker", "Kevin Alexander", "Chris Wood"];
+                names.forEach(name => {
+                    const opt = document.createElement("option");
+                    opt.value = name;
+                    opt.textContent = name || "-- None --";
+                    if (name === currentVal) opt.selected = true;
+                    select.appendChild(opt);
+                });
+                td.textContent = "";
+                td.appendChild(select);
+                select.focus();
+
+                const save = () => {
+                    const val = select.value;
+                    batch.initials = val || null;
+                    batchesRef.child(batchId).update({ initials: batch.initials });
+                    td.textContent = batch.initials ? escapeHtml(batch.initials) : "—";
+                };
+                select.addEventListener("blur", save);
+                select.addEventListener("change", save);
+                select.addEventListener("keydown", (e) => {
+                    if (e.key === "Escape") { td.textContent = currentVal ? escapeHtml(currentVal) : "—"; }
+                });
+            });
+        });
+
+        // Mixed By 2 editing (dropdown)
+        tbody.querySelectorAll('.editable-completed-field[data-field="initials2"]').forEach(td => {
+            td.addEventListener("click", () => {
+                if (td.querySelector("select")) return;
+                const batchId = td.dataset.batchId;
+                const batch = batches.find(b => b.id === batchId);
+                if (!batch) return;
+
+                const currentVal = batch.initials2 || "";
+                const select = document.createElement("select");
+                select.className = "tank-input";
+                select.style.width = "150px";
+                const names = ["", "Matt Huff", "Peyton Smith", "Brandon Jones", "Josh James", "Josh Wimer", "Elijah Baker", "Kevin Alexander", "Chris Wood"];
+                names.forEach(name => {
+                    const opt = document.createElement("option");
+                    opt.value = name;
+                    opt.textContent = name || "-- None --";
+                    if (name === currentVal) opt.selected = true;
+                    select.appendChild(opt);
+                });
+                td.textContent = "";
+                td.appendChild(select);
+                select.focus();
+
+                const save = () => {
+                    const val = select.value;
+                    batch.initials2 = val || null;
+                    batchesRef.child(batchId).update({ initials2: batch.initials2 });
+                    td.textContent = batch.initials2 ? escapeHtml(batch.initials2) : "—";
+                };
+                select.addEventListener("blur", save);
+                select.addEventListener("change", save);
+                select.addEventListener("keydown", (e) => {
+                    if (e.key === "Escape") { td.textContent = currentVal ? escapeHtml(currentVal) : "—"; }
+                });
+            });
+        });
+
+        // Poured By editing (text input)
+        tbody.querySelectorAll('.editable-completed-field[data-field="pouredBy"]').forEach(td => {
+            td.addEventListener("click", () => {
+                if (td.querySelector("input")) return;
+                const batchId = td.dataset.batchId;
+                const batch = batches.find(b => b.id === batchId);
+                if (!batch) return;
+
+                const currentVal = batch.pouredBy || "";
+                const input = document.createElement("input");
+                input.type = "text";
+                input.className = "tank-input";
+                input.style.width = "140px";
+                input.value = currentVal;
+                td.textContent = "";
+                td.appendChild(input);
+                input.focus();
+                input.select();
+
+                const save = () => {
+                    const val = input.value.trim();
+                    batch.pouredBy = val || null;
+                    batchesRef.child(batchId).update({ pouredBy: batch.pouredBy });
+                    td.textContent = batch.pouredBy ? escapeHtml(batch.pouredBy) : "—";
+                };
+                input.addEventListener("blur", save);
+                input.addEventListener("keydown", (e) => {
+                    if (e.key === "Enter") { e.preventDefault(); save(); }
+                    if (e.key === "Escape") { td.textContent = currentVal ? escapeHtml(currentVal) : "—"; }
+                });
+            });
+        });
+
+        // Notes editing (text input)
+        tbody.querySelectorAll('.editable-completed-field[data-field="notes"]').forEach(td => {
+            td.addEventListener("click", () => {
+                if (td.querySelector("input")) return;
+                const batchId = td.dataset.batchId;
+                const batch = batches.find(b => b.id === batchId);
+                if (!batch) return;
+
+                const currentVal = batch.notes || "";
+                const input = document.createElement("input");
+                input.type = "text";
+                input.className = "tank-input";
+                input.style.width = "160px";
+                input.value = currentVal;
+                td.textContent = "";
+                td.appendChild(input);
+                input.focus();
+                input.select();
+
+                const save = () => {
+                    const val = input.value.trim();
+                    batch.notes = val || null;
+                    batchesRef.child(batchId).update({ notes: batch.notes });
+                    td.textContent = batch.notes ? escapeHtml(batch.notes) : "—";
+                };
+                input.addEventListener("blur", save);
+                input.addEventListener("keydown", (e) => {
+                    if (e.key === "Enter") { e.preventDefault(); save(); }
+                    if (e.key === "Escape") { td.textContent = currentVal ? escapeHtml(currentVal) : "—"; }
+                });
+            });
+        });
+    }
+
 }
 
 // ── Chart View ──────────────────────────────────────────────────────
@@ -1447,12 +1844,12 @@ function getMixingCompleteRows() {
         .map((batch) => {
             const bowlInfo = BOWLS[batch.bowl];
             const bowlName = bowlInfo ? bowlInfo.name : batch.bowl;
-            const bowlCap = bowlInfo ? bowlInfo.capacity : null;
+            const bowlCap = batch.capacityOverride != null ? batch.capacityOverride : (bowlInfo ? bowlInfo.capacity : null);
             return {
                 batchNumber: batch.batchNumber || "",
                 product: batch.product,
                 bowl: bowlName,
-                capacity: bowlCap ? bowlCap.toLocaleString() + " gal" : "N/A",
+                capacity: bowlCap ? Number(bowlCap).toLocaleString() + " gal" : "N/A",
                 capacityNum: bowlCap || 0,
                 packaging: batch.packaging || "",
                 unitCount: batch.unitCount || "",
@@ -3245,15 +3642,160 @@ function importProductionData() {
     });
 }
 
-// Show import button for master@ only
+// Show import button and add-completed button for ajolly@ only
 const importBtn = document.getElementById("import-production-btn");
+const addCompletedBtn = document.getElementById("add-completed-btn");
 if (importBtn) {
     auth.onAuthStateChanged(user => {
-        if (user && user.email === "master@colordept.local") {
+        if (user && user.email === "ajolly@colordept.local") {
             importBtn.classList.remove("hidden");
+            if (addCompletedBtn) addCompletedBtn.classList.remove("hidden");
         }
     });
     importBtn.addEventListener("click", importProductionData);
+}
+
+// ── Add Completed Batch (AJOLLY only) ────────────────────────────────
+if (addCompletedBtn) {
+    const acOverlay = document.getElementById("add-completed-overlay");
+    const acForm = document.getElementById("add-completed-form");
+    const acProductInput = document.getElementById("ac-product");
+    const acProductList = document.getElementById("ac-product-list");
+    let acAutocompleteIndex = -1;
+
+    addCompletedBtn.addEventListener("click", () => {
+        if (!canEditCompletedFields()) return;
+        acOverlay.classList.remove("hidden");
+        // Default completed date to now
+        const now = new Date();
+        const pad = (n) => String(n).padStart(2, "0");
+        document.getElementById("ac-completed-date").value =
+            `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}T${pad(now.getHours())}:${pad(now.getMinutes())}`;
+        acProductInput.focus();
+    });
+
+    document.getElementById("ac-cancel-btn").addEventListener("click", () => {
+        acOverlay.classList.add("hidden");
+        acForm.reset();
+    });
+
+    acOverlay.addEventListener("click", (e) => {
+        if (e.target === acOverlay) {
+            acOverlay.classList.add("hidden");
+            acForm.reset();
+        }
+    });
+
+    // Autocomplete for product field
+    function renderAcAutocomplete(filter) {
+        acProductList.innerHTML = "";
+        acAutocompleteIndex = -1;
+        if (!filter) { acProductList.classList.add("hidden"); return; }
+        const lower = filter.toLowerCase();
+        const matches = PRODUCT_CATALOG.filter(p => p.toLowerCase().includes(lower));
+        if (matches.length === 0) { acProductList.classList.add("hidden"); return; }
+        matches.forEach((item) => {
+            const div = document.createElement("div");
+            div.className = "autocomplete-item";
+            const parts = item.split(" – ");
+            div.innerHTML = `${parts[0]} <span class="item-number">– ${parts[1]}</span>`;
+            div.addEventListener("mousedown", (e) => {
+                e.preventDefault();
+                acProductInput.value = item;
+                acProductList.classList.add("hidden");
+            });
+            acProductList.appendChild(div);
+        });
+        acProductList.classList.remove("hidden");
+    }
+
+    acProductInput.addEventListener("input", () => renderAcAutocomplete(acProductInput.value.trim()));
+    acProductInput.addEventListener("keydown", (e) => {
+        const items = acProductList.querySelectorAll(".autocomplete-item");
+        if (!items.length) return;
+        if (e.key === "ArrowDown") {
+            e.preventDefault();
+            acAutocompleteIndex = Math.min(acAutocompleteIndex + 1, items.length - 1);
+            items.forEach((el, i) => el.classList.toggle("active", i === acAutocompleteIndex));
+            items[acAutocompleteIndex].scrollIntoView({ block: "nearest" });
+        } else if (e.key === "ArrowUp") {
+            e.preventDefault();
+            acAutocompleteIndex = Math.max(acAutocompleteIndex - 1, 0);
+            items.forEach((el, i) => el.classList.toggle("active", i === acAutocompleteIndex));
+            items[acAutocompleteIndex].scrollIntoView({ block: "nearest" });
+        } else if (e.key === "Enter") {
+            e.preventDefault();
+            if (acAutocompleteIndex >= 0 && items[acAutocompleteIndex]) {
+                acProductInput.value = PRODUCT_CATALOG.filter(p => p.toLowerCase().includes(acProductInput.value.trim().toLowerCase()))[acAutocompleteIndex];
+                acProductList.classList.add("hidden");
+            }
+        } else if (e.key === "Escape") {
+            acProductList.classList.add("hidden");
+        }
+    });
+    acProductInput.addEventListener("blur", () => acProductList.classList.add("hidden"));
+
+    acForm.addEventListener("submit", (e) => {
+        e.preventDefault();
+        if (!canEditCompletedFields()) return;
+
+        const product = acProductInput.value.trim();
+        const bowl = document.getElementById("ac-bowl").value;
+        const packaging = document.getElementById("ac-packaging").value;
+        if (!product || !bowl) return;
+
+        const batchNumber = document.getElementById("ac-batch-number").value.trim() || null;
+        const unitCountVal = document.getElementById("ac-unit-count").value.trim();
+        const viscosity = document.getElementById("ac-viscosity").value.trim() || null;
+        const initials = document.getElementById("ac-initials").value || null;
+        const initials2 = document.getElementById("ac-initials2").value || null;
+        const pouredBy = document.getElementById("ac-poured-by").value.trim() || null;
+        const notes = document.getElementById("ac-notes").value.trim() || null;
+        const completedDateVal = document.getElementById("ac-completed-date").value;
+        const completedAt = completedDateVal ? new Date(completedDateVal).getTime() : Date.now();
+
+        // Check for duplicate batch number
+        if (batchNumber) {
+            const dup = batches.find(b => b.batchNumber === batchNumber);
+            if (dup) {
+                alert("Batch number \"" + batchNumber + "\" is already in use.");
+                return;
+            }
+        }
+
+        const batch = {
+            id: generateId(),
+            batchNumber: batchNumber,
+            product,
+            bowl,
+            packaging: packaging || null,
+            unitCount: unitCountVal ? Number(unitCountVal) : null,
+            notes,
+            status: "batch_complete",
+            sortOrder: 0,
+            createdAt: completedAt,
+            startedAt: completedAt,
+            mixingCompleteAt: completedAt,
+            pouringAt: completedAt,
+            completedAt: completedAt,
+            viscosity,
+            initials,
+            initials2: initials2 || null,
+            pouredBy,
+            capacityOverride: null,
+        };
+
+        batchesRef.child(batch.id).set(batch);
+
+        // Save custom product if new
+        if (product && !PRODUCT_CATALOG.includes(product)) {
+            PRODUCT_CATALOG.push(product);
+            customProductsRef.push(product);
+        }
+
+        acForm.reset();
+        acOverlay.classList.add("hidden");
+    });
 }
 
 // ── Helpers ─────────────────────────────────────────────────────────
