@@ -3146,7 +3146,7 @@ function importProductionData() {
 
     // Check if import was already run
     const alreadyImported = IMPORT_DATA_2026.filter(row => allBatchNums.has(row.bn));
-    if (alreadyImported.length > 50) {
+    if (alreadyImported.length > 350) {
         alert("It looks like the import was already run (" + alreadyImported.length + " of " + IMPORT_DATA_2026.length + " batch numbers already exist). Aborting to prevent duplicates.");
         return;
     }
