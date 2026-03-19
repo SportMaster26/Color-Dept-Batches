@@ -753,79 +753,12 @@ function updateRecycledNumbersBar() {
     });
 }
 
-// ── TEMPORARY: Manual assign mode (remove when done) ─────────────────
-
-function showResetBatchNumbersBtn() {
-    if (document.getElementById("reset-batch-numbers-btn")) return;
-    const bar = document.getElementById("recycled-numbers-bar");
-    if (!bar) return;
-    const btn = document.createElement("button");
-    btn.id = "reset-batch-numbers-btn";
-    btn.className = "btn btn-primary";
-    btn.style.cssText = "margin-left:12px;background:#c00;border-color:#c00;";
-    btn.textContent = "Reset Batch Numbers";
-    btn.addEventListener("click", resetBatchNumbers);
-    bar.appendChild(btn);
-}
-
-function resetBatchNumbers() {
+// ── ONE-TIME: Set counter to 446, next auto-assign = A0447 (remove after it runs) ──
+function setCounterTo446() {
     if (!isAdmin) return;
-    const activeBatches = batches.filter(b => b.status !== "batch_complete" && b.batchNumber);
-    if (activeBatches.length === 0) {
-        alert("No active batches with numbers to clear.");
-        return;
-    }
-    if (!confirm(
-        "This will:\n" +
-        "• Clear batch numbers from " + activeBatches.length + " active batch(es)\n" +
-        "• Clear the recycled numbers pool\n" +
-        "• Reset the counter to the highest completed batch number\n\n" +
-        "You will then manually assign numbers using the 'Assign #' button on each card.\n" +
-        "Completed batch numbers will NOT be touched.\n\nProceed?"
-    )) return;
-
-    const updates = {};
-    for (const b of activeBatches) {
-        updates["batches/" + b.id + "/batchNumber"] = null;
-    }
-
-    // Find highest completed batch number
-    let highestCompleted = MIN_BATCH_NUMBER - 1;
-    for (const b of batches) {
-        if (b.status === "batch_complete" && b.batchNumber) {
-            const num = parseBatchNum(b.batchNumber);
-            if (!isNaN(num) && num > highestCompleted) highestCompleted = num;
-        }
-    }
-    updates["meta/batchCounter"] = Math.max(highestCompleted, MIN_BATCH_NUMBER - 1);
-
+    db.ref("meta/batchCounter").set(446);
     recycledNumbersRef.remove();
-    db.ref().update(updates).then(() => {
-        alert("Reset complete! Cleared " + activeBatches.length + " active batch number(s). Counter set to " + formatBatchNum(Math.max(highestCompleted, MIN_BATCH_NUMBER - 1)) + ". Use the 'Assign #' buttons on each card to assign numbers.");
-    }).catch(err => {
-        alert("Reset failed: " + err.message);
-    });
-}
-
-function manualAssignBatchNumber(batchId) {
-    if (_autoAssignInFlight) return;
-    const batch = batches.find(b => b.id === batchId);
-    if (!batch || batch.batchNumber) return;
-    _autoAssignInFlight = true;
-    assignBatchNumber((batchNumber) => {
-        batchesRef.child(batchId).child("batchNumber").transaction(
-            (current) => {
-                if (current) return;
-                return batchNumber;
-            },
-            (error, committed) => {
-                _autoAssignInFlight = false;
-                if (!committed && !error) {
-                    recycleBatchNumber(batchNumber);
-                }
-            }
-        );
-    });
+    console.log("Counter set to 446 (next = A0447), recycled pool cleared.");
 }
 
 // ── Undo Button ─────────────────────────────────────────────────────
@@ -907,9 +840,10 @@ function onBatches(snapshot) {
     updateRecycledNumbersBar();
     if (activeTab === "completed") renderCompleted();
 
-    // TEMPORARY: show reset button for admin
-    if (_manualAssignMode && isAdmin) {
-        showResetBatchNumbersBtn();
+    // ONE-TIME: set counter to 446 (remove after it runs)
+    if (!window._counterSetDone && isAdmin) {
+        window._counterSetDone = true;
+        setCounterTo446();
     }
 }
 
@@ -918,9 +852,7 @@ function onBatches(snapshot) {
 // Only ONE assignment runs at a time per client. Uses Firebase transaction on the
 // batch's batchNumber field so multiple clients don't double-assign.
 let _autoAssignInFlight = false;
-let _manualAssignMode = true; // TEMPORARY: disable auto-assign, use manual buttons instead
 function assignNumbersToTopBatches() {
-    if (_manualAssignMode) return;
     if (_autoAssignInFlight) return;
     for (const bowlKey of BOWL_ORDER) {
         const laneBatches = batches
@@ -2432,10 +2364,8 @@ function createBatchCard(batch) {
         : "";
     if (isAdmin) {
         const moveBtn = isTouchDevice ? `<button class="btn btn-sm btn-move" data-action="move" data-id="${batch.id}">Move</button>` : "";
-        const assignBtn = (_manualAssignMode && !batch.batchNumber) ? `<button class="btn btn-sm btn-start-mixing" data-action="manual-assign" data-id="${batch.id}">Assign #</button>` : "";
         actionsHtml = `
             <div class="card-actions">
-                ${assignBtn}
                 ${moveBtn}
                 ${nextAction ? `<button class="btn btn-sm ${nextBtnClass}" data-action="advance" data-id="${batch.id}">${nextAction.label}</button>` : ""}
                 <button class="btn btn-sm btn-duplicate" data-action="duplicate" data-id="${batch.id}" title="Duplicate batch">&#x2398;</button>
@@ -2776,8 +2706,6 @@ document.addEventListener("click", (e) => {
         openMoveModal(id);
     } else if (action === "edit" && isAdmin) {
         openEditModal(id);
-    } else if (action === "manual-assign" && isAdmin) {
-        manualAssignBatchNumber(id);
     } else if (action === "duplicate" && isAdmin) {
         duplicateBatch(id);
     } else if (action === "delete" && isAdmin) {
