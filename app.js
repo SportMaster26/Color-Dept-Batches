@@ -294,6 +294,78 @@ const lockedAccountsRef = db.ref("meta/lockedAccounts");
 const failedAttemptsRef = db.ref("meta/failedAttempts");
 const loginAuditRef = db.ref("meta/loginAudit");
 
+// ── Batch Number Helpers ─────────────────────────────────────────────
+
+/** Parse "A0437" → 437. Returns NaN for invalid strings. */
+function parseBatchNum(str) {
+    if (!str) return NaN;
+    return parseInt(str.slice(1), 10);
+}
+
+/** Format number 437 → "A0437". */
+function formatBatchNum(n) {
+    return "A" + String(n).padStart(4, "0");
+}
+
+/** Returns a Set of all numeric batch numbers currently in use. */
+function getUsedBatchNumbers() {
+    const used = new Set();
+    for (const b of batches) {
+        if (b.batchNumber) {
+            const n = parseBatchNum(b.batchNumber);
+            if (!isNaN(n)) used.add(n);
+        }
+    }
+    return used;
+}
+
+/**
+ * Returns true if batchNumber is already used by any batch,
+ * optionally excluding a specific batch ID (for edits).
+ */
+function isBatchNumberTaken(batchNumber, excludeId) {
+    if (!batchNumber) return false;
+    return batches.some(b =>
+        b.batchNumber === batchNumber &&
+        (!excludeId || b.id !== excludeId)
+    );
+}
+
+/** Push a batch number back to the recycled pool if valid. */
+function recycleBatchNumber(batchNumberStr) {
+    const num = parseBatchNum(batchNumberStr);
+    if (!isNaN(num) && num >= MIN_BATCH_NUMBER) {
+        recycledNumbersRef.push(num);
+    }
+}
+
+/**
+ * Build a new queued batch object with consistent field set.
+ * @param {Object} fields - product, bowl, packaging, unitCount, notes, sortOrder
+ */
+function buildNewBatch(fields) {
+    return {
+        id: generateId(),
+        batchNumber: null,
+        product: fields.product,
+        bowl: fields.bowl,
+        packaging: fields.packaging || null,
+        unitCount: fields.unitCount || null,
+        notes: fields.notes || null,
+        status: "queued",
+        sortOrder: fields.sortOrder,
+        createdAt: Date.now(),
+        startedAt: null,
+        mixingCompleteAt: null,
+        pouringAt: null,
+        completedAt: null,
+        viscosity: null,
+        initials: null,
+        initials2: null,
+        pouredBy: null,
+    };
+}
+
 // ── Latex Tank Configuration ─────────────────────────────────────────
 const LATEX_TANKS = [
     { id: "C1", name: "C#1", capacity: 6000, group: "C Tanks" },
@@ -662,7 +734,7 @@ function updateRecycledNumbersBar() {
                 .filter((n) => n >= MIN_BATCH_NUMBER)
                 .sort((a, b) => a - b);
             if (nums.length > 0) {
-                listEl.textContent = nums.map((n) => "A" + String(n).padStart(4, "0")).join(", ");
+                listEl.textContent = nums.map((n) => formatBatchNum(n)).join(", ");
             } else {
                 listEl.textContent = "None";
             }
@@ -671,19 +743,13 @@ function updateRecycledNumbersBar() {
         }
 
         // Calculate and show next batch number
-        const usedNumbers = new Set();
-        for (const b of batches) {
-            if (b.batchNumber) {
-                const n = parseInt(b.batchNumber.slice(1), 10);
-                if (!isNaN(n)) usedNumbers.add(n);
-            }
-        }
+        const usedNumbers = getUsedBatchNumbers();
         let maxUsed = 0;
         for (const num of usedNumbers) {
             if (num > maxUsed) maxUsed = num;
         }
         const nextNum = Math.max(maxUsed + 1, MIN_BATCH_NUMBER);
-        nextEl.textContent = "A" + String(nextNum).padStart(4, "0");
+        nextEl.textContent = formatBatchNum(nextNum);
     });
 }
 
@@ -800,10 +866,7 @@ function assignNumbersToTopBatches() {
                             _autoAssignInFlight = false;
                             if (!committed && !error) {
                                 // Another client won the race — recycle our number
-                                const num = parseInt(batchNumber.slice(1), 10);
-                                if (!isNaN(num) && num >= MIN_BATCH_NUMBER) {
-                                    recycledNumbersRef.push(num);
-                                }
+                                recycleBatchNumber(batchNumber);
                             }
                             // Firebase on("value") will fire → onBatchesChanged →
                             // assignNumbersToTopBatches picks up the next batch
@@ -1226,8 +1289,8 @@ function getCompletedRows() {
     return batches
         .filter((b) => b.status === "batch_complete")
         .sort((a, b) => {
-            const numA = a.batchNumber ? parseInt(a.batchNumber.slice(1)) : Infinity;
-            const numB = b.batchNumber ? parseInt(b.batchNumber.slice(1)) : Infinity;
+            const numA = a.batchNumber ? parseBatchNum(a.batchNumber) : Infinity;
+            const numB = b.batchNumber ? parseBatchNum(b.batchNumber) : Infinity;
             return numA - numB;
         })
         .map((batch) => {
@@ -1399,8 +1462,7 @@ function renderCompleted() {
                 const save = () => {
                     const val = input.value.trim();
                     if (val && val !== currentVal) {
-                        const dup = batches.find(b => b.id !== batchId && b.batchNumber && b.batchNumber === val);
-                        if (dup) {
+                        if (isBatchNumberTaken(val, batchId)) {
                             alert("Batch number \"" + val + "\" is already in use by another batch.");
                             input.focus();
                             return;
@@ -1907,8 +1969,8 @@ function getMixingCompleteRows() {
     return batches
         .filter((b) => validStatuses.includes(b.status) && b.mixingCompleteAt)
         .sort((a, b) => {
-            const numA = a.batchNumber ? parseInt(a.batchNumber.slice(1)) : Infinity;
-            const numB = b.batchNumber ? parseInt(b.batchNumber.slice(1)) : Infinity;
+            const numA = a.batchNumber ? parseBatchNum(a.batchNumber) : Infinity;
+            const numB = b.batchNumber ? parseBatchNum(b.batchNumber) : Infinity;
             return numA - numB;
         })
         .map((batch) => {
@@ -2358,8 +2420,7 @@ function createBatchCard(batch) {
                 const save = () => {
                     const val = input.value.trim();
                     if (val && val !== currentVal) {
-                        const dup = batches.find(b => b.id !== batch.id && b.batchNumber && b.batchNumber === val);
-                        if (dup) {
+                        if (isBatchNumberTaken(val, batch.id)) {
                             alert("Batch number \"" + val + "\" is already in use by another batch.");
                             input.focus();
                             return;
@@ -2648,47 +2709,23 @@ function duplicateBatch(id) {
         return Math.max(max, order);
     }, -1);
 
-    function createDuplicate(batchNumber) {
-        const newBatch = {
-            id: generateId(),
-            batchNumber: batchNumber || null,
-            product: batch.product,
-            bowl: batch.bowl,
-            packaging: batch.packaging || null,
-            unitCount: batch.unitCount || null,
-            notes: batch.notes || null,
-            status: "queued",
-            sortOrder: maxOrder + 1,
-            createdAt: Date.now(),
-            startedAt: null,
-            mixingCompleteAt: null,
-            pouringAt: null,
-            completedAt: null,
-            viscosity: null,
-            initials: null,
-            initials2: null,
-            pouredBy: null,
-        };
-        batchesRef.child(newBatch.id).set(newBatch);
-    }
-
     // Always create without a number — assignNumbersToTopBatches() will
-    // assign one when the Firebase listener fires (prevents race conditions
-    // where both this function and assignNumbersToTopBatches try to assign).
-    createDuplicate(null);
+    // assign one when the Firebase listener fires (prevents race conditions).
+    const newBatch = buildNewBatch({
+        product: batch.product,
+        bowl: batch.bowl,
+        packaging: batch.packaging,
+        unitCount: batch.unitCount,
+        notes: batch.notes,
+        sortOrder: maxOrder + 1,
+    });
+    batchesRef.child(newBatch.id).set(newBatch);
 }
 
 // Reusable helper: assign a batch number (recycled first, then counter).
 // Uses Firebase transaction on counter for atomic increment across multiple clients.
 function assignBatchNumber(callback) {
-    // Build set of all batch numbers currently in use
-    const usedNumbers = new Set();
-    for (const b of batches) {
-        if (b.batchNumber) {
-            const n = parseInt(b.batchNumber.slice(1), 10);
-            if (!isNaN(n)) usedNumbers.add(n);
-        }
-    }
+    const usedNumbers = getUsedBatchNumbers();
 
     recycledNumbersRef.once("value", (snap) => {
         const recycled = snap.val();
@@ -2707,7 +2744,7 @@ function assignBatchNumber(callback) {
                 if (val < minNum) { minKey = key; minNum = val; }
             }
             recycledNumbersRef.child(minKey).remove();
-            callback("A" + String(minNum).padStart(4, "0"));
+            callback(formatBatchNum(minNum));
         } else {
             // Find the highest batch number currently in use
             let maxUsed = 0;
@@ -2726,7 +2763,7 @@ function assignBatchNumber(callback) {
                 return floor;
             }, (error, committed, snapshot) => {
                 if (error || !committed) { alert("Failed to generate batch number. Please try again."); return; }
-                callback("A" + String(snapshot.val()).padStart(4, "0"));
+                callback(formatBatchNum(snapshot.val()));
             });
         }
     });
@@ -3024,11 +3061,7 @@ editForm.addEventListener("submit", (e) => {
 function deleteBatch(id) {
     const batch = batches.find((b) => b.id === id);
     if (batch && batch.batchNumber) {
-        // Recycle the batch number for reuse (only if >= MIN_BATCH_NUMBER)
-        const num = parseInt(batch.batchNumber.slice(1), 10);
-        if (!isNaN(num) && num >= MIN_BATCH_NUMBER) {
-            recycledNumbersRef.push(num);
-        }
+        recycleBatchNumber(batch.batchNumber);
     }
     batchesRef.child(id).remove();
 }
@@ -3139,32 +3172,17 @@ batchForm.addEventListener("submit", (e) => {
         return Math.max(max, order);
     }, -1);
 
-    function createBatch(batchNumber) {
-        const batch = {
-            id: generateId(),
-            batchNumber: batchNumber || null,
-            product,
-            bowl,
-            packaging,
-            unitCount: unitCountVal ? Number(unitCountVal) : null,
-            notes: notes || null,
-            status: "queued",
-            sortOrder: maxOrder + 1,
-            createdAt: Date.now(),
-            startedAt: null,
-            mixingCompleteAt: null,
-            pouringAt: null,
-            completedAt: null,
-            viscosity: null,
-            initials: null,
-            pouredBy: null,
-        };
-        batchesRef.child(batch.id).set(batch);
-    }
-
     // Always create without a number — assignNumbersToTopBatches() will
     // assign one when the Firebase listener fires (prevents race conditions).
-    createBatch(null);
+    const batch = buildNewBatch({
+        product,
+        bowl,
+        packaging,
+        unitCount: unitCountVal ? Number(unitCountVal) : null,
+        notes: notes || null,
+        sortOrder: maxOrder + 1,
+    });
+    batchesRef.child(batch.id).set(batch);
 
     // Save custom product if not already in catalog
     if (product && !PRODUCT_CATALOG.includes(product)) {
@@ -3848,12 +3866,9 @@ if (addCompletedBtn) {
         const completedAt = completedDateVal ? new Date(completedDateVal).getTime() : Date.now();
 
         // Check for duplicate batch number
-        if (batchNumber) {
-            const dup = batches.find(b => b.batchNumber === batchNumber);
-            if (dup) {
-                alert("Batch number \"" + batchNumber + "\" is already in use.");
-                return;
-            }
+        if (isBatchNumberTaken(batchNumber)) {
+            alert("Batch number \"" + batchNumber + "\" is already in use.");
+            return;
         }
 
         const batch = {
