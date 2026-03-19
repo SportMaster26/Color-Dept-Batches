@@ -2795,14 +2795,14 @@ function assignBatchNumber(callback) {
                 if (num > maxUsed) maxUsed = num;
             }
             const floor = Math.max(maxUsed + 1, MIN_BATCH_NUMBER);
-            // Atomic transaction: if counter drifted past actual usage, snap it back
+            // Atomic transaction: snap counter to match actual usage
             batchCounterRef.transaction((current) => {
                 const cur = current || 0;
-                if (cur >= floor) {
-                    // Counter is at or past floor — use cur + 1 (another client may have just used floor)
+                if (cur === floor) {
+                    // Another client likely just claimed floor — advance by 1
                     return cur + 1;
                 }
-                // Counter is behind actual usage — snap to floor
+                // Counter behind OR inflated past actual usage — snap to floor
                 return floor;
             }, (error, committed, snapshot) => {
                 if (error || !committed) { alert("Failed to generate batch number. Please try again."); return; }
