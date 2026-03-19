@@ -3642,17 +3642,14 @@ function importProductionData() {
     });
 }
 
-// Show import button and add-completed button for ajolly@ only
-const importBtn = document.getElementById("import-production-btn");
+// Show add-completed button for ajolly@ only
 const addCompletedBtn = document.getElementById("add-completed-btn");
-if (importBtn) {
+if (addCompletedBtn) {
     auth.onAuthStateChanged(user => {
         if (user && user.email === "ajolly@colordept.local") {
-            importBtn.classList.remove("hidden");
-            if (addCompletedBtn) addCompletedBtn.classList.remove("hidden");
+            addCompletedBtn.classList.remove("hidden");
         }
     });
-    importBtn.addEventListener("click", importProductionData);
 }
 
 // ── Add Completed Batch (AJOLLY only) ────────────────────────────────
