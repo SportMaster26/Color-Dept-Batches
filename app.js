@@ -769,11 +769,10 @@ function onBatches(snapshot) {
 
 // Auto-assign batch numbers to the top 2 batches in each bowl lane.
 // This is the ONLY place that assigns numbers (besides advanceStatus for queued→mixing).
-// Uses a per-bowl lock to prevent race conditions from concurrent Firebase triggers.
-const _assigningBowls = new Set();
+// Tracks which batch IDs are already queued/in-flight to prevent double-assignment.
+const _pendingBatchIds = new Set();
 function assignNumbersToTopBatches() {
     for (const bowlKey of BOWL_ORDER) {
-        if (_assigningBowls.has(bowlKey)) continue;
         const laneBatches = batches
             .filter((b) => b.bowl === bowlKey && b.status !== "batch_complete")
             .sort((a, b) => {
@@ -782,17 +781,16 @@ function assignNumbersToTopBatches() {
                 return orderA - orderB;
             });
 
-        // Assign numbers to the top 2 batches (1st and 2nd in line) if they don't have one
+        // Check top 2 batches in each lane
         for (let i = 0; i < Math.min(2, laneBatches.length); i++) {
-            if (!laneBatches[i].batchNumber) {
-                const batch = laneBatches[i];
-                _assigningBowls.add(bowlKey);
+            const batch = laneBatches[i];
+            if (!batch.batchNumber && !_pendingBatchIds.has(batch.id)) {
+                _pendingBatchIds.add(batch.id);
                 assignBatchNumber((batchNumber) => {
-                    _assigningBowls.delete(bowlKey);
+                    _pendingBatchIds.delete(batch.id);
                     batch.batchNumber = batchNumber;
                     batchesRef.child(batch.id).update({ batchNumber });
                 });
-                break; // Only assign one at a time per bowl to avoid races
             }
         }
     }
@@ -2660,9 +2658,22 @@ function duplicateBatch(id) {
     createDuplicate(null);
 }
 
-// Reusable helper: assign a batch number (recycled first, then counter)
+// Reusable helper: assign a batch number (recycled first, then counter).
+// All assignments are serialized through a queue so only one runs at a time,
+// preventing race conditions where concurrent calls consume multiple numbers.
+let _assignInFlight = false;
+const _assignQueue = [];
 function assignBatchNumber(callback) {
-    // Build set of all batch numbers currently in use
+    _assignQueue.push(callback);
+    if (!_assignInFlight) _processNextAssignment();
+}
+
+function _processNextAssignment() {
+    if (_assignQueue.length === 0) { _assignInFlight = false; return; }
+    _assignInFlight = true;
+    const callback = _assignQueue.shift();
+
+    // Build set of all batch numbers currently in use (fresh each time)
     const usedNumbers = new Set();
     for (const b of batches) {
         if (b.batchNumber) {
@@ -2689,6 +2700,7 @@ function assignBatchNumber(callback) {
             }
             recycledNumbersRef.child(minKey).remove();
             callback("A" + String(minNum).padStart(4, "0"));
+            _processNextAssignment();
         } else {
             // Find the highest batch number currently in use
             let maxUsed = 0;
@@ -2696,11 +2708,11 @@ function assignBatchNumber(callback) {
                 if (num > maxUsed) maxUsed = num;
             }
             // Always base next number on what's actually in use, not the stored counter
-            // This prevents the counter from drifting ahead and skipping numbers
             const nextNumber = Math.max(maxUsed + 1, MIN_BATCH_NUMBER);
             batchCounterRef.set(nextNumber, (error) => {
-                if (error) { alert("Failed to generate batch number. Please try again."); return; }
+                if (error) { alert("Failed to generate batch number. Please try again."); _assignInFlight = false; return; }
                 callback("A" + String(nextNumber).padStart(4, "0"));
+                _processNextAssignment();
             });
         }
     });
