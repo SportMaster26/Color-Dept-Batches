@@ -753,14 +753,6 @@ function updateRecycledNumbersBar() {
     });
 }
 
-// ── ONE-TIME: Set counter to 446, next auto-assign = A0447 (remove after it runs) ──
-function setCounterTo446() {
-    if (!isAdmin) return;
-    db.ref("meta/batchCounter").set(446);
-    recycledNumbersRef.remove();
-    console.log("Counter set to 446 (next = A0447), recycled pool cleared.");
-}
-
 // ── Undo Button ─────────────────────────────────────────────────────
 function getActiveUndoStack() {
     if (isAdmin) return undoStack;
@@ -839,12 +831,6 @@ function onBatches(snapshot) {
     updateCompletedCount();
     updateRecycledNumbersBar();
     if (activeTab === "completed") renderCompleted();
-
-    // ONE-TIME: set counter to 446 (remove after it runs)
-    if (!window._counterSetDone && isAdmin) {
-        window._counterSetDone = true;
-        setCounterTo446();
-    }
 }
 
 // Auto-assign batch numbers to the top 2 batches in each bowl lane.
