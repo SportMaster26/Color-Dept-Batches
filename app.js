@@ -767,7 +767,10 @@ function onBatches(snapshot) {
     if (activeTab === "completed") renderCompleted();
 }
 
-// Auto-assign batch numbers to batches that are 2nd in line for their bowl
+// Auto-assign batch numbers to the top 2 batches in each bowl lane.
+// This is the ONLY place that assigns numbers (besides advanceStatus for queued→mixing).
+// Tracks which batch IDs are already queued/in-flight to prevent double-assignment.
+const _pendingBatchIds = new Set();
 function assignNumbersToTopBatches() {
     for (const bowlKey of BOWL_ORDER) {
         const laneBatches = batches
@@ -778,13 +781,17 @@ function assignNumbersToTopBatches() {
                 return orderA - orderB;
             });
 
-        // Assign a number to the 2nd batch in line (index 1) if it doesn't have one yet
-        if (laneBatches.length >= 2 && !laneBatches[1].batchNumber) {
-            const batch = laneBatches[1];
-            assignBatchNumber((batchNumber) => {
-                batch.batchNumber = batchNumber;
-                batchesRef.child(batch.id).update({ batchNumber });
-            });
+        // Check top 2 batches in each lane
+        for (let i = 0; i < Math.min(2, laneBatches.length); i++) {
+            const batch = laneBatches[i];
+            if (!batch.batchNumber && !_pendingBatchIds.has(batch.id)) {
+                _pendingBatchIds.add(batch.id);
+                assignBatchNumber((batchNumber) => {
+                    _pendingBatchIds.delete(batch.id);
+                    batch.batchNumber = batchNumber;
+                    batchesRef.child(batch.id).update({ batchNumber });
+                });
+            }
         }
     }
 }
@@ -2645,18 +2652,28 @@ function duplicateBatch(id) {
         batchesRef.child(newBatch.id).set(newBatch);
     }
 
-    // Only assign a batch number if the duplicate will be 2nd in line.
-    const activeLaneBatches = laneBatches.filter((b) => b.status !== "batch_complete");
-    if (activeLaneBatches.length === 1) {
-        assignBatchNumber((batchNumber) => createDuplicate(batchNumber));
-    } else {
-        createDuplicate(null);
-    }
+    // Always create without a number — assignNumbersToTopBatches() will
+    // assign one when the Firebase listener fires (prevents race conditions
+    // where both this function and assignNumbersToTopBatches try to assign).
+    createDuplicate(null);
 }
 
-// Reusable helper: assign a batch number (recycled first, then counter)
+// Reusable helper: assign a batch number (recycled first, then counter).
+// All assignments are serialized through a queue so only one runs at a time,
+// preventing race conditions where concurrent calls consume multiple numbers.
+let _assignInFlight = false;
+const _assignQueue = [];
 function assignBatchNumber(callback) {
-    // Build set of all batch numbers currently in use
+    _assignQueue.push(callback);
+    if (!_assignInFlight) _processNextAssignment();
+}
+
+function _processNextAssignment() {
+    if (_assignQueue.length === 0) { _assignInFlight = false; return; }
+    _assignInFlight = true;
+    const callback = _assignQueue.shift();
+
+    // Build set of all batch numbers currently in use (fresh each time)
     const usedNumbers = new Set();
     for (const b of batches) {
         if (b.batchNumber) {
@@ -2683,6 +2700,7 @@ function assignBatchNumber(callback) {
             }
             recycledNumbersRef.child(minKey).remove();
             callback("A" + String(minNum).padStart(4, "0"));
+            _processNextAssignment();
         } else {
             // Find the highest batch number currently in use
             let maxUsed = 0;
@@ -2690,11 +2708,11 @@ function assignBatchNumber(callback) {
                 if (num > maxUsed) maxUsed = num;
             }
             // Always base next number on what's actually in use, not the stored counter
-            // This prevents the counter from drifting ahead and skipping numbers
             const nextNumber = Math.max(maxUsed + 1, MIN_BATCH_NUMBER);
             batchCounterRef.set(nextNumber, (error) => {
-                if (error) { alert("Failed to generate batch number. Please try again."); return; }
+                if (error) { alert("Failed to generate batch number. Please try again."); _assignInFlight = false; return; }
                 callback("A" + String(nextNumber).padStart(4, "0"));
+                _processNextAssignment();
             });
         }
     });
@@ -3130,12 +3148,9 @@ batchForm.addEventListener("submit", (e) => {
         batchesRef.child(batch.id).set(batch);
     }
 
-    // Only assign a batch number if this batch will be 2nd in line (exactly 1 batch already in bowl).
-    if (laneBatches.length === 1) {
-        assignBatchNumber((batchNumber) => createBatch(batchNumber));
-    } else {
-        createBatch(null);
-    }
+    // Always create without a number — assignNumbersToTopBatches() will
+    // assign one when the Firebase listener fires (prevents race conditions).
+    createBatch(null);
 
     // Save custom product if not already in catalog
     if (product && !PRODUCT_CATALOG.includes(product)) {
