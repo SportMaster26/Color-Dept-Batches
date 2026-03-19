@@ -2613,9 +2613,26 @@ function duplicateBatch(id) {
 
 // Reusable helper: assign a batch number (recycled first, then counter)
 function assignBatchNumber(callback) {
+    // Build set of all batch numbers currently in use
+    const usedNumbers = new Set();
+    for (const b of batches) {
+        if (b.batchNumber) {
+            const n = parseInt(b.batchNumber.slice(1), 10);
+            if (!isNaN(n)) usedNumbers.add(n);
+        }
+    }
+
     recycledNumbersRef.once("value", (snap) => {
         const recycled = snap.val();
-        const validEntries = recycled ? Object.entries(recycled).filter(([, val]) => val >= MIN_BATCH_NUMBER) : [];
+        const validEntries = recycled ? Object.entries(recycled).filter(([, val]) => val >= MIN_BATCH_NUMBER && !usedNumbers.has(val)) : [];
+        // Remove any recycled entries that conflict with existing batches
+        if (recycled) {
+            for (const [key, val] of Object.entries(recycled)) {
+                if (val < MIN_BATCH_NUMBER || usedNumbers.has(val)) {
+                    recycledNumbersRef.child(key).remove();
+                }
+            }
+        }
         if (validEntries.length > 0) {
             let minKey = validEntries[0][0], minNum = validEntries[0][1];
             for (const [key, val] of validEntries) {
@@ -2624,8 +2641,16 @@ function assignBatchNumber(callback) {
             recycledNumbersRef.child(minKey).remove();
             callback("A" + String(minNum).padStart(4, "0"));
         } else {
-            batchCounterRef.transaction((current) => Math.max((current || 0) + 1, MIN_BATCH_NUMBER),
-                (error, committed, snapshot) => {
+            // Find the highest batch number currently in use
+            let maxUsed = 0;
+            for (const num of usedNumbers) {
+                if (num > maxUsed) maxUsed = num;
+            }
+            batchCounterRef.transaction((current) => {
+                const next = (current || 0) + 1;
+                // Ensure we're above both MIN_BATCH_NUMBER and all existing batch numbers
+                return Math.max(next, MIN_BATCH_NUMBER, maxUsed + 1);
+            }, (error, committed, snapshot) => {
                     if (error || !committed) { alert("Failed to generate batch number. Please try again."); return; }
                     callback("A" + String(snapshot.val()).padStart(4, "0"));
                 });
