@@ -645,6 +645,48 @@ function updateCompletedCount() {
     badge.classList.toggle("hidden", newCount === 0 || activeTab === "completed");
 }
 
+// ── Recycled Numbers Bar ─────────────────────────────────────────────
+function updateRecycledNumbersBar() {
+    const bar = document.getElementById("recycled-numbers-bar");
+    if (!bar || !isAdmin) return;
+    bar.classList.remove("hidden");
+
+    // Show recycled numbers from Firebase
+    recycledNumbersRef.once("value", (snap) => {
+        const recycled = snap.val();
+        const listEl = document.getElementById("recycled-numbers-list");
+        const nextEl = document.getElementById("next-batch-number");
+
+        if (recycled) {
+            const nums = Object.values(recycled)
+                .filter((n) => n >= MIN_BATCH_NUMBER)
+                .sort((a, b) => a - b);
+            if (nums.length > 0) {
+                listEl.textContent = nums.map((n) => "A" + String(n).padStart(4, "0")).join(", ");
+            } else {
+                listEl.textContent = "None";
+            }
+        } else {
+            listEl.textContent = "None";
+        }
+
+        // Calculate and show next batch number
+        const usedNumbers = new Set();
+        for (const b of batches) {
+            if (b.batchNumber) {
+                const n = parseInt(b.batchNumber.slice(1), 10);
+                if (!isNaN(n)) usedNumbers.add(n);
+            }
+        }
+        let maxUsed = 0;
+        for (const num of usedNumbers) {
+            if (num > maxUsed) maxUsed = num;
+        }
+        const nextNum = Math.max(maxUsed + 1, MIN_BATCH_NUMBER);
+        nextEl.textContent = "A" + String(nextNum).padStart(4, "0");
+    });
+}
+
 // ── Undo Button ─────────────────────────────────────────────────────
 function getActiveUndoStack() {
     if (isAdmin) return undoStack;
@@ -721,6 +763,7 @@ function onBatches(snapshot) {
     render();
     if (activeTab === "latex") renderLatexBoard();
     updateCompletedCount();
+    updateRecycledNumbersBar();
     if (activeTab === "completed") renderCompleted();
 }
 
@@ -2646,14 +2689,13 @@ function assignBatchNumber(callback) {
             for (const num of usedNumbers) {
                 if (num > maxUsed) maxUsed = num;
             }
-            batchCounterRef.transaction((current) => {
-                const next = (current || 0) + 1;
-                // Ensure we're above both MIN_BATCH_NUMBER and all existing batch numbers
-                return Math.max(next, MIN_BATCH_NUMBER, maxUsed + 1);
-            }, (error, committed, snapshot) => {
-                    if (error || !committed) { alert("Failed to generate batch number. Please try again."); return; }
-                    callback("A" + String(snapshot.val()).padStart(4, "0"));
-                });
+            // Always base next number on what's actually in use, not the stored counter
+            // This prevents the counter from drifting ahead and skipping numbers
+            const nextNumber = Math.max(maxUsed + 1, MIN_BATCH_NUMBER);
+            batchCounterRef.set(nextNumber, (error) => {
+                if (error) { alert("Failed to generate batch number. Please try again."); return; }
+                callback("A" + String(nextNumber).padStart(4, "0"));
+            });
         }
     });
 }
