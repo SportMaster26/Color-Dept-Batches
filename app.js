@@ -767,9 +767,13 @@ function onBatches(snapshot) {
     if (activeTab === "completed") renderCompleted();
 }
 
-// Auto-assign batch numbers to batches that are 2nd in line for their bowl
+// Auto-assign batch numbers to the top 2 batches in each bowl lane.
+// This is the ONLY place that assigns numbers (besides advanceStatus for queued→mixing).
+// Uses a per-bowl lock to prevent race conditions from concurrent Firebase triggers.
+const _assigningBowls = new Set();
 function assignNumbersToTopBatches() {
     for (const bowlKey of BOWL_ORDER) {
+        if (_assigningBowls.has(bowlKey)) continue;
         const laneBatches = batches
             .filter((b) => b.bowl === bowlKey && b.status !== "batch_complete")
             .sort((a, b) => {
@@ -778,13 +782,18 @@ function assignNumbersToTopBatches() {
                 return orderA - orderB;
             });
 
-        // Assign a number to the 2nd batch in line (index 1) if it doesn't have one yet
-        if (laneBatches.length >= 2 && !laneBatches[1].batchNumber) {
-            const batch = laneBatches[1];
-            assignBatchNumber((batchNumber) => {
-                batch.batchNumber = batchNumber;
-                batchesRef.child(batch.id).update({ batchNumber });
-            });
+        // Assign numbers to the top 2 batches (1st and 2nd in line) if they don't have one
+        for (let i = 0; i < Math.min(2, laneBatches.length); i++) {
+            if (!laneBatches[i].batchNumber) {
+                const batch = laneBatches[i];
+                _assigningBowls.add(bowlKey);
+                assignBatchNumber((batchNumber) => {
+                    _assigningBowls.delete(bowlKey);
+                    batch.batchNumber = batchNumber;
+                    batchesRef.child(batch.id).update({ batchNumber });
+                });
+                break; // Only assign one at a time per bowl to avoid races
+            }
         }
     }
 }
@@ -2645,13 +2654,10 @@ function duplicateBatch(id) {
         batchesRef.child(newBatch.id).set(newBatch);
     }
 
-    // Only assign a batch number if the duplicate will be 2nd in line.
-    const activeLaneBatches = laneBatches.filter((b) => b.status !== "batch_complete");
-    if (activeLaneBatches.length === 1) {
-        assignBatchNumber((batchNumber) => createDuplicate(batchNumber));
-    } else {
-        createDuplicate(null);
-    }
+    // Always create without a number — assignNumbersToTopBatches() will
+    // assign one when the Firebase listener fires (prevents race conditions
+    // where both this function and assignNumbersToTopBatches try to assign).
+    createDuplicate(null);
 }
 
 // Reusable helper: assign a batch number (recycled first, then counter)
@@ -3130,12 +3136,9 @@ batchForm.addEventListener("submit", (e) => {
         batchesRef.child(batch.id).set(batch);
     }
 
-    // Only assign a batch number if this batch will be 2nd in line (exactly 1 batch already in bowl).
-    if (laneBatches.length === 1) {
-        assignBatchNumber((batchNumber) => createBatch(batchNumber));
-    } else {
-        createBatch(null);
-    }
+    // Always create without a number — assignNumbersToTopBatches() will
+    // assign one when the Firebase listener fires (prevents race conditions).
+    createBatch(null);
 
     // Save custom product if not already in catalog
     if (product && !PRODUCT_CATALOG.includes(product)) {
