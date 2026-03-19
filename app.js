@@ -2725,9 +2725,8 @@ function duplicateBatch(id) {
 // Reusable helper: assign a batch number (recycled first, then counter).
 // Uses Firebase transaction on counter for atomic increment across multiple clients.
 function assignBatchNumber(callback) {
-    const usedNumbers = getUsedBatchNumbers();
-
     recycledNumbersRef.once("value", (snap) => {
+        const usedNumbers = getUsedBatchNumbers();
         const recycled = snap.val();
         const validEntries = recycled ? Object.entries(recycled).filter(([, val]) => val >= MIN_BATCH_NUMBER && !usedNumbers.has(val)) : [];
         // Remove any recycled entries that conflict with existing batches
@@ -2744,6 +2743,11 @@ function assignBatchNumber(callback) {
                 if (val < minNum) { minKey = key; minNum = val; }
             }
             recycledNumbersRef.child(minKey).remove();
+            // Keep counter in sync so it doesn't drift behind
+            batchCounterRef.transaction((current) => {
+                const cur = current || 0;
+                return cur >= minNum ? cur : minNum;
+            });
             callback(formatBatchNum(minNum));
         } else {
             // Find the highest batch number currently in use
@@ -2778,7 +2782,10 @@ function advanceStatus(id) {
 
     // If advancing from queued → mixing and batch has no number yet, assign one first
     if (batch.status === "queued" && !batch.batchNumber) {
+        if (_autoAssignInFlight) return;
+        _autoAssignInFlight = true;
         assignBatchNumber((batchNumber) => {
+            _autoAssignInFlight = false;
             batch.batchNumber = batchNumber;
             batchesRef.child(batch.id).update({ batchNumber });
             applyStatusAdvance(batch, nextAction.next);
