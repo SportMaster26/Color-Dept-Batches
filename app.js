@@ -812,16 +812,20 @@ function assignNumbersToTopBatches() {
             if (!laneBatches[i].batchNumber) {
                 const batchId = laneBatches[i].id;
                 _autoAssignInFlight = true;
+                // Increment counter and write batch number in one flow.
+                // If batch already has a number, decrement counter to undo.
                 assignBatchNumber((batchNumber) => {
-                    // Use transaction so only ONE client can set the batch number.
-                    // If another client already set it, recycle our number.
                     batchesRef.child(batchId).child("batchNumber").transaction(
                         (current) => {
-                            if (current) return; // Already set by another client — abort
+                            if (current) return; // Already set — abort
                             return batchNumber;
                         },
                         (error, committed) => {
                             _autoAssignInFlight = false;
+                            if (!committed && !error) {
+                                // Batch already had a number — return counter value
+                                batchCounterRef.transaction((cur) => (cur || 1) - 1);
+                            }
                         }
                     );
                 });
