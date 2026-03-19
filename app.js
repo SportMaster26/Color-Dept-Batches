@@ -753,6 +753,46 @@ function updateRecycledNumbersBar() {
     });
 }
 
+// ── ONE-TIME RESET (remove after it runs) ────────────────────────────
+function resetBatchNumbers() {
+    if (!isAdmin) return;
+    const activeBatches = batches.filter(b => b.status !== "batch_complete" && b.batchNumber);
+    if (activeBatches.length === 0) {
+        console.log("Reset: no active batches with numbers to clear.");
+        return;
+    }
+    if (!confirm(
+        "This will:\n" +
+        "• Clear batch numbers from " + activeBatches.length + " active batch(es)\n" +
+        "• Clear the recycled numbers pool\n" +
+        "• Reset the counter to the highest completed batch number\n" +
+        "• Auto-assign fresh numbers to top batches\n\n" +
+        "Completed batch numbers will NOT be touched.\n\nProceed?"
+    )) return;
+
+    const updates = {};
+    for (const b of activeBatches) {
+        updates["batches/" + b.id + "/batchNumber"] = null;
+    }
+
+    // Find highest completed batch number
+    let highestCompleted = MIN_BATCH_NUMBER - 1;
+    for (const b of batches) {
+        if (b.status === "batch_complete" && b.batchNumber) {
+            const num = parseBatchNum(b.batchNumber);
+            if (!isNaN(num) && num > highestCompleted) highestCompleted = num;
+        }
+    }
+    updates["meta/batchCounter"] = Math.max(highestCompleted, MIN_BATCH_NUMBER - 1);
+
+    recycledNumbersRef.remove();
+    db.ref().update(updates).then(() => {
+        alert("Reset complete! Cleared " + activeBatches.length + " active batch number(s). Counter set to " + formatBatchNum(Math.max(highestCompleted, MIN_BATCH_NUMBER - 1)) + ". Fresh numbers will auto-assign now.");
+    }).catch(err => {
+        alert("Reset failed: " + err.message);
+    });
+}
+
 // ── Undo Button ─────────────────────────────────────────────────────
 function getActiveUndoStack() {
     if (isAdmin) return undoStack;
@@ -831,6 +871,12 @@ function onBatches(snapshot) {
     updateCompletedCount();
     updateRecycledNumbersBar();
     if (activeTab === "completed") renderCompleted();
+
+    // ONE-TIME RESET TRIGGER (remove after it runs)
+    if (!window._batchResetDone && isAdmin) {
+        window._batchResetDone = true;
+        resetBatchNumbers();
+    }
 }
 
 // Auto-assign batch numbers to the top 2 batches in each bowl lane.
