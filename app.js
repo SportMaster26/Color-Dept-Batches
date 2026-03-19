@@ -758,18 +758,18 @@ function updateRecycledNumbersBar() {
 let _fixJumpedDone = false;
 function fixJumpedBatchNumbers() {
     if (!isAdmin) { _fixJumpedDone = true; return; }
-    db.ref("meta/fixJumpedDone2").once("value", (snap) => {
+    db.ref("meta/fixJumpedDone3").once("value", (snap) => {
         if (snap.val()) {
             _fixJumpedDone = true;
             return;
         }
-        db.ref("meta/fixJumpedDone2").set(true);
+        db.ref("meta/fixJumpedDone3").set(true);
         db.ref("meta/fixJumpedDone").remove();
+        db.ref("meta/fixJumpedDone2").remove();
         db.ref("meta/batchCounter").set(447);
         recycledNumbersRef.remove();
 
         const jumped = batches.filter(b => {
-            if (b.status === "batch_complete") return false;
             if (!b.batchNumber) return false;
             const num = parseBatchNum(b.batchNumber);
             return !isNaN(num) && num > 447;
