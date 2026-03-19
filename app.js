@@ -772,7 +772,14 @@ function onBatches(snapshot) {
 // Only ONE assignment runs at a time per client. Uses Firebase transaction on the
 // batch's batchNumber field so multiple clients don't double-assign.
 let _autoAssignInFlight = false;
+let _autoAssignStartedAt = 0;
 function assignNumbersToTopBatches() {
+    // Safety net: if the flag has been stuck for >10 seconds, force-reset it.
+    // This catches edge cases where a Firebase callback is never invoked.
+    if (_autoAssignInFlight && (Date.now() - _autoAssignStartedAt > 10000)) {
+        console.warn("Auto-assign was stuck for >10s — force-resetting");
+        _autoAssignInFlight = false;
+    }
     if (_autoAssignInFlight) return;
     for (const bowlKey of BOWL_ORDER) {
         const laneBatches = batches
@@ -788,6 +795,7 @@ function assignNumbersToTopBatches() {
             if (!laneBatches[i].batchNumber) {
                 const batchId = laneBatches[i].id;
                 _autoAssignInFlight = true;
+                _autoAssignStartedAt = Date.now();
                 assignBatchNumber((batchNumber) => {
                     // Use transaction so only ONE client can set the batch number.
                     // If another client already set it, recycle our number.
@@ -809,6 +817,10 @@ function assignNumbersToTopBatches() {
                             // assignNumbersToTopBatches picks up the next batch
                         }
                     );
+                }, () => {
+                    // Error getting batch number — reset flag so we can try again
+                    _autoAssignInFlight = false;
+                    console.error("Failed to assign batch number, will retry on next Firebase update");
                 });
                 return; // Only one at a time per client
             }
@@ -2680,7 +2692,10 @@ function duplicateBatch(id) {
 
 // Reusable helper: assign a batch number (recycled first, then counter).
 // Uses Firebase transaction on counter for atomic increment across multiple clients.
-function assignBatchNumber(callback) {
+// onError is called if assignment fails — callers MUST handle it to reset state.
+function assignBatchNumber(callback, onError) {
+    if (!onError) onError = function () { alert("Failed to generate batch number. Please try again."); };
+
     // Build set of all batch numbers currently in use
     const usedNumbers = new Set();
     for (const b of batches) {
@@ -2719,16 +2734,18 @@ function assignBatchNumber(callback) {
             batchCounterRef.transaction((current) => {
                 const cur = current || 0;
                 if (cur >= floor) {
-                    // Counter is at or past floor — use cur + 1 (another client may have just used floor)
                     return cur + 1;
                 }
-                // Counter is behind actual usage — snap to floor
                 return floor;
             }, (error, committed, snapshot) => {
-                if (error || !committed) { alert("Failed to generate batch number. Please try again."); return; }
+                if (error || !committed) { onError(); return; }
                 callback("A" + String(snapshot.val()).padStart(4, "0"));
             });
         }
+    }, (error) => {
+        // Firebase read for recycled numbers failed — call onError so caller can reset
+        console.error("Failed to read recycled numbers:", error);
+        onError();
     });
 }
 
@@ -2742,9 +2759,25 @@ function advanceStatus(id) {
     // If advancing from queued → mixing and batch has no number yet, assign one first
     if (batch.status === "queued" && !batch.batchNumber) {
         assignBatchNumber((batchNumber) => {
-            batch.batchNumber = batchNumber;
-            batchesRef.child(batch.id).update({ batchNumber });
-            applyStatusAdvance(batch, nextAction.next);
+            // Use transaction so only one client sets the number; recycle if we lose the race
+            batchesRef.child(batch.id).child("batchNumber").transaction(
+                (current) => {
+                    if (current) return; // Already set by another client — abort
+                    return batchNumber;
+                },
+                (error, committed) => {
+                    if (!committed && !error) {
+                        const num = parseInt(batchNumber.slice(1), 10);
+                        if (!isNaN(num) && num >= MIN_BATCH_NUMBER) {
+                            recycledNumbersRef.push(num);
+                        }
+                    }
+                    if (committed || error) {
+                        batch.batchNumber = batchNumber;
+                    }
+                    applyStatusAdvance(batch, nextAction.next);
+                }
+            );
         });
         return;
     }
