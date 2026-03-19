@@ -753,19 +753,20 @@ function updateRecycledNumbersBar() {
     });
 }
 
-// ── ONE-TIME FIX: Clear jumped batch numbers > A0446 (remove after it runs) ──
+// ── ONE-TIME FIX: Clear jumped batch numbers > A0447 (remove after it runs) ──
 function fixJumpedBatchNumbers() {
     if (!isAdmin) return;
-    // Use Firebase flag so this only runs once across ALL sessions/refreshes
-    db.ref("meta/fixJumpedDone").once("value", (snap) => {
+    db.ref("meta/fixJumpedDone2").once("value", (snap) => {
         if (snap.val()) return; // Already ran
-        db.ref("meta/fixJumpedDone").set(true);
+        db.ref("meta/fixJumpedDone2").set(true);
+        db.ref("meta/fixJumpedDone").remove(); // clean up old flag
+        db.ref("meta/batchCounter").set(447);
 
         const jumped = batches.filter(b => {
             if (b.status === "batch_complete") return false;
             if (!b.batchNumber) return false;
             const num = parseBatchNum(b.batchNumber);
-            return !isNaN(num) && num > 446;
+            return !isNaN(num) && num > 447;
         });
         if (jumped.length === 0) return;
 
@@ -773,9 +774,8 @@ function fixJumpedBatchNumbers() {
         for (const b of jumped) {
             updates["batches/" + b.id + "/batchNumber"] = null;
         }
-        // Counter is already at 446 in Firebase — just clear the wrong numbers
         db.ref().update(updates).then(() => {
-            console.log("Fixed " + jumped.length + " jumped batch number(s). Auto-assign will reassign.");
+            console.log("Fixed " + jumped.length + " jumped batch number(s). Counter set to 447. Auto-assign from A0448.");
         });
     });
 }
