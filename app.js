@@ -769,11 +769,11 @@ function onBatches(snapshot) {
 
 // Auto-assign batch numbers to the top 2 batches in each bowl lane.
 // This is the ONLY place that assigns numbers (besides advanceStatus for queued→mixing).
-// Only ONE assignment runs at a time globally. When it completes and Firebase
-// updates, onBatchesChanged fires again and this function picks up the next one.
+// Only ONE assignment runs at a time per client. Uses Firebase transaction on the
+// batch's batchNumber field so multiple clients don't double-assign.
 let _autoAssignInFlight = false;
 function assignNumbersToTopBatches() {
-    if (_autoAssignInFlight) return; // One at a time
+    if (_autoAssignInFlight) return;
     for (const bowlKey of BOWL_ORDER) {
         const laneBatches = batches
             .filter((b) => b.bowl === bowlKey && b.status !== "batch_complete")
@@ -789,12 +789,28 @@ function assignNumbersToTopBatches() {
                 const batchId = laneBatches[i].id;
                 _autoAssignInFlight = true;
                 assignBatchNumber((batchNumber) => {
-                    _autoAssignInFlight = false;
-                    batchesRef.child(batchId).update({ batchNumber });
-                    // Firebase on("value") will fire → onBatchesChanged → assignNumbersToTopBatches
-                    // which will then pick up the next batch that needs a number
+                    // Use transaction so only ONE client can set the batch number.
+                    // If another client already set it, recycle our number.
+                    batchesRef.child(batchId).child("batchNumber").transaction(
+                        (current) => {
+                            if (current) return; // Already set by another client — abort
+                            return batchNumber;
+                        },
+                        (error, committed) => {
+                            _autoAssignInFlight = false;
+                            if (!committed && !error) {
+                                // Another client won the race — recycle our number
+                                const num = parseInt(batchNumber.slice(1), 10);
+                                if (!isNaN(num) && num >= MIN_BATCH_NUMBER) {
+                                    recycledNumbersRef.push(num);
+                                }
+                            }
+                            // Firebase on("value") will fire → onBatchesChanged →
+                            // assignNumbersToTopBatches picks up the next batch
+                        }
+                    );
                 });
-                return; // Only one at a time!
+                return; // Only one at a time per client
             }
         }
     }
@@ -2663,7 +2679,7 @@ function duplicateBatch(id) {
 }
 
 // Reusable helper: assign a batch number (recycled first, then counter).
-// Only one call should be in-flight at a time (enforced by callers).
+// Uses Firebase transaction on counter for atomic increment across multiple clients.
 function assignBatchNumber(callback) {
     // Build set of all batch numbers currently in use
     const usedNumbers = new Set();
@@ -2698,11 +2714,19 @@ function assignBatchNumber(callback) {
             for (const num of usedNumbers) {
                 if (num > maxUsed) maxUsed = num;
             }
-            // Always base next number on what's actually in use, not the stored counter
-            const nextNumber = Math.max(maxUsed + 1, MIN_BATCH_NUMBER);
-            batchCounterRef.set(nextNumber, (error) => {
-                if (error) { alert("Failed to generate batch number. Please try again."); return; }
-                callback("A" + String(nextNumber).padStart(4, "0"));
+            const floor = Math.max(maxUsed + 1, MIN_BATCH_NUMBER);
+            // Atomic transaction: if counter drifted past actual usage, snap it back
+            batchCounterRef.transaction((current) => {
+                const cur = current || 0;
+                if (cur >= floor) {
+                    // Counter is at or past floor — use cur + 1 (another client may have just used floor)
+                    return cur + 1;
+                }
+                // Counter is behind actual usage — snap to floor
+                return floor;
+            }, (error, committed, snapshot) => {
+                if (error || !committed) { alert("Failed to generate batch number. Please try again."); return; }
+                callback("A" + String(snapshot.val()).padStart(4, "0"));
             });
         }
     });
