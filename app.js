@@ -754,13 +754,19 @@ function updateRecycledNumbersBar() {
 }
 
 // ── ONE-TIME FIX: Clear jumped batch numbers > A0447 (remove after it runs) ──
+// Blocks auto-assign until the fix has completed or been confirmed already done.
+let _fixJumpedDone = false;
 function fixJumpedBatchNumbers() {
-    if (!isAdmin) return;
+    if (!isAdmin) { _fixJumpedDone = true; return; }
     db.ref("meta/fixJumpedDone2").once("value", (snap) => {
-        if (snap.val()) return; // Already ran
+        if (snap.val()) {
+            _fixJumpedDone = true;
+            return;
+        }
         db.ref("meta/fixJumpedDone2").set(true);
-        db.ref("meta/fixJumpedDone").remove(); // clean up old flag
+        db.ref("meta/fixJumpedDone").remove();
         db.ref("meta/batchCounter").set(447);
+        recycledNumbersRef.remove();
 
         const jumped = batches.filter(b => {
             if (b.status === "batch_complete") return false;
@@ -768,13 +774,17 @@ function fixJumpedBatchNumbers() {
             const num = parseBatchNum(b.batchNumber);
             return !isNaN(num) && num > 447;
         });
-        if (jumped.length === 0) return;
+        if (jumped.length === 0) {
+            _fixJumpedDone = true;
+            return;
+        }
 
         const updates = {};
         for (const b of jumped) {
             updates["batches/" + b.id + "/batchNumber"] = null;
         }
         db.ref().update(updates).then(() => {
+            _fixJumpedDone = true;
             console.log("Fixed " + jumped.length + " jumped batch number(s). Counter set to 447. Auto-assign from A0448.");
         });
     });
@@ -867,6 +877,7 @@ function onBatches(snapshot) {
 // batch's batchNumber field so multiple clients don't double-assign.
 let _autoAssignInFlight = false;
 function assignNumbersToTopBatches() {
+    if (!_fixJumpedDone) return; // Wait for one-time fix to complete (remove with fix)
     if (_autoAssignInFlight) return;
     for (const bowlKey of BOWL_ORDER) {
         const laneBatches = batches
