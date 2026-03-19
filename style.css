@@ -86,6 +86,35 @@ header h1 {
     border-bottom: 2px solid #d0d5dd;
 }
 
+/* ── Recycled Numbers Bar ─────────────────────────────────────────── */
+.recycled-numbers-bar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: #fff8e1;
+    border-bottom: 1px solid #ffe082;
+    padding: 6px 24px;
+    font-size: 0.85rem;
+    color: #5d4037;
+}
+.recycled-label {
+    font-weight: 700;
+    color: #e65100;
+}
+.recycled-numbers-list {
+    font-weight: 600;
+    color: #1565c0;
+    letter-spacing: 0.5px;
+}
+.recycled-sep {
+    color: #bbb;
+    margin: 0 4px;
+}
+.next-batch-number {
+    font-weight: 700;
+    color: #2e7d32;
+}
+
 .tab-btn {
     border: none;
     background: transparent;
