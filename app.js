@@ -761,6 +761,7 @@ function fixJumpedBatchNumbers() {
     db.ref("meta/fixJumpedDone3").once("value", (snap) => {
         if (snap.val()) {
             _fixJumpedDone = true;
+            assignNumbersToTopBatches();
             return;
         }
         db.ref("meta/fixJumpedDone3").set(true);
@@ -776,6 +777,7 @@ function fixJumpedBatchNumbers() {
         });
         if (jumped.length === 0) {
             _fixJumpedDone = true;
+            assignNumbersToTopBatches();
             return;
         }
 
@@ -785,6 +787,7 @@ function fixJumpedBatchNumbers() {
         }
         db.ref().update(updates).then(() => {
             _fixJumpedDone = true;
+            assignNumbersToTopBatches();
             console.log("Fixed " + jumped.length + " jumped batch number(s). Counter set to 447. Auto-assign from A0448.");
         });
     });
