@@ -243,6 +243,19 @@ header h1 {
     background: #1b5e20;
 }
 
+.card-batch-assigned {
+    display: block;
+    width: 100%;
+    background: #0065A1;
+    color: #fff;
+    padding: 6px 0;
+    font-weight: 700;
+    font-size: 13px;
+    text-align: center;
+    border-radius: 6px 6px 0 0;
+    margin-bottom: 4px;
+}
+
 .btn-undo {
     background: #546e7a;
     color: #fff;
