@@ -783,7 +783,6 @@ function onBatches(snapshot) {
     if (Object.keys(migrations).length > 0) {
         batchesRef.update(migrations);
     }
-    assignNumbersToTopBatches();
     render();
     if (activeTab === "latex") renderLatexBoard();
     updateCompletedCount();
@@ -791,60 +790,6 @@ function onBatches(snapshot) {
     if (activeTab === "completed") renderCompleted();
 }
 
-// Auto-assign batch numbers to the top 2 batches in each bowl lane.
-// This is the ONLY place that assigns numbers (besides advanceStatus for queued→mixing).
-// Only ONE assignment runs at a time per client. Uses Firebase transaction on the
-// batch's batchNumber field so multiple clients don't double-assign.
-let _autoAssignInFlight = false;
-function assignNumbersToTopBatches() {
-    if (_autoAssignInFlight) return;
-    for (const bowlKey of BOWL_ORDER) {
-        const laneBatches = batches
-            .filter((b) => b.bowl === bowlKey && b.status !== "batch_complete")
-            .sort((a, b) => {
-                const orderA = a.sortOrder != null ? a.sortOrder : a.createdAt;
-                const orderB = b.sortOrder != null ? b.sortOrder : b.createdAt;
-                return orderA - orderB;
-            });
-
-        // Check top 2 batches in each lane
-        for (let i = 0; i < Math.min(2, laneBatches.length); i++) {
-            if (!laneBatches[i].batchNumber) {
-                const batchId = laneBatches[i].id;
-                _autoAssignInFlight = true;
-                // Read the batch number fresh from the server before consuming a counter value.
-                // This prevents wasting numbers when the local snapshot is stale or
-                // another tab already assigned a number.
-                batchesRef.child(batchId).child("batchNumber").once("value", (snap) => {
-                    if (snap.val()) {
-                        // Batch already got a number (from another tab or stale snapshot)
-                        console.log("[auto-assign] Batch", batchId, "already has", snap.val(), "— skipping");
-                        _autoAssignInFlight = false;
-                        return;
-                    }
-                    assignBatchNumber((batchNumber) => {
-                        console.log("[auto-assign] Assigning", batchNumber, "to batch", batchId);
-                        batchesRef.child(batchId).child("batchNumber").transaction(
-                            (current) => {
-                                if (current) return; // Already set — abort
-                                return batchNumber;
-                            },
-                            (error, committed) => {
-                                if (!committed && !error) {
-                                    console.warn("[auto-assign] Transaction aborted for", batchId, "— number", batchNumber, "was wasted");
-                                } else if (committed) {
-                                    console.log("[auto-assign] Committed", batchNumber, "to batch", batchId);
-                                }
-                                _autoAssignInFlight = false;
-                            }
-                        );
-                    });
-                });
-                return; // Only one at a time per client
-            }
-        }
-    }
-}
 
 function onBatchesError(error) {
     console.error("Firebase connection error:", error);
@@ -2676,8 +2621,7 @@ function duplicateBatch(id) {
         return Math.max(max, order);
     }, -1);
 
-    // Always create without a number — assignNumbersToTopBatches() will
-    // assign one when the Firebase listener fires (prevents race conditions).
+    // Batch number is assigned manually (not auto-assigned).
     const newBatch = buildNewBatch({
         product: batch.product,
         bowl: batch.bowl,
@@ -2706,19 +2650,6 @@ function advanceStatus(id) {
 
     const nextAction = STATUS_NEXT_ACTION[batch.status];
     if (!nextAction) return;
-
-    // If advancing from queued → mixing and batch has no number yet, assign one first
-    if (batch.status === "queued" && !batch.batchNumber) {
-        if (_autoAssignInFlight) return;
-        _autoAssignInFlight = true;
-        assignBatchNumber((batchNumber) => {
-            _autoAssignInFlight = false;
-            batch.batchNumber = batchNumber;
-            batchesRef.child(batch.id).update({ batchNumber });
-            applyStatusAdvance(batch, nextAction.next);
-        });
-        return;
-    }
 
     // If advancing from mixing → mixing_complete, show the viscosity/initials modal
     if (batch.status === "mixing" && nextAction.next === "mixing_complete") {
@@ -3102,8 +3033,7 @@ batchForm.addEventListener("submit", (e) => {
         return Math.max(max, order);
     }, -1);
 
-    // Always create without a number — assignNumbersToTopBatches() will
-    // assign one when the Firebase listener fires (prevents race conditions).
+    // Batch number is assigned manually (not auto-assigned).
     const batch = buildNewBatch({
         product,
         bowl,
