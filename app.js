@@ -2303,12 +2303,14 @@ function createBatchCard(batch) {
     if (batch.pouredBy) extraInfo += `<span class="card-poured-by">Poured: ${escapeHtml(batch.pouredBy)}</span>`;
 
     // Show batch number button at top of every card (admin only)
+    const editable = canEditBatchNumber();
     let assignBtnHtml = "";
     if (isAdmin) {
         if (batch.batchNumber) {
-            assignBtnHtml = `<div class="card-batch-assigned">${escapeHtml(batch.batchNumber)}</div>`;
+            const editClass = editable ? " editable-batch-num" : "";
+            assignBtnHtml = `<div class="card-batch-assigned${editClass}" data-batch-id="${batch.id}">${escapeHtml(batch.batchNumber)}</div>`;
         } else {
-            assignBtnHtml = `<button class="btn btn-sm btn-assign-card" data-action="assign-number" data-id="${batch.id}">Assign Batch Number</button>`;
+            assignBtnHtml = `<button class="btn btn-sm btn-assign-card" data-action="assign-number" data-id="${batch.id}" draggable="false">Assign Batch Number</button>`;
         }
     } else if (batch.batchNumber) {
         assignBtnHtml = `<div class="card-batch-assigned">${escapeHtml(batch.batchNumber)}</div>`;
@@ -2327,6 +2329,42 @@ function createBatchCard(batch) {
         </div>
         ${actionsHtml}
     `;
+
+    // Inline edit batch number (ajolly only)
+    if (editable && batch.batchNumber) {
+        const numDiv = card.querySelector(".editable-batch-num");
+        if (numDiv) {
+            numDiv.addEventListener("click", (e) => {
+                e.stopPropagation();
+                if (numDiv.querySelector("input")) return;
+                const currentVal = batch.batchNumber || "";
+                const input = document.createElement("input");
+                input.type = "text";
+                input.style.cssText = "width:80px;font-size:13px;padding:4px 6px;text-align:center;border:none;border-radius:4px;";
+                input.value = currentVal;
+                numDiv.textContent = "";
+                numDiv.appendChild(input);
+                input.focus();
+                input.select();
+
+                const save = () => {
+                    const val = input.value.trim();
+                    if (val && val !== currentVal && isBatchNumberTaken(val, batch.id)) {
+                        alert("Batch number \"" + val + "\" is already in use.");
+                        input.focus();
+                        return;
+                    }
+                    batch.batchNumber = val || null;
+                    batchesRef.child(batch.id).update({ batchNumber: batch.batchNumber });
+                };
+                input.addEventListener("blur", save);
+                input.addEventListener("keydown", (ev) => {
+                    if (ev.key === "Enter") { ev.preventDefault(); save(); }
+                    if (ev.key === "Escape") { render(); }
+                });
+            });
+        }
+    }
 
     return card;
 }
@@ -2584,7 +2622,12 @@ document.addEventListener("click", (e) => {
     } else if (action === "duplicate" && isAdmin) {
         duplicateBatch(id);
     } else if (action === "assign-number" && isAdmin) {
+        e.stopPropagation();
+        btn.disabled = true;
+        btn.textContent = "Assigning...";
         assignBatchNumber((batchNumber) => {
+            // Show the number immediately on the card
+            btn.outerHTML = `<div class="card-batch-assigned">${batchNumber}</div>`;
             batchesRef.child(id).update({ batchNumber });
         });
     } else if (action === "delete" && isAdmin) {

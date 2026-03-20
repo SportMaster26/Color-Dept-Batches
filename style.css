@@ -237,6 +237,9 @@ header h1 {
     border-radius: 6px 6px 0 0;
     cursor: pointer;
     margin-bottom: 4px;
+    touch-action: manipulation;
+    -webkit-user-select: none;
+    user-select: none;
 }
 
 .btn-assign-card:hover {
@@ -254,6 +257,14 @@ header h1 {
     text-align: center;
     border-radius: 6px 6px 0 0;
     margin-bottom: 4px;
+}
+
+.card-batch-assigned.editable-batch-num {
+    cursor: pointer;
+}
+
+.card-batch-assigned.editable-batch-num:hover {
+    background: #004a7a;
 }
 
 .btn-undo {
