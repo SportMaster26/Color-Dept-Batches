@@ -1182,9 +1182,9 @@ function getCompletedRows() {
     return batches
         .filter((b) => b.status === "batch_complete")
         .sort((a, b) => {
-            const numA = a.batchNumber ? parseBatchNum(a.batchNumber) : Infinity;
-            const numB = b.batchNumber ? parseBatchNum(b.batchNumber) : Infinity;
-            return numA - numB;
+            const tA = a.mixingCompleteAt || a.completedAt || a.pouringAt || a.startedAt || a.createdAt || 0;
+            const tB = b.mixingCompleteAt || b.completedAt || b.pouringAt || b.startedAt || b.createdAt || 0;
+            return tA - tB;
         })
         .map((batch) => {
             const bowlInfo = BOWLS[batch.bowl];
@@ -1301,19 +1301,24 @@ function renderCompleted() {
         ? rows.filter(r => r.batchNumber && r.batchNumber.toUpperCase().includes(batchSearchTerm))
         : rows;
 
-    const editableBatchNum = canEditBatchNumber();
+    const editableBatchNum = canEditBatchNumber() || isAdmin;
     const editableCompleted = canEditCompletedFields();
 
     tbody.innerHTML = filteredRows.map((r, i) => {
-        const batchNumHtml = escapeHtml(r.batchNumber) || "—";
-        const highlighted = batchSearchTerm && r.batchNumber
-            ? batchNumHtml.replace(new RegExp(`(${batchSearchTerm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, "gi"), `<mark class="batch-search-highlight">$1</mark>`)
-            : batchNumHtml;
+        let batchNumContent;
+        if (r.batchNumber) {
+            const batchNumHtml = escapeHtml(r.batchNumber);
+            batchNumContent = batchSearchTerm
+                ? batchNumHtml.replace(new RegExp(`(${batchSearchTerm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, "gi"), `<mark class="batch-search-highlight">$1</mark>`)
+                : batchNumHtml;
+        } else {
+            batchNumContent = editableBatchNum ? `<span class="assign-batch-btn">Assign</span>` : "—";
+        }
         const batchNumClass = `batch-num-cell${editableBatchNum ? ' editable-batch-num' : ''}`;
         const ecf = editableCompleted ? 'editable-completed-field' : '';
         return `<tr>
             <td>${i + 1}</td>
-            <td class="${batchNumClass}" data-batch-id="${r.id}">${highlighted}</td>
+            <td class="${batchNumClass}" data-batch-id="${r.id}">${batchNumContent}</td>
             <td class="${ecf}" data-batch-id="${r.id}" data-field="product">${escapeHtml(r.product)}</td>
             <td class="${ecf}" data-batch-id="${r.id}" data-field="bowl">${escapeHtml(r.bowl)}</td>
             <td class="${ecf}" data-batch-id="${r.id}" data-field="capacity">${r.capacity}</td>
@@ -1332,7 +1337,7 @@ function renderCompleted() {
         </tr>`;
     }).join("");
 
-    // Attach inline-edit handlers for batch number cells (ajolly only)
+    // Attach inline-edit handlers for batch number cells (admin + ajolly)
     if (editableBatchNum) {
         tbody.querySelectorAll(".editable-batch-num").forEach(td => {
             td.addEventListener("click", () => {
@@ -1862,9 +1867,9 @@ function getMixingCompleteRows() {
     return batches
         .filter((b) => validStatuses.includes(b.status) && b.mixingCompleteAt)
         .sort((a, b) => {
-            const numA = a.batchNumber ? parseBatchNum(a.batchNumber) : Infinity;
-            const numB = b.batchNumber ? parseBatchNum(b.batchNumber) : Infinity;
-            return numA - numB;
+            const tA = a.mixingCompleteAt || 0;
+            const tB = b.mixingCompleteAt || 0;
+            return tA - tB;
         })
         .map((batch) => {
             const bowlInfo = BOWLS[batch.bowl];
@@ -3583,6 +3588,34 @@ if (addCompletedBtn) {
         if (user && user.email === "ajolly@colordept.local") {
             addCompletedBtn.classList.remove("hidden");
         }
+    });
+}
+
+// ── Reset All Batch Numbers (admin only) ─────────────────────────────
+const resetAllBatchBtn = document.getElementById("reset-all-batch-numbers-btn");
+if (resetAllBatchBtn) {
+    auth.onAuthStateChanged(user => {
+        if (user && (isAdmin || user.email === "ajolly@colordept.local")) {
+            resetAllBatchBtn.classList.remove("hidden");
+        }
+    });
+    resetAllBatchBtn.addEventListener("click", () => {
+        const withNumbers = batches.filter(b => b.batchNumber);
+        if (withNumbers.length === 0) {
+            alert("No batches have batch numbers assigned.");
+            return;
+        }
+        if (!confirm("This will clear ALL batch numbers from ALL " + withNumbers.length + " batches (active + completed).\n\nYou will need to re-assign every batch number manually.\n\nAre you sure?")) return;
+        if (!confirm("FINAL WARNING: This cannot be undone. " + withNumbers.length + " batch numbers will be erased.\n\nProceed?")) return;
+        const updates = {};
+        for (const b of withNumbers) {
+            updates[b.id + "/batchNumber"] = null;
+        }
+        batchesRef.update(updates).then(() => {
+            alert("Done. All " + withNumbers.length + " batch numbers have been cleared.");
+        }).catch(err => {
+            alert("Error: " + err.message);
+        });
     });
 }
 
