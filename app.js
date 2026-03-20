@@ -284,8 +284,6 @@ let PRODUCT_CATALOG = [
 
 // ── Firebase Reference ──────────────────────────────────────────────
 const batchesRef = db.ref("batches");
-const batchCounterRef = db.ref("meta/batchCounter");
-const recycledNumbersRef = db.ref("meta/recycledNumbers");
 const notesRef = db.ref("notes");
 const customProductsRef = db.ref("meta/customProducts");
 const latexTanksRef = db.ref("latexTanks");
@@ -302,10 +300,6 @@ function parseBatchNum(str) {
 }
 
 /** Format number 437 → "A0437". */
-function formatBatchNum(n) {
-    return "A" + String(n).padStart(4, "0");
-}
-
 /**
  * Returns true if batchNumber is already used by any batch,
  * optionally excluding a specific batch ID (for edits).
@@ -697,27 +691,6 @@ function updateCompletedCount() {
     badge.classList.toggle("hidden", newCount === 0 || activeTab === "completed");
 }
 
-// ── Batch Number Bar ─────────────────────────────────────────────────
-function updateRecycledNumbersBar() {
-    const bar = document.getElementById("recycled-numbers-bar");
-    if (!bar || !isAdmin) return;
-    bar.classList.remove("hidden");
-
-    const nextEl = document.getElementById("next-batch-number");
-    recycledNumbersRef.once("value", (rsnap) => {
-        const pool = rsnap.val();
-        if (pool) {
-            // Show smallest recycled number as next
-            const nums = Object.values(pool).sort((a, b) => a - b);
-            nextEl.textContent = formatBatchNum(nums[0]) + " (from pool: " + nums.map(n => formatBatchNum(n)).join(", ") + ")";
-        } else {
-            batchCounterRef.once("value", (snap) => {
-                const counter = snap.val() || 0;
-                nextEl.textContent = formatBatchNum(counter + 1);
-            });
-        }
-    });
-}
 
 
 // ── Undo Button ─────────────────────────────────────────────────────
@@ -795,7 +768,6 @@ function onBatches(snapshot) {
     render();
     if (activeTab === "latex") renderLatexBoard();
     updateCompletedCount();
-    updateRecycledNumbersBar();
     if (activeTab === "completed") renderCompleted();
 }
 
@@ -2597,33 +2569,6 @@ function duplicateBatch(id) {
     batchesRef.child(newBatch.id).set(newBatch);
 }
 
-// Assign the next batch number — uses skipped/recycled numbers first, then counter.
-function assignBatchNumber(callback) {
-    recycledNumbersRef.once("value", (snap) => {
-        const pool = snap.val();
-        if (pool) {
-            // Find the smallest recycled number
-            const keys = Object.keys(pool);
-            let minKey = keys[0];
-            let minNum = pool[minKey];
-            for (const k of keys) {
-                if (pool[k] < minNum) { minKey = k; minNum = pool[k]; }
-            }
-            // Remove it from the pool, then use it
-            recycledNumbersRef.child(minKey).remove(() => {
-                callback(formatBatchNum(minNum));
-            });
-            return;
-        }
-        // No recycled numbers — increment counter
-        batchCounterRef.transaction((current) => {
-            return (current || 0) + 1;
-        }, (error, committed, snapshot) => {
-            if (error || !committed) { alert("Failed to generate batch number. Please try again."); return; }
-            callback(formatBatchNum(snapshot.val()));
-        });
-    });
-}
 
 function advanceStatus(id) {
     const batch = batches.find((b) => b.id === id);
@@ -3583,14 +3528,8 @@ function importProductionData() {
         updates["batches/" + ab.id + "/batchNumber"] = null;
     }
 
-    // Update batch counter to highest number
-    const highestNum = Math.max(...IMPORT_DATA_2026.map(r => parseInt(r.bn.slice(1))));
-    updates["meta/batchCounter"] = highestNum;
-
     db.ref().update(updates).then(() => {
-        // Clear recycled numbers to avoid conflicts
-        recycledNumbersRef.remove();
-        alert("Import complete!\n\nMatched & updated: " + matchCount + "\nNewly created: " + createCount + "\nActive batch numbers cleared: " + activeBatchesWithConflict.length + "\nBatch counter set to: " + highestNum);
+        alert("Import complete!\n\nMatched & updated: " + matchCount + "\nNewly created: " + createCount + "\nActive batch numbers cleared: " + activeBatchesWithConflict.length);
     }).catch(err => {
         alert("Import failed: " + err.message);
         console.error("Import error:", err);
