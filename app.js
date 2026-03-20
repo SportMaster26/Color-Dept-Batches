@@ -1182,9 +1182,16 @@ function getCompletedRows() {
     return batches
         .filter((b) => b.status === "batch_complete")
         .sort((a, b) => {
-            const numA = a.batchNumber ? parseBatchNum(a.batchNumber) : Infinity;
-            const numB = b.batchNumber ? parseBatchNum(b.batchNumber) : Infinity;
-            return numA - numB;
+            const numA = a.batchNumber ? parseBatchNum(a.batchNumber) : NaN;
+            const numB = b.batchNumber ? parseBatchNum(b.batchNumber) : NaN;
+            const hasA = !isNaN(numA);
+            const hasB = !isNaN(numB);
+            if (hasA && hasB) return numA - numB;
+            if (hasA && !hasB) return -1;
+            if (!hasA && hasB) return 1;
+            const tA = a.completedAt || a.pouringAt || a.startedAt || a.createdAt || 0;
+            const tB = b.completedAt || b.pouringAt || b.startedAt || b.createdAt || 0;
+            return tA - tB;
         })
         .map((batch) => {
             const bowlInfo = BOWLS[batch.bowl];
@@ -1862,9 +1869,16 @@ function getMixingCompleteRows() {
     return batches
         .filter((b) => validStatuses.includes(b.status) && b.mixingCompleteAt)
         .sort((a, b) => {
-            const numA = a.batchNumber ? parseBatchNum(a.batchNumber) : Infinity;
-            const numB = b.batchNumber ? parseBatchNum(b.batchNumber) : Infinity;
-            return numA - numB;
+            const numA = a.batchNumber ? parseBatchNum(a.batchNumber) : NaN;
+            const numB = b.batchNumber ? parseBatchNum(b.batchNumber) : NaN;
+            const hasA = !isNaN(numA);
+            const hasB = !isNaN(numB);
+            if (hasA && hasB) return numA - numB;
+            if (hasA && !hasB) return -1;
+            if (!hasA && hasB) return 1;
+            const tA = a.completedAt || a.mixingCompleteAt || a.startedAt || a.createdAt || 0;
+            const tB = b.completedAt || b.mixingCompleteAt || b.startedAt || b.createdAt || 0;
+            return tA - tB;
         })
         .map((batch) => {
             const bowlInfo = BOWLS[batch.bowl];
