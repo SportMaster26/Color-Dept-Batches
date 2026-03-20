@@ -3629,21 +3629,29 @@ if (resetAllBatchBtn) {
         }
     });
     resetAllBatchBtn.addEventListener("click", () => {
-        const withNumbers = batches.filter(b => b.batchNumber);
-        if (withNumbers.length === 0) {
-            alert("No batches have batch numbers assigned.");
-            return;
-        }
-        if (!confirm("This will clear ALL batch numbers from ALL " + withNumbers.length + " batches (active + completed).\n\nYou will need to re-assign every batch number manually.\n\nAre you sure?")) return;
-        if (!confirm("FINAL WARNING: This cannot be undone. " + withNumbers.length + " batch numbers will be erased.\n\nProceed?")) return;
-        const updates = {};
-        for (const b of withNumbers) {
-            updates[b.id + "/batchNumber"] = null;
-        }
-        batchesRef.update(updates).then(() => {
-            alert("Done. All " + withNumbers.length + " batch numbers have been cleared.");
-        }).catch(err => {
-            alert("Error: " + err.message);
+        if (!confirm("This will clear ALL batch numbers from EVERY batch (active + completed).\n\nYou will need to re-assign every batch number manually.\n\nAre you sure?")) return;
+        if (!confirm("FINAL WARNING: This cannot be undone. ALL batch numbers will be erased.\n\nProceed?")) return;
+        // Read directly from Firebase to catch everything
+        batchesRef.once("value", (snapshot) => {
+            const data = snapshot.val();
+            if (!data) { alert("No batches found."); return; }
+            const updates = {};
+            let count = 0;
+            for (const id of Object.keys(data)) {
+                if (data[id].batchNumber) {
+                    updates[id + "/batchNumber"] = null;
+                    count++;
+                }
+            }
+            if (count === 0) {
+                alert("No batches have batch numbers assigned.");
+                return;
+            }
+            batchesRef.update(updates).then(() => {
+                alert("Done. Cleared " + count + " batch numbers.");
+            }).catch(err => {
+                alert("Error: " + err.message);
+            });
         });
     });
 }
