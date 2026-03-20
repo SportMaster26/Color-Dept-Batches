@@ -2310,7 +2310,7 @@ function createBatchCard(batch) {
             const editClass = editable ? " editable-batch-num" : "";
             assignBtnHtml = `<div class="card-batch-assigned${editClass}" data-batch-id="${batch.id}">${escapeHtml(batch.batchNumber)}</div>`;
         } else {
-            assignBtnHtml = `<button class="btn btn-sm btn-assign-card" data-action="assign-number" data-id="${batch.id}">Assign Batch Number</button>`;
+            assignBtnHtml = `<button class="btn btn-sm btn-assign-card" data-action="assign-number" data-id="${batch.id}" draggable="false">Assign Batch Number</button>`;
         }
     } else if (batch.batchNumber) {
         assignBtnHtml = `<div class="card-batch-assigned">${escapeHtml(batch.batchNumber)}</div>`;
@@ -2622,7 +2622,12 @@ document.addEventListener("click", (e) => {
     } else if (action === "duplicate" && isAdmin) {
         duplicateBatch(id);
     } else if (action === "assign-number" && isAdmin) {
+        e.stopPropagation();
+        btn.disabled = true;
+        btn.textContent = "Assigning...";
         assignBatchNumber((batchNumber) => {
+            // Show the number immediately on the card
+            btn.outerHTML = `<div class="card-batch-assigned">${batchNumber}</div>`;
             batchesRef.child(id).update({ batchNumber });
         });
     } else if (action === "delete" && isAdmin) {
