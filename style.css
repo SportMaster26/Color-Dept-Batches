@@ -256,6 +256,14 @@ header h1 {
     margin-bottom: 4px;
 }
 
+.card-batch-assigned.editable-batch-num {
+    cursor: pointer;
+}
+
+.card-batch-assigned.editable-batch-num:hover {
+    background: #004a7a;
+}
+
 .btn-undo {
     background: #546e7a;
     color: #fff;
