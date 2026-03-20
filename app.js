@@ -3648,7 +3648,8 @@ if (resetAllBatchBtn) {
                 return;
             }
             batchesRef.update(updates).then(() => {
-                alert("Done. Cleared " + count + " batch numbers.");
+                alert("Done. Cleared " + count + " batch numbers. Page will reload.");
+                window.location.reload();
             }).catch(err => {
                 alert("Error: " + err.message);
             });
