@@ -3591,6 +3591,34 @@ if (addCompletedBtn) {
     });
 }
 
+// ── Reset All Batch Numbers (admin only) ─────────────────────────────
+const resetAllBatchBtn = document.getElementById("reset-all-batch-numbers-btn");
+if (resetAllBatchBtn) {
+    auth.onAuthStateChanged(user => {
+        if (user && (isAdmin || user.email === "ajolly@colordept.local")) {
+            resetAllBatchBtn.classList.remove("hidden");
+        }
+    });
+    resetAllBatchBtn.addEventListener("click", () => {
+        const withNumbers = batches.filter(b => b.batchNumber);
+        if (withNumbers.length === 0) {
+            alert("No batches have batch numbers assigned.");
+            return;
+        }
+        if (!confirm("This will clear ALL batch numbers from ALL " + withNumbers.length + " batches (active + completed).\n\nYou will need to re-assign every batch number manually.\n\nAre you sure?")) return;
+        if (!confirm("FINAL WARNING: This cannot be undone. " + withNumbers.length + " batch numbers will be erased.\n\nProceed?")) return;
+        const updates = {};
+        for (const b of withNumbers) {
+            updates[b.id + "/batchNumber"] = null;
+        }
+        batchesRef.update(updates).then(() => {
+            alert("Done. All " + withNumbers.length + " batch numbers have been cleared.");
+        }).catch(err => {
+            alert("Error: " + err.message);
+        });
+    });
+}
+
 // ── Add Completed Batch (AJOLLY only) ────────────────────────────────
 if (addCompletedBtn) {
     const acOverlay = document.getElementById("add-completed-overlay");
