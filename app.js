@@ -704,9 +704,18 @@ function updateRecycledNumbersBar() {
     bar.classList.remove("hidden");
 
     const nextEl = document.getElementById("next-batch-number");
-    batchCounterRef.once("value", (snap) => {
-        const counter = snap.val() || 0;
-        nextEl.textContent = formatBatchNum(counter + 1);
+    recycledNumbersRef.once("value", (rsnap) => {
+        const pool = rsnap.val();
+        if (pool) {
+            // Show smallest recycled number as next
+            const nums = Object.values(pool).sort((a, b) => a - b);
+            nextEl.textContent = formatBatchNum(nums[0]) + " (from pool: " + nums.map(n => formatBatchNum(n)).join(", ") + ")";
+        } else {
+            batchCounterRef.once("value", (snap) => {
+                const counter = snap.val() || 0;
+                nextEl.textContent = formatBatchNum(counter + 1);
+            });
+        }
     });
 }
 
@@ -2598,14 +2607,31 @@ function duplicateBatch(id) {
     batchesRef.child(newBatch.id).set(newBatch);
 }
 
-// Assign the next batch number from the counter.
-// Uses Firebase transaction on counter for atomic increment across multiple clients.
+// Assign the next batch number — uses skipped/recycled numbers first, then counter.
 function assignBatchNumber(callback) {
-    batchCounterRef.transaction((current) => {
-        return (current || 0) + 1;
-    }, (error, committed, snapshot) => {
-        if (error || !committed) { alert("Failed to generate batch number. Please try again."); return; }
-        callback(formatBatchNum(snapshot.val()));
+    recycledNumbersRef.once("value", (snap) => {
+        const pool = snap.val();
+        if (pool) {
+            // Find the smallest recycled number
+            const keys = Object.keys(pool);
+            let minKey = keys[0];
+            let minNum = pool[minKey];
+            for (const k of keys) {
+                if (pool[k] < minNum) { minKey = k; minNum = pool[k]; }
+            }
+            // Remove it from the pool, then use it
+            recycledNumbersRef.child(minKey).remove(() => {
+                callback(formatBatchNum(minNum));
+            });
+            return;
+        }
+        // No recycled numbers — increment counter
+        batchCounterRef.transaction((current) => {
+            return (current || 0) + 1;
+        }, (error, committed, snapshot) => {
+            if (error || !committed) { alert("Failed to generate batch number. Please try again."); return; }
+            callback(formatBatchNum(snapshot.val()));
+        });
     });
 }
 
