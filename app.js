@@ -2274,7 +2274,12 @@ function createBatchCard(batch) {
     }
     if (batch.pouredBy) extraInfo += `<span class="card-poured-by">Poured: ${escapeHtml(batch.pouredBy)}</span>`;
 
+    // Clickable batch number banner at top of card (admin can type to set/edit)
+    const batchNumText = batch.batchNumber ? escapeHtml(batch.batchNumber) : "[ + Batch # ]";
+    const batchNumClass = batch.batchNumber ? "card-batch-banner has-number" : "card-batch-banner no-number";
+
     card.innerHTML = `
+        <div class="${batchNumClass}" data-batch-id="${batch.id}">${batchNumText}</div>
         <div class="card-top">
             <span class="card-product">${escapeHtml(batch.product)}</span>
             <span class="card-status">${statusLabel}</span>
@@ -2286,6 +2291,41 @@ function createBatchCard(batch) {
         </div>
         ${actionsHtml}
     `;
+
+    // Click banner to type in batch number (admin only)
+    if (isAdmin) {
+        const banner = card.querySelector(".card-batch-banner");
+        banner.addEventListener("click", (e) => {
+            e.stopPropagation();
+            if (banner.querySelector("input")) return;
+            const currentVal = batch.batchNumber || "";
+            const input = document.createElement("input");
+            input.type = "text";
+            input.className = "batch-num-input";
+            input.value = currentVal;
+            input.placeholder = "e.g. A0424";
+            banner.textContent = "";
+            banner.appendChild(input);
+            input.focus();
+            input.select();
+
+            const save = () => {
+                const val = input.value.trim().toUpperCase();
+                if (val && val !== currentVal && isBatchNumberTaken(val, batch.id)) {
+                    alert("Batch number \"" + val + "\" is already in use.");
+                    input.focus();
+                    return;
+                }
+                batch.batchNumber = val || null;
+                batchesRef.child(batch.id).update({ batchNumber: batch.batchNumber });
+            };
+            input.addEventListener("blur", save);
+            input.addEventListener("keydown", (ev) => {
+                if (ev.key === "Enter") { ev.preventDefault(); input.blur(); }
+                if (ev.key === "Escape") { render(); }
+            });
+        });
+    }
 
     return card;
 }

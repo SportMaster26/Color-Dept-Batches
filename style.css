@@ -197,6 +197,49 @@ header h1 {
     background: #B87D1F;
 }
 
+.card-batch-banner {
+    display: block;
+    width: 100%;
+    padding: 6px 0;
+    font-weight: 700;
+    font-size: 13px;
+    text-align: center;
+    border-radius: 6px 6px 0 0;
+    margin-bottom: 4px;
+    cursor: pointer;
+    touch-action: manipulation;
+}
+
+.card-batch-banner.has-number {
+    background: #0065A1;
+    color: #fff;
+}
+
+.card-batch-banner.has-number:hover {
+    background: #004a7a;
+}
+
+.card-batch-banner.no-number {
+    background: #e8ecf0;
+    color: #667788;
+    border: 2px dashed #bcc3ce;
+}
+
+.card-batch-banner.no-number:hover {
+    background: #d0d5dd;
+    color: #333;
+}
+
+.batch-num-input {
+    width: 90px;
+    font-size: 13px;
+    font-weight: 700;
+    padding: 3px 6px;
+    text-align: center;
+    border: 2px solid #fff;
+    border-radius: 4px;
+    text-transform: uppercase;
+}
 
 .btn-undo {
     background: #546e7a;
