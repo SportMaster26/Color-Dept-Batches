@@ -788,11 +788,6 @@ function onBatches(snapshot) {
             batch.status = "batch_complete";
             migrations[batch.id + "/status"] = "batch_complete";
         }
-        // One-time: clear all batch numbers from active batches
-        if (batch.status !== "batch_complete" && batch.batchNumber) {
-            batch.batchNumber = null;
-            migrations[batch.id + "/batchNumber"] = null;
-        }
     }
     if (Object.keys(migrations).length > 0) {
         batchesRef.update(migrations);
