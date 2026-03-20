@@ -225,6 +225,17 @@ header h1 {
     background: #B87D1F;
 }
 
+.btn-assign-number {
+    background: #2e7d32;
+    color: #fff;
+    padding: 10px 20px;
+    font-weight: 600;
+}
+
+.btn-assign-number:hover {
+    background: #1b5e20;
+}
+
 .btn-undo {
     background: #546e7a;
     color: #fff;

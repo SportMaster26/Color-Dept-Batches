@@ -783,7 +783,6 @@ function onBatches(snapshot) {
     if (Object.keys(migrations).length > 0) {
         batchesRef.update(migrations);
     }
-    assignNumbersToTopBatches();
     render();
     if (activeTab === "latex") renderLatexBoard();
     updateCompletedCount();
@@ -791,49 +790,6 @@ function onBatches(snapshot) {
     if (activeTab === "completed") renderCompleted();
 }
 
-// Auto-assign batch numbers to the top 2 batches in each bowl lane.
-// This is the ONLY place that assigns numbers (besides advanceStatus for queued→mixing).
-// Only ONE assignment runs at a time per client. Uses Firebase transaction on the
-// batch's batchNumber field so multiple clients don't double-assign.
-let _autoAssignInFlight = false;
-function assignNumbersToTopBatches() {
-    if (_autoAssignInFlight) return;
-    for (const bowlKey of BOWL_ORDER) {
-        const laneBatches = batches
-            .filter((b) => b.bowl === bowlKey && b.status !== "batch_complete")
-            .sort((a, b) => {
-                const orderA = a.sortOrder != null ? a.sortOrder : a.createdAt;
-                const orderB = b.sortOrder != null ? b.sortOrder : b.createdAt;
-                return orderA - orderB;
-            });
-
-        // Check top 2 batches in each lane
-        for (let i = 0; i < Math.min(2, laneBatches.length); i++) {
-            if (!laneBatches[i].batchNumber) {
-                const batchId = laneBatches[i].id;
-                _autoAssignInFlight = true;
-                // Increment counter and write batch number in one flow.
-                // If batch already has a number, decrement counter to undo.
-                assignBatchNumber((batchNumber) => {
-                    batchesRef.child(batchId).child("batchNumber").transaction(
-                        (current) => {
-                            if (current) return; // Already set — abort
-                            return batchNumber;
-                        },
-                        (error, committed) => {
-                            _autoAssignInFlight = false;
-                            if (!committed && !error) {
-                                // Batch already had a number — return counter value
-                                batchCounterRef.transaction((cur) => (cur || 1) - 1);
-                            }
-                        }
-                    );
-                });
-                return; // Only one at a time per client
-            }
-        }
-    }
-}
 
 function onBatchesError(error) {
     console.error("Firebase connection error:", error);
@@ -2665,8 +2621,7 @@ function duplicateBatch(id) {
         return Math.max(max, order);
     }, -1);
 
-    // Always create without a number — assignNumbersToTopBatches() will
-    // assign one when the Firebase listener fires (prevents race conditions).
+    // Batch number is assigned manually (not auto-assigned).
     const newBatch = buildNewBatch({
         product: batch.product,
         bowl: batch.bowl,
@@ -2678,7 +2633,7 @@ function duplicateBatch(id) {
     batchesRef.child(newBatch.id).set(newBatch);
 }
 
-// Reusable helper: assign a batch number (recycled first, then counter).
+// Assign the next batch number from the counter.
 // Uses Firebase transaction on counter for atomic increment across multiple clients.
 function assignBatchNumber(callback) {
     batchCounterRef.transaction((current) => {
@@ -2695,19 +2650,6 @@ function advanceStatus(id) {
 
     const nextAction = STATUS_NEXT_ACTION[batch.status];
     if (!nextAction) return;
-
-    // If advancing from queued → mixing and batch has no number yet, assign one first
-    if (batch.status === "queued" && !batch.batchNumber) {
-        if (_autoAssignInFlight) return;
-        _autoAssignInFlight = true;
-        assignBatchNumber((batchNumber) => {
-            _autoAssignInFlight = false;
-            batch.batchNumber = batchNumber;
-            batchesRef.child(batch.id).update({ batchNumber });
-            applyStatusAdvance(batch, nextAction.next);
-        });
-        return;
-    }
 
     // If advancing from mixing → mixing_complete, show the viscosity/initials modal
     if (batch.status === "mixing" && nextAction.next === "mixing_complete") {
@@ -2989,6 +2931,26 @@ function deleteBatch(id) {
 const modalOverlay = document.getElementById("modal-overlay");
 const batchForm = document.getElementById("batch-form");
 
+document.getElementById("assign-number-btn").addEventListener("click", () => {
+    if (!isAdmin) return;
+    // Find the oldest active batch without a batch number
+    const unassigned = batches
+        .filter((b) => !b.batchNumber && b.status !== "batch_complete")
+        .sort((a, b) => {
+            const orderA = a.sortOrder != null ? a.sortOrder : a.createdAt;
+            const orderB = b.sortOrder != null ? b.sortOrder : b.createdAt;
+            return orderA - orderB;
+        });
+    if (unassigned.length === 0) {
+        alert("All active batches already have numbers.");
+        return;
+    }
+    const batch = unassigned[0];
+    assignBatchNumber((batchNumber) => {
+        batchesRef.child(batch.id).update({ batchNumber });
+    });
+});
+
 document.getElementById("add-batch-btn").addEventListener("click", () => {
     if (!isAdmin) return;
     modalOverlay.classList.remove("hidden");
@@ -3091,8 +3053,7 @@ batchForm.addEventListener("submit", (e) => {
         return Math.max(max, order);
     }, -1);
 
-    // Always create without a number — assignNumbersToTopBatches() will
-    // assign one when the Firebase listener fires (prevents race conditions).
+    // Batch number is assigned manually (not auto-assigned).
     const batch = buildNewBatch({
         product,
         bowl,
