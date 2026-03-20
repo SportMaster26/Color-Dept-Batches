@@ -2302,10 +2302,17 @@ function createBatchCard(batch) {
     }
     if (batch.pouredBy) extraInfo += `<span class="card-poured-by">Poured: ${escapeHtml(batch.pouredBy)}</span>`;
 
-    // Show "Assign Batch Number" button at top of card if no number assigned (admin only)
-    const assignBtnHtml = (!batch.batchNumber && isAdmin)
-        ? `<button class="btn btn-sm btn-assign-card" data-action="assign-number" data-id="${batch.id}">Assign Batch Number</button>`
-        : "";
+    // Show batch number button at top of every card (admin only)
+    let assignBtnHtml = "";
+    if (isAdmin) {
+        if (batch.batchNumber) {
+            assignBtnHtml = `<div class="card-batch-assigned">${escapeHtml(batch.batchNumber)}</div>`;
+        } else {
+            assignBtnHtml = `<button class="btn btn-sm btn-assign-card" data-action="assign-number" data-id="${batch.id}">Assign Batch Number</button>`;
+        }
+    } else if (batch.batchNumber) {
+        assignBtnHtml = `<div class="card-batch-assigned">${escapeHtml(batch.batchNumber)}</div>`;
+    }
 
     card.innerHTML = `
         ${assignBtnHtml}
