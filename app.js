@@ -2633,7 +2633,7 @@ function duplicateBatch(id) {
     batchesRef.child(newBatch.id).set(newBatch);
 }
 
-// Reusable helper: assign a batch number (recycled first, then counter).
+// Assign the next batch number from the counter.
 // Uses Firebase transaction on counter for atomic increment across multiple clients.
 function assignBatchNumber(callback) {
     batchCounterRef.transaction((current) => {
@@ -2930,6 +2930,26 @@ function deleteBatch(id) {
 // ── Modal ───────────────────────────────────────────────────────────
 const modalOverlay = document.getElementById("modal-overlay");
 const batchForm = document.getElementById("batch-form");
+
+document.getElementById("assign-number-btn").addEventListener("click", () => {
+    if (!isAdmin) return;
+    // Find the oldest active batch without a batch number
+    const unassigned = batches
+        .filter((b) => !b.batchNumber && b.status !== "batch_complete")
+        .sort((a, b) => {
+            const orderA = a.sortOrder != null ? a.sortOrder : a.createdAt;
+            const orderB = b.sortOrder != null ? b.sortOrder : b.createdAt;
+            return orderA - orderB;
+        });
+    if (unassigned.length === 0) {
+        alert("All active batches already have numbers.");
+        return;
+    }
+    const batch = unassigned[0];
+    assignBatchNumber((batchNumber) => {
+        batchesRef.child(batch.id).update({ batchNumber });
+    });
+});
 
 document.getElementById("add-batch-btn").addEventListener("click", () => {
     if (!isAdmin) return;
