@@ -299,6 +299,14 @@ function parseBatchNum(str) {
     return parseInt(str.slice(1), 10);
 }
 
+function getNextBatchNumber() {
+    const usedNums = batches
+        .map(b => parseBatchNum(b.batchNumber))
+        .filter(n => !isNaN(n));
+    const max = usedNums.length > 0 ? Math.max(...usedNums) : 0;
+    return "A" + String(max + 1).padStart(4, "0");
+}
+
 /** Format number 437 → "A0437". */
 /**
  * Returns true if batchNumber is already used by any batch,
@@ -1346,7 +1354,17 @@ function renderCompleted() {
                 const batch = batches.find(b => b.id === batchId);
                 if (!batch) return;
 
-                const currentVal = batch.batchNumber || "";
+                // No number yet — auto-assign next in sequence
+                if (!batch.batchNumber) {
+                    const nextNum = getNextBatchNumber();
+                    batch.batchNumber = nextNum;
+                    batchesRef.child(batchId).update({ batchNumber: nextNum });
+                    td.innerHTML = escapeHtml(nextNum);
+                    return;
+                }
+
+                // Already has a number — allow editing
+                const currentVal = batch.batchNumber;
                 const input = document.createElement("input");
                 input.type = "text";
                 input.className = "tank-input";
@@ -1358,7 +1376,7 @@ function renderCompleted() {
                 input.select();
 
                 const save = () => {
-                    const val = input.value.trim();
+                    const val = input.value.trim().toUpperCase();
                     if (val && val !== currentVal) {
                         if (isBatchNumberTaken(val, batchId)) {
                             alert("Batch number \"" + val + "\" is already in use by another batch.");
@@ -1368,12 +1386,12 @@ function renderCompleted() {
                     }
                     batch.batchNumber = val || null;
                     batchesRef.child(batchId).update({ batchNumber: batch.batchNumber });
-                    td.innerHTML = batch.batchNumber ? escapeHtml(batch.batchNumber) : "—";
+                    td.innerHTML = batch.batchNumber ? escapeHtml(batch.batchNumber) : `<span class="assign-batch-btn">Assign</span>`;
                 };
                 input.addEventListener("blur", save);
                 input.addEventListener("keydown", (e) => {
                     if (e.key === "Enter") { e.preventDefault(); save(); }
-                    if (e.key === "Escape") { td.innerHTML = currentVal ? escapeHtml(currentVal) : "—"; }
+                    if (e.key === "Escape") { td.innerHTML = escapeHtml(currentVal); }
                 });
             });
         });
@@ -2297,18 +2315,29 @@ function createBatchCard(batch) {
         ${actionsHtml}
     `;
 
-    // Click banner to type in batch number (admin only)
+    // Click banner to assign/edit batch number (admin only)
     if (isAdmin) {
         const banner = card.querySelector(".card-batch-banner");
         banner.addEventListener("click", (e) => {
             e.stopPropagation();
+
+            // No number yet — auto-assign next in sequence
+            if (!batch.batchNumber) {
+                const nextNum = getNextBatchNumber();
+                batch.batchNumber = nextNum;
+                batchesRef.child(batch.id).update({ batchNumber: nextNum });
+                banner.textContent = nextNum;
+                banner.className = "card-batch-banner has-number";
+                return;
+            }
+
+            // Already has a number — allow editing
             if (banner.querySelector("input")) return;
-            const currentVal = batch.batchNumber || "";
+            const currentVal = batch.batchNumber;
             const input = document.createElement("input");
             input.type = "text";
             input.className = "batch-num-input";
             input.value = currentVal;
-            input.placeholder = "e.g. A0424";
             banner.textContent = "";
             banner.appendChild(input);
             input.focus();
@@ -3600,21 +3629,29 @@ if (resetAllBatchBtn) {
         }
     });
     resetAllBatchBtn.addEventListener("click", () => {
-        const withNumbers = batches.filter(b => b.batchNumber);
-        if (withNumbers.length === 0) {
-            alert("No batches have batch numbers assigned.");
-            return;
-        }
-        if (!confirm("This will clear ALL batch numbers from ALL " + withNumbers.length + " batches (active + completed).\n\nYou will need to re-assign every batch number manually.\n\nAre you sure?")) return;
-        if (!confirm("FINAL WARNING: This cannot be undone. " + withNumbers.length + " batch numbers will be erased.\n\nProceed?")) return;
-        const updates = {};
-        for (const b of withNumbers) {
-            updates[b.id + "/batchNumber"] = null;
-        }
-        batchesRef.update(updates).then(() => {
-            alert("Done. All " + withNumbers.length + " batch numbers have been cleared.");
-        }).catch(err => {
-            alert("Error: " + err.message);
+        if (!confirm("This will clear ALL batch numbers from EVERY batch (active + completed).\n\nYou will need to re-assign every batch number manually.\n\nAre you sure?")) return;
+        if (!confirm("FINAL WARNING: This cannot be undone. ALL batch numbers will be erased.\n\nProceed?")) return;
+        // Read directly from Firebase to catch everything
+        batchesRef.once("value", (snapshot) => {
+            const data = snapshot.val();
+            if (!data) { alert("No batches found."); return; }
+            const updates = {};
+            let count = 0;
+            for (const id of Object.keys(data)) {
+                if (data[id].batchNumber) {
+                    updates[id + "/batchNumber"] = null;
+                    count++;
+                }
+            }
+            if (count === 0) {
+                alert("No batches have batch numbers assigned.");
+                return;
+            }
+            batchesRef.update(updates).then(() => {
+                alert("Done. Cleared " + count + " batch numbers.");
+            }).catch(err => {
+                alert("Error: " + err.message);
+            });
         });
     });
 }
