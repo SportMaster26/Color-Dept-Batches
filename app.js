@@ -812,22 +812,33 @@ function assignNumbersToTopBatches() {
             if (!laneBatches[i].batchNumber) {
                 const batchId = laneBatches[i].id;
                 _autoAssignInFlight = true;
-                // Increment counter and write batch number in one flow.
-                // If batch already has a number, decrement counter to undo.
-                assignBatchNumber((batchNumber) => {
-                    batchesRef.child(batchId).child("batchNumber").transaction(
-                        (current) => {
-                            if (current) return; // Already set — abort
-                            return batchNumber;
-                        },
-                        (error, committed) => {
-                            _autoAssignInFlight = false;
-                            if (!committed && !error) {
-                                // Batch already had a number — return counter value
-                                batchCounterRef.transaction((cur) => (cur || 1) - 1);
+                // Read the batch number fresh from the server before consuming a counter value.
+                // This prevents wasting numbers when the local snapshot is stale or
+                // another tab already assigned a number.
+                batchesRef.child(batchId).child("batchNumber").once("value", (snap) => {
+                    if (snap.val()) {
+                        // Batch already got a number (from another tab or stale snapshot)
+                        console.log("[auto-assign] Batch", batchId, "already has", snap.val(), "— skipping");
+                        _autoAssignInFlight = false;
+                        return;
+                    }
+                    assignBatchNumber((batchNumber) => {
+                        console.log("[auto-assign] Assigning", batchNumber, "to batch", batchId);
+                        batchesRef.child(batchId).child("batchNumber").transaction(
+                            (current) => {
+                                if (current) return; // Already set — abort
+                                return batchNumber;
+                            },
+                            (error, committed) => {
+                                if (!committed && !error) {
+                                    console.warn("[auto-assign] Transaction aborted for", batchId, "— number", batchNumber, "was wasted");
+                                } else if (committed) {
+                                    console.log("[auto-assign] Committed", batchNumber, "to batch", batchId);
+                                }
+                                _autoAssignInFlight = false;
                             }
-                        }
-                    );
+                        );
+                    });
                 });
                 return; // Only one at a time per client
             }
