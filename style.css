@@ -86,34 +86,6 @@ header h1 {
     border-bottom: 2px solid #d0d5dd;
 }
 
-/* ── Recycled Numbers Bar ─────────────────────────────────────────── */
-.recycled-numbers-bar {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    background: #fff8e1;
-    border-bottom: 1px solid #ffe082;
-    padding: 6px 24px;
-    font-size: 0.85rem;
-    color: #5d4037;
-}
-.recycled-label {
-    font-weight: 700;
-    color: #e65100;
-}
-.recycled-numbers-list {
-    font-weight: 600;
-    color: #1565c0;
-    letter-spacing: 0.5px;
-}
-.recycled-sep {
-    color: #bbb;
-    margin: 0 4px;
-}
-.next-batch-number {
-    font-weight: 700;
-    color: #2e7d32;
-}
 
 .tab-btn {
     border: none;
@@ -225,47 +197,6 @@ header h1 {
     background: #B87D1F;
 }
 
-.btn-assign-card {
-    display: block;
-    width: 100%;
-    background: #2e7d32;
-    color: #fff;
-    padding: 6px 0;
-    font-weight: 600;
-    font-size: 12px;
-    border: none;
-    border-radius: 6px 6px 0 0;
-    cursor: pointer;
-    margin-bottom: 4px;
-    touch-action: manipulation;
-    -webkit-user-select: none;
-    user-select: none;
-}
-
-.btn-assign-card:hover {
-    background: #1b5e20;
-}
-
-.card-batch-assigned {
-    display: block;
-    width: 100%;
-    background: #0065A1;
-    color: #fff;
-    padding: 6px 0;
-    font-weight: 700;
-    font-size: 13px;
-    text-align: center;
-    border-radius: 6px 6px 0 0;
-    margin-bottom: 4px;
-}
-
-.card-batch-assigned.editable-batch-num {
-    cursor: pointer;
-}
-
-.card-batch-assigned.editable-batch-num:hover {
-    background: #004a7a;
-}
 
 .btn-undo {
     background: #546e7a;
