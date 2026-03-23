@@ -225,7 +225,14 @@ header h1 {
     border: 2px dashed #bcc3ce;
 }
 
-.card-batch-banner.no-number:hover {
+@media (hover: hover) {
+    .card-batch-banner.no-number:hover {
+        background: #d0d5dd;
+        color: #333;
+    }
+}
+
+.card-batch-banner.no-number:active {
     background: #d0d5dd;
     color: #333;
 }

@@ -2312,7 +2312,7 @@ function createBatchCard(batch) {
     if (batch.pouredBy) extraInfo += `<span class="card-poured-by">Poured: ${escapeHtml(batch.pouredBy)}</span>`;
 
     // Clickable batch number banner at top of card (admin can type to set/edit)
-    const batchNumText = batch.batchNumber ? escapeHtml(batch.batchNumber) : "[ + Batch # ]";
+    const batchNumText = batch.batchNumber ? escapeHtml(batch.batchNumber) : "Assign Batch Number";
     const batchNumClass = batch.batchNumber ? "card-batch-banner has-number" : "card-batch-banner no-number";
 
     card.innerHTML = `
@@ -2334,6 +2334,9 @@ function createBatchCard(batch) {
     const canEditBatchCard = isAdmin || canEditBatchNumber();
     if (canAssignBatchCard) {
         const banner = card.querySelector(".card-batch-banner");
+        // Prevent draggable card from stealing taps on the banner (mobile)
+        banner.draggable = false;
+        banner.addEventListener("dragstart", (e) => { e.preventDefault(); e.stopPropagation(); });
         banner.addEventListener("click", (e) => {
             e.stopPropagation();
 
