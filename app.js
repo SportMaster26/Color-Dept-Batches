@@ -1190,6 +1190,13 @@ function getCompletedRows() {
     return batches
         .filter((b) => b.status === "batch_complete")
         .sort((a, b) => {
+            const numA = a.batchNumber ? parseInt(a.batchNumber, 10) : null;
+            const numB = b.batchNumber ? parseInt(b.batchNumber, 10) : null;
+            // Batches with numbers come first, sorted numerically
+            if (numA != null && numB != null) return numA - numB;
+            if (numA != null) return -1;
+            if (numB != null) return 1;
+            // Both without numbers — fall back to timestamp
             const tA = a.mixingCompleteAt || a.completedAt || a.pouringAt || a.startedAt || a.createdAt || 0;
             const tB = b.mixingCompleteAt || b.completedAt || b.pouringAt || b.startedAt || b.createdAt || 0;
             return tA - tB;
@@ -3648,7 +3655,8 @@ if (resetAllBatchBtn) {
                 return;
             }
             batchesRef.update(updates).then(() => {
-                alert("Done. Cleared " + count + " batch numbers.");
+                alert("Done. Cleared " + count + " batch numbers. Page will reload.");
+                window.location.reload();
             }).catch(err => {
                 alert("Error: " + err.message);
             });
