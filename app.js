@@ -3627,42 +3627,6 @@ if (addCompletedBtn) {
     });
 }
 
-// ── Reset All Batch Numbers (admin only) ─────────────────────────────
-const resetAllBatchBtn = document.getElementById("reset-all-batch-numbers-btn");
-if (resetAllBatchBtn) {
-    auth.onAuthStateChanged(user => {
-        if (user && (isAdmin || user.email === "ajolly@colordept.local")) {
-            resetAllBatchBtn.classList.remove("hidden");
-        }
-    });
-    resetAllBatchBtn.addEventListener("click", () => {
-        if (!confirm("This will clear ALL batch numbers from EVERY batch (active + completed).\n\nYou will need to re-assign every batch number manually.\n\nAre you sure?")) return;
-        if (!confirm("FINAL WARNING: This cannot be undone. ALL batch numbers will be erased.\n\nProceed?")) return;
-        // Read directly from Firebase to catch everything
-        batchesRef.once("value", (snapshot) => {
-            const data = snapshot.val();
-            if (!data) { alert("No batches found."); return; }
-            const updates = {};
-            let count = 0;
-            for (const id of Object.keys(data)) {
-                if (data[id].batchNumber) {
-                    updates[id + "/batchNumber"] = null;
-                    count++;
-                }
-            }
-            if (count === 0) {
-                alert("No batches have batch numbers assigned.");
-                return;
-            }
-            batchesRef.update(updates).then(() => {
-                alert("Done. Cleared " + count + " batch numbers. Page will reload.");
-                window.location.reload();
-            }).catch(err => {
-                alert("Error: " + err.message);
-            });
-        });
-    });
-}
 
 // ── Add Completed Batch (AJOLLY only) ────────────────────────────────
 if (addCompletedBtn) {
