@@ -300,11 +300,14 @@ function parseBatchNum(str) {
 }
 
 function getNextBatchNumber() {
-    const usedNums = batches
-        .map(b => parseBatchNum(b.batchNumber))
-        .filter(n => !isNaN(n));
-    const max = usedNums.length > 0 ? Math.max(...usedNums) : 0;
-    return "A" + String(max + 1).padStart(4, "0");
+    const usedNums = new Set(
+        batches
+            .map(b => parseBatchNum(b.batchNumber))
+            .filter(n => !isNaN(n))
+    );
+    let next = 1;
+    while (usedNums.has(next)) next++;
+    return "A" + String(next).padStart(4, "0");
 }
 
 /** Format number 437 → "A0437". */
@@ -1190,12 +1193,12 @@ function getCompletedRows() {
     return batches
         .filter((b) => b.status === "batch_complete")
         .sort((a, b) => {
-            const numA = a.batchNumber ? parseInt(a.batchNumber, 10) : null;
-            const numB = b.batchNumber ? parseInt(b.batchNumber, 10) : null;
+            const numA = a.batchNumber ? parseBatchNum(a.batchNumber) : NaN;
+            const numB = b.batchNumber ? parseBatchNum(b.batchNumber) : NaN;
             // Batches with numbers come first, sorted numerically
-            if (numA != null && numB != null) return numA - numB;
-            if (numA != null) return -1;
-            if (numB != null) return 1;
+            if (!isNaN(numA) && !isNaN(numB)) return numA - numB;
+            if (!isNaN(numA)) return -1;
+            if (!isNaN(numB)) return 1;
             // Both without numbers — fall back to timestamp
             const tA = a.mixingCompleteAt || a.completedAt || a.pouringAt || a.startedAt || a.createdAt || 0;
             const tB = b.mixingCompleteAt || b.completedAt || b.pouringAt || b.startedAt || b.createdAt || 0;
@@ -3627,42 +3630,6 @@ if (addCompletedBtn) {
     });
 }
 
-// ── Reset All Batch Numbers (admin only) ─────────────────────────────
-const resetAllBatchBtn = document.getElementById("reset-all-batch-numbers-btn");
-if (resetAllBatchBtn) {
-    auth.onAuthStateChanged(user => {
-        if (user && (isAdmin || user.email === "ajolly@colordept.local")) {
-            resetAllBatchBtn.classList.remove("hidden");
-        }
-    });
-    resetAllBatchBtn.addEventListener("click", () => {
-        if (!confirm("This will clear ALL batch numbers from EVERY batch (active + completed).\n\nYou will need to re-assign every batch number manually.\n\nAre you sure?")) return;
-        if (!confirm("FINAL WARNING: This cannot be undone. ALL batch numbers will be erased.\n\nProceed?")) return;
-        // Read directly from Firebase to catch everything
-        batchesRef.once("value", (snapshot) => {
-            const data = snapshot.val();
-            if (!data) { alert("No batches found."); return; }
-            const updates = {};
-            let count = 0;
-            for (const id of Object.keys(data)) {
-                if (data[id].batchNumber) {
-                    updates[id + "/batchNumber"] = null;
-                    count++;
-                }
-            }
-            if (count === 0) {
-                alert("No batches have batch numbers assigned.");
-                return;
-            }
-            batchesRef.update(updates).then(() => {
-                alert("Done. Cleared " + count + " batch numbers. Page will reload.");
-                window.location.reload();
-            }).catch(err => {
-                alert("Error: " + err.message);
-            });
-        });
-    });
-}
 
 // ── Add Completed Batch (AJOLLY only) ────────────────────────────────
 if (addCompletedBtn) {
