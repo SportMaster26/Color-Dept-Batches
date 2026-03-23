@@ -1319,20 +1319,22 @@ function renderCompleted() {
         ? rows.filter(r => r.batchNumber && r.batchNumber.toUpperCase().includes(batchSearchTerm))
         : rows;
 
-    const editableBatchNum = canEditBatchNumber() || isAdmin;
+    const canEditBatch = canEditBatchNumber() || isAdmin;
+    const canAssignBatch = canEditBatch || isPlatformOrFloor();
     const editableCompleted = canEditCompletedFields();
 
     tbody.innerHTML = filteredRows.map((r, i) => {
         let batchNumContent;
+        const batchClickable = r.batchNumber ? canEditBatch : canAssignBatch;
         if (r.batchNumber) {
             const batchNumHtml = escapeHtml(r.batchNumber);
             batchNumContent = batchSearchTerm
                 ? batchNumHtml.replace(new RegExp(`(${batchSearchTerm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, "gi"), `<mark class="batch-search-highlight">$1</mark>`)
                 : batchNumHtml;
         } else {
-            batchNumContent = editableBatchNum ? `<span class="assign-batch-btn">Assign</span>` : "—";
+            batchNumContent = canAssignBatch ? `<span class="assign-batch-btn">Assign</span>` : "—";
         }
-        const batchNumClass = `batch-num-cell${editableBatchNum ? ' editable-batch-num' : ''}`;
+        const batchNumClass = `batch-num-cell${batchClickable ? ' editable-batch-num' : ''}`;
         const ecf = editableCompleted ? 'editable-completed-field' : '';
         return `<tr>
             <td>${i + 1}</td>
@@ -1355,8 +1357,8 @@ function renderCompleted() {
         </tr>`;
     }).join("");
 
-    // Attach inline-edit handlers for batch number cells (admin + ajolly)
-    if (editableBatchNum) {
+    // Attach inline-edit handlers for batch number cells
+    if (canAssignBatch) {
         tbody.querySelectorAll(".editable-batch-num").forEach(td => {
             td.addEventListener("click", () => {
                 if (td.querySelector("input")) return;
@@ -1364,7 +1366,7 @@ function renderCompleted() {
                 const batch = batches.find(b => b.id === batchId);
                 if (!batch) return;
 
-                // No number yet — auto-assign next in sequence
+                // No number yet — auto-assign next in sequence (admin, ajolly, floor, platform)
                 if (!batch.batchNumber) {
                     const nextNum = getNextBatchNumber();
                     batch.batchNumber = nextNum;
@@ -1373,7 +1375,9 @@ function renderCompleted() {
                     return;
                 }
 
-                // Already has a number — allow editing
+                // Already has a number — only admin/ajolly can edit
+                if (!canEditBatch) return;
+
                 const currentVal = batch.batchNumber;
                 const input = document.createElement("input");
                 input.type = "text";
@@ -2325,13 +2329,15 @@ function createBatchCard(batch) {
         ${actionsHtml}
     `;
 
-    // Click banner to assign/edit batch number (admin only)
-    if (isAdmin) {
+    // Click banner to assign/edit batch number
+    const canAssignBatchCard = isAdmin || canEditBatchNumber() || isPlatformOrFloor();
+    const canEditBatchCard = isAdmin || canEditBatchNumber();
+    if (canAssignBatchCard) {
         const banner = card.querySelector(".card-batch-banner");
         banner.addEventListener("click", (e) => {
             e.stopPropagation();
 
-            // No number yet — auto-assign next in sequence
+            // No number yet — auto-assign next in sequence (admin, ajolly, floor, platform)
             if (!batch.batchNumber) {
                 const nextNum = getNextBatchNumber();
                 batch.batchNumber = nextNum;
@@ -2341,7 +2347,9 @@ function createBatchCard(batch) {
                 return;
             }
 
-            // Already has a number — allow editing
+            // Already has a number — only admin/ajolly can edit
+            if (!canEditBatchCard) return;
+
             if (banner.querySelector("input")) return;
             const currentVal = batch.batchNumber;
             const input = document.createElement("input");
