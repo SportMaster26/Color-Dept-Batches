@@ -1257,6 +1257,7 @@ const UNIT_COUNT_EDIT_USERS = [
     "kherrin@colordept.local",
     "matt@colordept.local",
     "ajolly@colordept.local",
+    "floor@colordept.local",
 ];
 
 function canEditUnitCount() {
@@ -2330,10 +2331,42 @@ function createBatchCard(batch) {
         <div class="card-details">
             ${packagingDisplay}
             ${extraInfo}
-            ${batch.notes ? `<span class="card-notes">${escapeHtml(batch.notes)}</span>` : ""}
+            ${batch.notes ? `<span class="card-notes">${escapeHtml(batch.notes)}</span>` : (isPlatformOrFloor() ? `<span class="card-notes card-notes-empty">Add Notes</span>` : "")}
         </div>
         ${actionsHtml}
     `;
+
+    // Let floor/platform tap notes to edit
+    if (isAdmin || isPlatformOrFloor()) {
+        const notesSpan = card.querySelector(".card-notes");
+        if (notesSpan) {
+            notesSpan.style.cursor = "pointer";
+            notesSpan.addEventListener("click", (e) => {
+                e.stopPropagation();
+                if (notesSpan.querySelector("input")) return;
+                const currentVal = batch.notes || "";
+                const input = document.createElement("input");
+                input.type = "text";
+                input.className = "batch-notes-input";
+                input.value = currentVal;
+                input.placeholder = "Enter notes...";
+                notesSpan.textContent = "";
+                notesSpan.appendChild(input);
+                input.focus();
+                const save = () => {
+                    const val = input.value.trim();
+                    batch.notes = val || null;
+                    batchesRef.child(batch.id).update({ notes: batch.notes });
+                    render();
+                };
+                input.addEventListener("blur", save);
+                input.addEventListener("keydown", (ev) => {
+                    if (ev.key === "Enter") { ev.preventDefault(); input.blur(); }
+                    if (ev.key === "Escape") { render(); }
+                });
+            });
+        }
+    }
 
     // Click banner to assign/edit batch number
     const canAssignBatchCard = isAdmin || canEditBatchNumber() || isPlatformOrFloor();

@@ -494,6 +494,23 @@ header h1 {
     font-style: italic;
 }
 
+.card-notes-empty {
+    color: #99aabb;
+    border: 1px dashed #ccd5dd;
+    border-radius: 4px;
+    padding: 2px 8px;
+    font-size: 11px;
+}
+
+.batch-notes-input {
+    width: 100%;
+    font-size: 12px;
+    padding: 3px 6px;
+    border: 2px solid #0065A1;
+    border-radius: 4px;
+    box-sizing: border-box;
+}
+
 .card-packaging {
     font-weight: 600;
     color: #556677;
