@@ -2090,6 +2090,12 @@ function renderCharts() {
         if (!compMap[name]) compMap[name] = { batches: 0, gallons: 0 };
         compMap[name].batches++;
         compMap[name].gallons += r.capacityNum;
+        // Credit 2nd mixer too
+        if (r.initials2 && r.initials2 !== r.initials) {
+            if (!compMap[r.initials2]) compMap[r.initials2] = { batches: 0, gallons: 0 };
+            compMap[r.initials2].batches++;
+            compMap[r.initials2].gallons += r.capacityNum;
+        }
     }
 
     const compNames = Object.keys(compMap).sort((a, b) => compMap[b].batches - compMap[a].batches);
