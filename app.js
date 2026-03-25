@@ -1703,7 +1703,7 @@ function renderCompleted() {
                 const select = document.createElement("select");
                 select.className = "tank-input";
                 select.style.width = "150px";
-                const names = ["", "Matt Huff", "Peyton Smith", "Brandon Jones", "Josh James", "Josh Wimer", "Elijah Baker", "Kevin Alexander", "Chris Wood"];
+                const names = ["", "Matt Huff", "Peyton Smith", "Brandon Jones", "Josh James", "Josh Wimer", "Elijah Baker", "Kevin Alexander", "Chris Wood", "Kevin Mackey"];
                 names.forEach(name => {
                     const opt = document.createElement("option");
                     opt.value = name;
@@ -1741,7 +1741,7 @@ function renderCompleted() {
                 const select = document.createElement("select");
                 select.className = "tank-input";
                 select.style.width = "150px";
-                const names = ["", "Matt Huff", "Peyton Smith", "Brandon Jones", "Josh James", "Josh Wimer", "Elijah Baker", "Kevin Alexander", "Chris Wood"];
+                const names = ["", "Matt Huff", "Peyton Smith", "Brandon Jones", "Josh James", "Josh Wimer", "Elijah Baker", "Kevin Alexander", "Chris Wood", "Kevin Mackey"];
                 names.forEach(name => {
                     const opt = document.createElement("option");
                     opt.value = name;
