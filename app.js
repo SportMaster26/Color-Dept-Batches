@@ -284,15 +284,72 @@ let PRODUCT_CATALOG = [
 
 // ── Firebase Reference ──────────────────────────────────────────────
 const batchesRef = db.ref("batches");
-const batchCounterRef = db.ref("meta/batchCounter");
-const recycledNumbersRef = db.ref("meta/recycledNumbers");
-const MIN_BATCH_NUMBER = 437;
 const notesRef = db.ref("notes");
 const customProductsRef = db.ref("meta/customProducts");
 const latexTanksRef = db.ref("latexTanks");
 const lockedAccountsRef = db.ref("meta/lockedAccounts");
 const failedAttemptsRef = db.ref("meta/failedAttempts");
 const loginAuditRef = db.ref("meta/loginAudit");
+
+// ── Batch Number Helpers ─────────────────────────────────────────────
+
+/** Parse "A0437" → 437. Returns NaN for invalid strings. */
+function parseBatchNum(str) {
+    if (!str) return NaN;
+    return parseInt(str.slice(1), 10);
+}
+
+function getNextBatchNumber() {
+    const usedNums = new Set(
+        batches
+            .map(b => parseBatchNum(b.batchNumber))
+            .filter(n => !isNaN(n))
+    );
+    let next = 1;
+    while (usedNums.has(next)) next++;
+    return "A" + String(next).padStart(4, "0");
+}
+
+/** Format number 437 → "A0437". */
+/**
+ * Returns true if batchNumber is already used by any batch,
+ * optionally excluding a specific batch ID (for edits).
+ */
+function isBatchNumberTaken(batchNumber, excludeId) {
+    if (!batchNumber) return false;
+    return batches.some(b =>
+        b.batchNumber === batchNumber &&
+        (!excludeId || b.id !== excludeId)
+    );
+}
+
+
+/**
+ * Build a new queued batch object with consistent field set.
+ * @param {Object} fields - product, bowl, packaging, unitCount, notes, sortOrder
+ */
+function buildNewBatch(fields) {
+    return {
+        id: generateId(),
+        batchNumber: null,
+        product: fields.product,
+        bowl: fields.bowl,
+        packaging: fields.packaging || null,
+        unitCount: fields.unitCount || null,
+        notes: fields.notes || null,
+        status: "queued",
+        sortOrder: fields.sortOrder,
+        createdAt: Date.now(),
+        startedAt: null,
+        mixingCompleteAt: null,
+        pouringAt: null,
+        completedAt: null,
+        viscosity: null,
+        initials: null,
+        initials2: null,
+        pouredBy: null,
+    };
+}
 
 // ── Latex Tank Configuration ─────────────────────────────────────────
 const LATEX_TANKS = [
@@ -645,47 +702,7 @@ function updateCompletedCount() {
     badge.classList.toggle("hidden", newCount === 0 || activeTab === "completed");
 }
 
-// ── Recycled Numbers Bar ─────────────────────────────────────────────
-function updateRecycledNumbersBar() {
-    const bar = document.getElementById("recycled-numbers-bar");
-    if (!bar || !isAdmin) return;
-    bar.classList.remove("hidden");
 
-    // Show recycled numbers from Firebase
-    recycledNumbersRef.once("value", (snap) => {
-        const recycled = snap.val();
-        const listEl = document.getElementById("recycled-numbers-list");
-        const nextEl = document.getElementById("next-batch-number");
-
-        if (recycled) {
-            const nums = Object.values(recycled)
-                .filter((n) => n >= MIN_BATCH_NUMBER)
-                .sort((a, b) => a - b);
-            if (nums.length > 0) {
-                listEl.textContent = nums.map((n) => "A" + String(n).padStart(4, "0")).join(", ");
-            } else {
-                listEl.textContent = "None";
-            }
-        } else {
-            listEl.textContent = "None";
-        }
-
-        // Calculate and show next batch number
-        const usedNumbers = new Set();
-        for (const b of batches) {
-            if (b.batchNumber) {
-                const n = parseInt(b.batchNumber.slice(1), 10);
-                if (!isNaN(n)) usedNumbers.add(n);
-            }
-        }
-        let maxUsed = 0;
-        for (const num of usedNumbers) {
-            if (num > maxUsed) maxUsed = num;
-        }
-        const nextNum = Math.max(maxUsed + 1, MIN_BATCH_NUMBER);
-        nextEl.textContent = "A" + String(nextNum).padStart(4, "0");
-    });
-}
 
 // ── Undo Button ─────────────────────────────────────────────────────
 function getActiveUndoStack() {
@@ -759,11 +776,9 @@ function onBatches(snapshot) {
     if (Object.keys(migrations).length > 0) {
         batchesRef.update(migrations);
     }
-    assignNumbersToTopBatches();
     render();
     if (activeTab === "latex") renderLatexBoard();
     updateCompletedCount();
-    updateRecycledNumbersBar();
     if (activeTab === "completed") renderCompleted();
 }
 
@@ -1238,9 +1253,16 @@ function getCompletedRows() {
     return batches
         .filter((b) => b.status === "batch_complete")
         .sort((a, b) => {
-            const numA = a.batchNumber ? parseInt(a.batchNumber.slice(1)) : Infinity;
-            const numB = b.batchNumber ? parseInt(b.batchNumber.slice(1)) : Infinity;
-            return numA - numB;
+            const numA = a.batchNumber ? parseBatchNum(a.batchNumber) : NaN;
+            const numB = b.batchNumber ? parseBatchNum(b.batchNumber) : NaN;
+            // Batches with numbers come first, sorted numerically
+            if (!isNaN(numA) && !isNaN(numB)) return numA - numB;
+            if (!isNaN(numA)) return -1;
+            if (!isNaN(numB)) return 1;
+            // Both without numbers — fall back to timestamp
+            const tA = a.mixingCompleteAt || a.completedAt || a.pouringAt || a.startedAt || a.createdAt || 0;
+            const tB = b.mixingCompleteAt || b.completedAt || b.pouringAt || b.startedAt || b.createdAt || 0;
+            return tA - tB;
         })
         .map((batch) => {
             const bowlInfo = BOWLS[batch.bowl];
@@ -1295,6 +1317,7 @@ const UNIT_COUNT_EDIT_USERS = [
     "kherrin@colordept.local",
     "matt@colordept.local",
     "ajolly@colordept.local",
+    "floor@colordept.local",
 ];
 
 function canEditUnitCount() {
@@ -1357,19 +1380,26 @@ function renderCompleted() {
         ? rows.filter(r => r.batchNumber && r.batchNumber.toUpperCase().includes(batchSearchTerm))
         : rows;
 
-    const editableBatchNum = canEditBatchNumber();
+    const canEditBatch = canEditBatchNumber() || isAdmin;
+    const canAssignBatch = canEditBatch || isPlatformOrFloor();
     const editableCompleted = canEditCompletedFields();
 
     tbody.innerHTML = filteredRows.map((r, i) => {
-        const batchNumHtml = escapeHtml(r.batchNumber) || "—";
-        const highlighted = batchSearchTerm && r.batchNumber
-            ? batchNumHtml.replace(new RegExp(`(${batchSearchTerm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, "gi"), `<mark class="batch-search-highlight">$1</mark>`)
-            : batchNumHtml;
-        const batchNumClass = `batch-num-cell${editableBatchNum ? ' editable-batch-num' : ''}`;
+        let batchNumContent;
+        const batchClickable = r.batchNumber ? canEditBatch : canAssignBatch;
+        if (r.batchNumber) {
+            const batchNumHtml = escapeHtml(r.batchNumber);
+            batchNumContent = batchSearchTerm
+                ? batchNumHtml.replace(new RegExp(`(${batchSearchTerm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, "gi"), `<mark class="batch-search-highlight">$1</mark>`)
+                : batchNumHtml;
+        } else {
+            batchNumContent = canAssignBatch ? `<span class="assign-batch-btn">Assign</span>` : "—";
+        }
+        const batchNumClass = `batch-num-cell${batchClickable ? ' editable-batch-num' : ''}`;
         const ecf = editableCompleted ? 'editable-completed-field' : '';
         return `<tr>
             <td>${i + 1}</td>
-            <td class="${batchNumClass}" data-batch-id="${r.id}">${highlighted}</td>
+            <td class="${batchNumClass}" data-batch-id="${r.id}">${batchNumContent}</td>
             <td class="${ecf}" data-batch-id="${r.id}" data-field="product">${escapeHtml(r.product)}</td>
             <td class="${ecf}" data-batch-id="${r.id}" data-field="bowl">${escapeHtml(r.bowl)}</td>
             <td class="${ecf}" data-batch-id="${r.id}" data-field="capacity">${r.capacity}</td>
@@ -1388,8 +1418,8 @@ function renderCompleted() {
         </tr>`;
     }).join("");
 
-    // Attach inline-edit handlers for batch number cells (ajolly only)
-    if (editableBatchNum) {
+    // Attach inline-edit handlers for batch number cells
+    if (canAssignBatch) {
         tbody.querySelectorAll(".editable-batch-num").forEach(td => {
             td.addEventListener("click", () => {
                 if (td.querySelector("input")) return;
@@ -1397,7 +1427,19 @@ function renderCompleted() {
                 const batch = batches.find(b => b.id === batchId);
                 if (!batch) return;
 
-                const currentVal = batch.batchNumber || "";
+                // No number yet — auto-assign next in sequence (admin, ajolly, floor, platform)
+                if (!batch.batchNumber) {
+                    const nextNum = getNextBatchNumber();
+                    batch.batchNumber = nextNum;
+                    batchesRef.child(batchId).update({ batchNumber: nextNum });
+                    td.innerHTML = escapeHtml(nextNum);
+                    return;
+                }
+
+                // Already has a number — only admin/ajolly can edit
+                if (!canEditBatch) return;
+
+                const currentVal = batch.batchNumber;
                 const input = document.createElement("input");
                 input.type = "text";
                 input.className = "tank-input";
@@ -1409,10 +1451,9 @@ function renderCompleted() {
                 input.select();
 
                 const save = () => {
-                    const val = input.value.trim();
+                    const val = input.value.trim().toUpperCase();
                     if (val && val !== currentVal) {
-                        const dup = batches.find(b => b.id !== batchId && b.batchNumber && b.batchNumber === val);
-                        if (dup) {
+                        if (isBatchNumberTaken(val, batchId)) {
                             alert("Batch number \"" + val + "\" is already in use by another batch.");
                             input.focus();
                             return;
@@ -1420,12 +1461,12 @@ function renderCompleted() {
                     }
                     batch.batchNumber = val || null;
                     batchesRef.child(batchId).update({ batchNumber: batch.batchNumber });
-                    td.innerHTML = batch.batchNumber ? escapeHtml(batch.batchNumber) : "—";
+                    td.innerHTML = batch.batchNumber ? escapeHtml(batch.batchNumber) : `<span class="assign-batch-btn">Assign</span>`;
                 };
                 input.addEventListener("blur", save);
                 input.addEventListener("keydown", (e) => {
                     if (e.key === "Enter") { e.preventDefault(); save(); }
-                    if (e.key === "Escape") { td.innerHTML = currentVal ? escapeHtml(currentVal) : "—"; }
+                    if (e.key === "Escape") { td.innerHTML = escapeHtml(currentVal); }
                 });
             });
         });
@@ -1722,7 +1763,7 @@ function renderCompleted() {
                 const select = document.createElement("select");
                 select.className = "tank-input";
                 select.style.width = "150px";
-                const names = ["", "Matt Huff", "Peyton Smith", "Brandon Jones", "Josh James", "Josh Wimer", "Elijah Baker", "Kevin Alexander", "Chris Wood"];
+                const names = ["", "Matt Huff", "Peyton Smith", "Brandon Jones", "Josh James", "Josh Wimer", "Elijah Baker", "Kevin Alexander", "Chris Wood", "Kevin Mackey"];
                 names.forEach(name => {
                     const opt = document.createElement("option");
                     opt.value = name;
@@ -1760,7 +1801,7 @@ function renderCompleted() {
                 const select = document.createElement("select");
                 select.className = "tank-input";
                 select.style.width = "150px";
-                const names = ["", "Matt Huff", "Peyton Smith", "Brandon Jones", "Josh James", "Josh Wimer", "Elijah Baker", "Kevin Alexander", "Chris Wood"];
+                const names = ["", "Matt Huff", "Peyton Smith", "Brandon Jones", "Josh James", "Josh Wimer", "Elijah Baker", "Kevin Alexander", "Chris Wood", "Kevin Mackey"];
                 names.forEach(name => {
                     const opt = document.createElement("option");
                     opt.value = name;
@@ -1919,9 +1960,9 @@ function getMixingCompleteRows() {
     return batches
         .filter((b) => validStatuses.includes(b.status) && b.mixingCompleteAt)
         .sort((a, b) => {
-            const numA = a.batchNumber ? parseInt(a.batchNumber.slice(1)) : Infinity;
-            const numB = b.batchNumber ? parseInt(b.batchNumber.slice(1)) : Infinity;
-            return numA - numB;
+            const tA = a.mixingCompleteAt || 0;
+            const tB = b.mixingCompleteAt || 0;
+            return tA - tB;
         })
         .map((batch) => {
             const bowlInfo = BOWLS[batch.bowl];
@@ -2110,6 +2151,12 @@ function renderCharts() {
         if (!compMap[name]) compMap[name] = { batches: 0, gallons: 0 };
         compMap[name].batches++;
         compMap[name].gallons += r.capacityNum;
+        // Credit 2nd mixer too
+        if (r.initials2 && r.initials2 !== r.initials) {
+            if (!compMap[r.initials2]) compMap[r.initials2] = { batches: 0, gallons: 0 };
+            compMap[r.initials2].batches++;
+            compMap[r.initials2].gallons += r.capacityNum;
+        }
     }
 
     const compNames = Object.keys(compMap).sort((a, b) => compMap[b].batches - compMap[a].batches);
@@ -2331,63 +2378,107 @@ function createBatchCard(batch) {
     }
     if (batch.pouredBy) extraInfo += `<span class="card-poured-by">Poured: ${escapeHtml(batch.pouredBy)}</span>`;
 
-    const editableBatchNum = canEditBatchNumber();
-    const batchNumText = batch.batchNumber ? escapeHtml(batch.batchNumber) : (editableBatchNum ? "[#]" : "");
-    const batchNumClass = editableBatchNum ? "card-batch-number editable-card-batch-num" : "card-batch-number";
-    const batchNumDisplay = (batch.batchNumber || editableBatchNum) ? `<span class="${batchNumClass}" data-batch-id="${batch.id}">${batchNumText}</span>` : "";
+    // Clickable batch number banner at top of card (admin can type to set/edit)
+    const batchNumText = batch.batchNumber ? escapeHtml(batch.batchNumber) : "Assign Batch Number";
+    const batchNumClass = batch.batchNumber ? "card-batch-banner has-number" : "card-batch-banner no-number";
 
     card.innerHTML = `
+        <div class="${batchNumClass}" data-batch-id="${batch.id}">${batchNumText}</div>
         <div class="card-top">
-            <span class="card-product">${batchNumDisplay}${escapeHtml(batch.product)}</span>
+            <span class="card-product">${escapeHtml(batch.product)}</span>
             <span class="card-status">${statusLabel}</span>
         </div>
         <div class="card-details">
             ${packagingDisplay}
             ${extraInfo}
-            ${batch.notes ? `<span class="card-notes">${escapeHtml(batch.notes)}</span>` : ""}
+            ${batch.notes ? `<span class="card-notes">${escapeHtml(batch.notes)}</span>` : (isPlatformOrFloor() ? `<span class="card-notes card-notes-empty">Add Notes</span>` : "")}
         </div>
         ${actionsHtml}
     `;
 
-    // Inline edit for batch number on kanban card
-    if (editableBatchNum) {
-        const batchNumSpan = card.querySelector(".editable-card-batch-num");
-        if (batchNumSpan) {
-            batchNumSpan.addEventListener("click", (e) => {
+    // Let floor/platform tap notes to edit
+    if (isAdmin || isPlatformOrFloor()) {
+        const notesSpan = card.querySelector(".card-notes");
+        if (notesSpan) {
+            notesSpan.style.cursor = "pointer";
+            notesSpan.addEventListener("click", (e) => {
                 e.stopPropagation();
-                if (batchNumSpan.querySelector("input")) return;
-                const currentVal = batch.batchNumber || "";
+                if (notesSpan.querySelector("input")) return;
+                const currentVal = batch.notes || "";
                 const input = document.createElement("input");
                 input.type = "text";
-                input.className = "tank-input";
-                input.style.cssText = "width:70px;font-size:11px;padding:1px 4px;";
+                input.className = "batch-notes-input";
                 input.value = currentVal;
-                batchNumSpan.textContent = "";
-                batchNumSpan.appendChild(input);
+                input.placeholder = "Enter notes...";
+                notesSpan.textContent = "";
+                notesSpan.appendChild(input);
                 input.focus();
-                input.select();
-
                 const save = () => {
                     const val = input.value.trim();
-                    if (val && val !== currentVal) {
-                        const dup = batches.find(b => b.id !== batch.id && b.batchNumber && b.batchNumber === val);
-                        if (dup) {
-                            alert("Batch number \"" + val + "\" is already in use by another batch.");
-                            input.focus();
-                            return;
-                        }
-                    }
-                    batch.batchNumber = val || null;
-                    batchesRef.child(batch.id).update({ batchNumber: batch.batchNumber });
-                    renderBoard();
+                    batch.notes = val || null;
+                    batchesRef.child(batch.id).update({ notes: batch.notes });
+                    render();
                 };
                 input.addEventListener("blur", save);
                 input.addEventListener("keydown", (ev) => {
-                    if (ev.key === "Enter") { ev.preventDefault(); save(); }
-                    if (ev.key === "Escape") { renderBoard(); }
+                    if (ev.key === "Enter") { ev.preventDefault(); input.blur(); }
+                    if (ev.key === "Escape") { render(); }
                 });
             });
         }
+    }
+
+    // Click banner to assign/edit batch number
+    const canAssignBatchCard = isAdmin || canEditBatchNumber() || isPlatformOrFloor();
+    const canEditBatchCard = isAdmin || canEditBatchNumber();
+    if (canAssignBatchCard) {
+        const banner = card.querySelector(".card-batch-banner");
+        // Prevent draggable card from stealing taps on the banner (mobile)
+        banner.draggable = false;
+        banner.addEventListener("dragstart", (e) => { e.preventDefault(); e.stopPropagation(); });
+        banner.addEventListener("click", (e) => {
+            e.stopPropagation();
+
+            // No number yet — auto-assign next in sequence (admin, ajolly, floor, platform)
+            if (!batch.batchNumber) {
+                const nextNum = getNextBatchNumber();
+                batch.batchNumber = nextNum;
+                batchesRef.child(batch.id).update({ batchNumber: nextNum });
+                banner.textContent = nextNum;
+                banner.className = "card-batch-banner has-number";
+                return;
+            }
+
+            // Already has a number — only admin/ajolly can edit
+            if (!canEditBatchCard) return;
+
+            if (banner.querySelector("input")) return;
+            const currentVal = batch.batchNumber;
+            const input = document.createElement("input");
+            input.type = "text";
+            input.className = "batch-num-input";
+            input.value = currentVal;
+            banner.textContent = "";
+            banner.appendChild(input);
+            input.focus();
+            input.select();
+
+            const save = () => {
+                const val = input.value.trim().toUpperCase();
+                if (val && val !== currentVal && isBatchNumberTaken(val, batch.id)) {
+                    alert("Batch number \"" + val + "\" is already in use.");
+                    input.focus();
+                    return;
+                }
+                batch.batchNumber = val || null;
+                batchesRef.child(batch.id).update({ batchNumber: batch.batchNumber });
+            };
+            input.addEventListener("blur", save);
+            input.addEventListener("keydown", (ev) => {
+                if (ev.key === "Enter") { ev.preventDefault(); input.blur(); }
+                if (ev.key === "Escape") { render(); }
+            });
+        });
     }
 
     return card;
@@ -2749,6 +2840,7 @@ function assignBatchNumber(callback, onError) {
     });
 }
 
+
 function advanceStatus(id) {
     const batch = batches.find((b) => b.id === id);
     if (!batch) return;
@@ -3055,14 +3147,6 @@ editForm.addEventListener("submit", (e) => {
 });
 
 function deleteBatch(id) {
-    const batch = batches.find((b) => b.id === id);
-    if (batch && batch.batchNumber) {
-        // Recycle the batch number for reuse (only if >= MIN_BATCH_NUMBER)
-        const num = parseInt(batch.batchNumber.slice(1), 10);
-        if (!isNaN(num) && num >= MIN_BATCH_NUMBER) {
-            recycledNumbersRef.push(num);
-        }
-    }
     batchesRef.child(id).remove();
 }
 
@@ -3172,32 +3256,16 @@ batchForm.addEventListener("submit", (e) => {
         return Math.max(max, order);
     }, -1);
 
-    function createBatch(batchNumber) {
-        const batch = {
-            id: generateId(),
-            batchNumber: batchNumber || null,
-            product,
-            bowl,
-            packaging,
-            unitCount: unitCountVal ? Number(unitCountVal) : null,
-            notes: notes || null,
-            status: "queued",
-            sortOrder: maxOrder + 1,
-            createdAt: Date.now(),
-            startedAt: null,
-            mixingCompleteAt: null,
-            pouringAt: null,
-            completedAt: null,
-            viscosity: null,
-            initials: null,
-            pouredBy: null,
-        };
-        batchesRef.child(batch.id).set(batch);
-    }
-
-    // Always create without a number — assignNumbersToTopBatches() will
-    // assign one when the Firebase listener fires (prevents race conditions).
-    createBatch(null);
+    // Batch number is assigned manually (not auto-assigned).
+    const batch = buildNewBatch({
+        product,
+        bowl,
+        packaging,
+        unitCount: unitCountVal ? Number(unitCountVal) : null,
+        notes: notes || null,
+        sortOrder: maxOrder + 1,
+    });
+    batchesRef.child(batch.id).set(batch);
 
     // Save custom product if not already in catalog
     if (product && !PRODUCT_CATALOG.includes(product)) {
@@ -3757,14 +3825,8 @@ function importProductionData() {
         updates["batches/" + ab.id + "/batchNumber"] = null;
     }
 
-    // Update batch counter to highest number
-    const highestNum = Math.max(...IMPORT_DATA_2026.map(r => parseInt(r.bn.slice(1))));
-    updates["meta/batchCounter"] = highestNum;
-
     db.ref().update(updates).then(() => {
-        // Clear recycled numbers to avoid conflicts
-        recycledNumbersRef.remove();
-        alert("Import complete!\n\nMatched & updated: " + matchCount + "\nNewly created: " + createCount + "\nActive batch numbers cleared: " + activeBatchesWithConflict.length + "\nBatch counter set to: " + highestNum);
+        alert("Import complete!\n\nMatched & updated: " + matchCount + "\nNewly created: " + createCount + "\nActive batch numbers cleared: " + activeBatchesWithConflict.length);
     }).catch(err => {
         alert("Import failed: " + err.message);
         console.error("Import error:", err);
@@ -3780,6 +3842,7 @@ if (addCompletedBtn) {
         }
     });
 }
+
 
 // ── Add Completed Batch (AJOLLY only) ────────────────────────────────
 if (addCompletedBtn) {
@@ -3881,12 +3944,9 @@ if (addCompletedBtn) {
         const completedAt = completedDateVal ? new Date(completedDateVal).getTime() : Date.now();
 
         // Check for duplicate batch number
-        if (batchNumber) {
-            const dup = batches.find(b => b.batchNumber === batchNumber);
-            if (dup) {
-                alert("Batch number \"" + batchNumber + "\" is already in use.");
-                return;
-            }
+        if (isBatchNumberTaken(batchNumber)) {
+            alert("Batch number \"" + batchNumber + "\" is already in use.");
+            return;
         }
 
         const batch = {

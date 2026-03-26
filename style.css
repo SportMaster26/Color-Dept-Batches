@@ -86,34 +86,6 @@ header h1 {
     border-bottom: 2px solid #d0d5dd;
 }
 
-/* ── Recycled Numbers Bar ─────────────────────────────────────────── */
-.recycled-numbers-bar {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    background: #fff8e1;
-    border-bottom: 1px solid #ffe082;
-    padding: 6px 24px;
-    font-size: 0.85rem;
-    color: #5d4037;
-}
-.recycled-label {
-    font-weight: 700;
-    color: #e65100;
-}
-.recycled-numbers-list {
-    font-weight: 600;
-    color: #1565c0;
-    letter-spacing: 0.5px;
-}
-.recycled-sep {
-    color: #bbb;
-    margin: 0 4px;
-}
-.next-batch-number {
-    font-weight: 700;
-    color: #2e7d32;
-}
 
 .tab-btn {
     border: none;
@@ -223,6 +195,76 @@ header h1 {
 
 .btn-batch-complete:hover {
     background: #B87D1F;
+}
+
+.card-batch-banner {
+    display: block;
+    width: 100%;
+    padding: 6px 0;
+    font-weight: 700;
+    font-size: 13px;
+    text-align: center;
+    border-radius: 6px 6px 0 0;
+    margin-bottom: 4px;
+    cursor: pointer;
+    touch-action: manipulation;
+}
+
+.card-batch-banner.has-number {
+    background: #0065A1;
+    color: #fff;
+}
+
+.card-batch-banner.has-number:hover {
+    background: #004a7a;
+}
+
+.card-batch-banner.no-number {
+    background: #e8ecf0;
+    color: #667788;
+    border: 2px dashed #bcc3ce;
+}
+
+@media (hover: hover) {
+    .card-batch-banner.no-number:hover {
+        background: #d0d5dd;
+        color: #333;
+    }
+}
+
+.card-batch-banner.no-number:active {
+    background: #d0d5dd;
+    color: #333;
+}
+
+.batch-num-input {
+    width: 90px;
+    font-size: 13px;
+    font-weight: 700;
+    padding: 3px 6px;
+    text-align: center;
+    border: 2px solid #fff;
+    border-radius: 4px;
+    text-transform: uppercase;
+}
+
+.assign-batch-btn {
+    display: inline-block;
+    background: #0065A1;
+    color: #fff;
+    padding: 2px 10px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.assign-batch-btn:hover {
+    background: #004a7a;
+}
+
+.editable-batch-num {
+    cursor: pointer;
 }
 
 .btn-undo {
@@ -450,6 +492,23 @@ header h1 {
 
 .card-notes {
     font-style: italic;
+}
+
+.card-notes-empty {
+    color: #99aabb;
+    border: 1px dashed #ccd5dd;
+    border-radius: 4px;
+    padding: 2px 8px;
+    font-size: 11px;
+}
+
+.batch-notes-input {
+    width: 100%;
+    font-size: 12px;
+    padding: 3px 6px;
+    border: 2px solid #0065A1;
+    border-radius: 4px;
+    box-sizing: border-box;
 }
 
 .card-packaging {
