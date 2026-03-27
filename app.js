@@ -469,6 +469,7 @@ const LATEX_TAB_USERS = [
     "ajolly@colordept.local",
     "cwood@colordept.local",
     "hhudak@colordept.local",
+    "paul@colordept.local",
     "jeff@colordept.local",
 ];
 
@@ -476,6 +477,7 @@ const LATEX_TAB_USERS = [
 const INVENTORY_TAB_USERS = [
     "master@colordept.local",
     "hhudak@colordept.local",
+    "paul@colordept.local",
     "ajolly@colordept.local",
 ];
 const loginScreen = document.getElementById("login-screen");
@@ -1049,6 +1051,7 @@ const LATEX_EDIT_USERS = [
     "matt@colordept.local",
     "ajolly@colordept.local",
     "hhudak@colordept.local",
+    "paul@colordept.local",
 ];
 
 function canEditLatexTotals(email) {
@@ -1278,6 +1281,7 @@ const INVENTORY_ITEMS = [
 const INVENTORY_EDIT_USERS = [
     "master@colordept.local",
     "hhudak@colordept.local",
+    "paul@colordept.local",
     "ajolly@colordept.local",
 ];
 
@@ -1790,6 +1794,7 @@ const PRODUCT_HISTORY_USERS = [
     "jeff@colordept.local",
     "dpanyard@colordept.local",
     "hhudak@colordept.local",
+    "paul@colordept.local",
 ];
 
 function canSeeProductHistory() {
