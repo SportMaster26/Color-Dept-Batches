@@ -1249,7 +1249,6 @@ const INVENTORY_ITEMS = [
     { id: "R2120_2", name: "Blue KEGS", unit: "Each", reorderLevel: 600, maxQty: 600, leadTime: "14- DAYS", notes: "Mauser/1 st drop trailer/ W00973", initialCount: 620.0, pkg: "each", weight: 1.0, group: "Misc Containers" },
     { id: "R2330", name: "Totes", unit: "Each", reorderLevel: 120, maxQty: 300, leadTime: "7 Days", notes: "Vendor-Fiber Drum Sales", initialCount: 259.0, pkg: "each", weight: 1.0, group: "Misc Containers" },
     { id: "R2474", name: "10oz. Jetcoat Wht Roof Patch Tube", unit: "Each", reorderLevel: 4608, maxQty: null, leadTime: "2 Weeks", notes: "4608 per Pallet", initialCount: 0, pkg: "each", weight: 1.0, group: "Misc Containers" },
-    { id: "R2330_2", name: "Totes", unit: "Each", reorderLevel: 120, maxQty: 300, leadTime: "7 Days", notes: "No trailer on site", initialCount: 0, pkg: "each", weight: 1, group: "Misc Containers" },
     { id: "R2296", name: "Jar", unit: "Each", reorderLevel: 10000, maxQty: 40000, leadTime: "6 wks", notes: "205 Per Box / 12 box per skid", initialCount: 11.0, pkg: "skid", weight: 2460.0, group: "Misc Containers" },
     { id: "R2297", name: "jar lid", unit: "Each", reorderLevel: 10000, maxQty: 40000, leadTime: "4 wks", notes: "624 per box/ 20 box per skid", initialCount: 0.5, pkg: "each", weight: 12480.0, group: "Misc Containers" },
     { id: "R2295", name: "Pints Empty 28-410", unit: "Each", reorderLevel: 0, maxQty: null, leadTime: "", notes: "OBSOLETE? LM", initialCount: 8100.0, pkg: "each", weight: 1.0, group: "Misc Items" },
