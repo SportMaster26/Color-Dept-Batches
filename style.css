@@ -1683,6 +1683,41 @@ header h1 {
     color: #556677;
 }
 
+.inv-toolbar {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+}
+
+.inv-toolbar .btn-undo-inv {
+    margin-right: auto;
+}
+
+.inv-card {
+    position: relative;
+}
+
+.inv-card-delete {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    background: transparent;
+    border: none;
+    color: #bbb;
+    font-size: 1.1rem;
+    line-height: 1;
+    cursor: pointer;
+    padding: 2px 6px;
+    border-radius: 4px;
+}
+
+.inv-card-delete:hover {
+    color: #dc3545;
+    background: rgba(220, 53, 69, 0.1);
+}
+
 .inv-card-notes {
     font-size: 0.7rem;
     color: #667788;
