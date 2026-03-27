@@ -761,18 +761,28 @@ function getActiveUndoStack() {
 function updateUndoBtn() {
     if (undoBtn) {
         const stack = getActiveUndoStack();
-        undoBtn.classList.toggle("hidden", (!isAdmin && !isOperator) || stack.length === 0);
+        const canUndo = (isAdmin || isOperator) && stack.length > 0;
+        // Always show for admin/operator, just disable when nothing to undo
+        undoBtn.classList.toggle("hidden", !isAdmin && !isOperator);
+        undoBtn.disabled = !canUndo;
+        undoBtn.style.opacity = canUndo ? "1" : "0.4";
     }
 }
 
 undoBtn.addEventListener("click", () => {
     const stack = getActiveUndoStack();
     if (isViewer || (!isAdmin && !isOperator) || stack.length === 0) return;
-    const action = stack.pop();
-    const batch = batches.find((b) => b.id === action.id);
-    if (batch) {
-        batch.status = action.prevStatus;
-        batchesRef.child(action.id).update({ status: action.prevStatus });
+    const entry = stack.pop();
+    if (entry.action === "delete" && entry.batchData) {
+        // Restore a deleted batch
+        batchesRef.child(entry.id).set(entry.batchData);
+    } else {
+        // Undo a status change
+        const batch = batches.find((b) => b.id === entry.id);
+        if (batch) {
+            batch.status = entry.prevStatus;
+            batchesRef.child(entry.id).update({ status: entry.prevStatus });
+        }
     }
     updateUndoBtn();
 });
@@ -3852,6 +3862,15 @@ editForm.addEventListener("submit", (e) => {
 });
 
 function deleteBatch(id) {
+    const batch = batches.find((b) => b.id === id);
+    if (batch) {
+        const batchCopy = Object.assign({}, batch);
+        delete batchCopy.id;
+        const stack = getActiveUndoStack();
+        stack.push({ id: id, action: "delete", batchData: batchCopy });
+        if (stack.length > MAX_UNDO) stack.shift();
+        updateUndoBtn();
+    }
     batchesRef.child(id).remove();
 }
 
