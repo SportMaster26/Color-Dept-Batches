@@ -485,7 +485,72 @@
 
     <!-- Inventory — Raw Material & Packaging Tracker -->
     <div id="inventory-board" class="inventory-board hidden">
+        <div class="inv-toolbar">
+            <button id="inv-undo-btn" class="btn btn-undo btn-undo-inv hidden" onclick="undoInventoryAction()" title="Undo last inventory action">Undo</button>
+            <button id="inv-add-btn" class="btn btn-primary btn-sm" onclick="showAddInventoryModal()">+ Add Row</button>
+            <button id="inv-export-btn" class="btn btn-primary btn-sm btn-export" onclick="exportInventoryToExcel()">Export to Excel</button>
+        </div>
         <!-- Rendered by JS — inventory cards with color coding -->
+    </div>
+
+    <!-- Add Inventory Item Modal -->
+    <div id="inv-add-overlay" class="modal-overlay hidden">
+        <div class="modal inventory-detail-modal">
+            <h2 class="inv-detail-title">Add Inventory Item</h2>
+            <div class="inv-detail-rows">
+                <div class="inv-detail-row">
+                    <span class="inv-detail-label">Name:</span>
+                    <input type="text" id="inv-add-name" class="inv-detail-stock-input" placeholder="Product name">
+                </div>
+                <div class="inv-detail-row">
+                    <span class="inv-detail-label">Item Code:</span>
+                    <input type="text" id="inv-add-code" class="inv-detail-stock-input" placeholder="e.g. R1234">
+                </div>
+                <div class="inv-detail-row">
+                    <span class="inv-detail-label">Group:</span>
+                    <select id="inv-add-group" class="inv-detail-stock-input">
+                        <option value="Raw Materials">Raw Materials</option>
+                        <option value="Pigments">Pigments</option>
+                        <option value="1 Gal Pails & Lids">1 Gal Pails & Lids</option>
+                        <option value="5 & 3.5 Gal Pails & Lids">5 & 3.5 Gal Pails & Lids</option>
+                        <option value="Misc Containers">Misc Containers</option>
+                        <option value="Misc Items">Misc Items</option>
+                    </select>
+                </div>
+                <div class="inv-detail-row">
+                    <span class="inv-detail-label">Unit:</span>
+                    <input type="text" id="inv-add-unit" class="inv-detail-stock-input" value="Each" placeholder="lbs, Each, etc.">
+                </div>
+                <div class="inv-detail-row">
+                    <span class="inv-detail-label">Package Type:</span>
+                    <input type="text" id="inv-add-pkg" class="inv-detail-stock-input" value="each" placeholder="skids, totes, drums">
+                </div>
+                <div class="inv-detail-row">
+                    <span class="inv-detail-label">Weight/Pkg:</span>
+                    <input type="number" id="inv-add-weight" class="inv-detail-stock-input" value="1" min="0" step="0.01">
+                </div>
+                <div class="inv-detail-row">
+                    <span class="inv-detail-label">Re-order Level:</span>
+                    <input type="number" id="inv-add-reorder" class="inv-detail-stock-input" placeholder="0" min="0">
+                </div>
+                <div class="inv-detail-row">
+                    <span class="inv-detail-label">Lead Time:</span>
+                    <input type="text" id="inv-add-leadtime" class="inv-detail-stock-input" placeholder="e.g. 7 Days">
+                </div>
+                <div class="inv-detail-row">
+                    <span class="inv-detail-label">Stock Count:</span>
+                    <input type="number" id="inv-add-stock" class="inv-detail-stock-input" value="0" min="0" step="0.25">
+                </div>
+                <div class="inv-detail-row inv-detail-notes-row">
+                    <span class="inv-detail-label">Notes:</span>
+                    <textarea id="inv-add-notes" class="inv-detail-notes-input" rows="2" placeholder="Add notes..."></textarea>
+                </div>
+            </div>
+            <div class="modal-actions">
+                <button id="inv-add-save" class="btn btn-primary">Add Item</button>
+                <button id="inv-add-cancel" class="btn btn-admin">Cancel</button>
+            </div>
+        </div>
     </div>
 
     <!-- Inventory Detail Modal -->

@@ -1292,6 +1292,39 @@ function getInventoryStatus(qty, reorderLevel) {
     return "green";
 }
 
+let invUndoStack = [];
+const MAX_INV_UNDO = 10;
+
+function pushInvUndo(action, itemId, data) {
+    invUndoStack.push({ action, itemId, data, ts: Date.now() });
+    if (invUndoStack.length > MAX_INV_UNDO) invUndoStack.shift();
+    updateInvUndoBtn();
+}
+
+function undoInventoryAction() {
+    if (invUndoStack.length === 0) return;
+    const entry = invUndoStack.pop();
+    if (entry.action === "delete") {
+        inventoryRef.child(entry.itemId).set(entry.data);
+        // Re-add to in-memory array if it was removed
+        if (!INVENTORY_ITEMS.find(i => i.id === entry.itemId) && entry.data._meta) {
+            INVENTORY_ITEMS.push({ id: entry.itemId, ...entry.data._meta, initialCount: entry.data.inv || 0 });
+        }
+    } else if (entry.action === "edit") {
+        inventoryRef.child(entry.itemId).set(entry.data);
+    } else if (entry.action === "add") {
+        inventoryRef.child(entry.itemId).remove();
+        const idx = INVENTORY_ITEMS.findIndex(i => i.id === entry.itemId);
+        if (idx !== -1) INVENTORY_ITEMS.splice(idx, 1);
+    }
+    updateInvUndoBtn();
+}
+
+function updateInvUndoBtn() {
+    const btn = document.getElementById("inv-undo-btn");
+    if (btn) btn.classList.toggle("hidden", invUndoStack.length === 0);
+}
+
 function renderInventoryBoard() {
     inventoryBoard.innerHTML = "";
     const groups = {};
@@ -1328,6 +1361,17 @@ function renderInventoryBoard() {
                 <div class="inv-card-pkg">${inv} ${escapeHtml(item.pkg)}</div>
                 ${displayNotes ? `<div class="inv-card-notes">${escapeHtml(displayNotes)}</div>` : ""}
             `;
+            const deleteBtn = document.createElement("button");
+            deleteBtn.className = "inv-card-delete";
+            deleteBtn.innerHTML = "&times;";
+            deleteBtn.title = "Remove item";
+            deleteBtn.addEventListener("click", (e) => {
+                e.stopPropagation();
+                if (confirm(`Remove "${item.name}" from inventory?`)) {
+                    deleteInventoryItem(item);
+                }
+            });
+            card.appendChild(deleteBtn);
             card.addEventListener("click", () => showInventoryDetailModal(item));
             grid.appendChild(card);
         }
@@ -1388,6 +1432,10 @@ function saveInventoryItem() {
     const userNotes = document.getElementById("inv-detail-notes").value.trim();
     const itemId = currentInvItem.id.replace(/[.#$/\[\]]/g, "_");
     const savedScrollPos = invScrollPos;
+    // Save previous state for undo
+    const prevRaw = inventoryData[itemId];
+    const prevData = prevRaw && typeof prevRaw === "object" ? { ...prevRaw } : { inv: prevRaw || 0 };
+    pushInvUndo("edit", itemId, prevData);
     inventoryRef.child(itemId).set({ inv: val, userNotes: userNotes, dateCounted: new Date().toISOString() })
         .then(() => {
             closeInventoryModal();
@@ -1406,6 +1454,103 @@ document.getElementById("inv-detail-save").addEventListener("click", saveInvento
 document.getElementById("inv-detail-cancel").addEventListener("click", closeInventoryModal);
 document.getElementById("inventory-detail-overlay").addEventListener("click", (e) => {
     if (e.target.id === "inventory-detail-overlay") closeInventoryModal();
+});
+
+function deleteInventoryItem(item) {
+    const user = auth.currentUser;
+    if (!user || !canEditInventory(user.email)) return;
+    // Save current data for undo
+    const raw = inventoryData[item.id];
+    const undoData = raw && typeof raw === "object" ? { ...raw } : { inv: raw || 0 };
+    undoData._meta = { name: item.name, unit: item.unit, reorderLevel: item.reorderLevel, maxQty: item.maxQty, leadTime: item.leadTime, notes: item.notes, pkg: item.pkg, weight: item.weight, group: item.group };
+    pushInvUndo("delete", item.id, undoData);
+    inventoryRef.child(item.id).remove();
+    // Remove from in-memory array
+    const idx = INVENTORY_ITEMS.findIndex(i => i.id === item.id);
+    if (idx !== -1) INVENTORY_ITEMS.splice(idx, 1);
+}
+
+function showAddInventoryModal() {
+    document.getElementById("inv-add-overlay").classList.remove("hidden");
+    document.getElementById("inv-add-name").value = "";
+    document.getElementById("inv-add-code").value = "";
+    document.getElementById("inv-add-unit").value = "Each";
+    document.getElementById("inv-add-reorder").value = "";
+    document.getElementById("inv-add-leadtime").value = "";
+    document.getElementById("inv-add-notes").value = "";
+    document.getElementById("inv-add-pkg").value = "each";
+    document.getElementById("inv-add-weight").value = "1";
+    document.getElementById("inv-add-stock").value = "0";
+    document.getElementById("inv-add-group").value = "Raw Materials";
+    document.getElementById("inv-add-name").focus();
+}
+
+function saveNewInventoryItem() {
+    const name = document.getElementById("inv-add-name").value.trim();
+    const code = document.getElementById("inv-add-code").value.trim();
+    if (!name || !code) { alert("Name and Item Code are required."); return; }
+    const user = auth.currentUser;
+    if (!user || !canEditInventory(user.email)) { alert("No permission."); return; }
+    const newItem = {
+        id: code,
+        name: name,
+        unit: document.getElementById("inv-add-unit").value.trim() || "Each",
+        reorderLevel: parseInt(document.getElementById("inv-add-reorder").value) || 0,
+        leadTime: document.getElementById("inv-add-leadtime").value.trim(),
+        notes: document.getElementById("inv-add-notes").value.trim(),
+        pkg: document.getElementById("inv-add-pkg").value.trim() || "each",
+        weight: parseFloat(document.getElementById("inv-add-weight").value) || 1,
+        group: document.getElementById("inv-add-group").value,
+    };
+    const stock = parseFloat(document.getElementById("inv-add-stock").value) || 0;
+    // Add to INVENTORY_ITEMS in memory
+    INVENTORY_ITEMS.push(newItem);
+    pushInvUndo("add", code, null);
+    // Save to Firebase
+    inventoryRef.child(code).set({ inv: stock, userNotes: newItem.notes, dateCounted: new Date().toISOString(),
+        _meta: { name: newItem.name, unit: newItem.unit, reorderLevel: newItem.reorderLevel, leadTime: newItem.leadTime, pkg: newItem.pkg, weight: newItem.weight, group: newItem.group }
+    }).then(() => {
+        document.getElementById("inv-add-overlay").classList.add("hidden");
+        renderInventoryBoard();
+    }).catch((err) => alert("Save failed: " + err.message));
+}
+
+function exportInventoryToExcel() {
+    if (typeof XLSX === "undefined") { alert("Export library not loaded."); return; }
+    const rows = [];
+    for (const item of INVENTORY_ITEMS) {
+        const raw = inventoryData[item.id];
+        const inv = (raw && typeof raw === "object") ? (raw.inv || 0) : (raw || 0);
+        const userNotes = (raw && typeof raw === "object") ? (raw.userNotes || "") : "";
+        const qty = inv * item.weight;
+        const updatedAt = (raw && typeof raw === "object") ? raw.dateCounted : null;
+        rows.push({
+            "Item Code": item.id,
+            "Product": item.name,
+            "QTY": qty,
+            "Unit": item.unit,
+            "Re-order Level": item.reorderLevel || "",
+            "Lead Time": item.leadTime,
+            "Notes": userNotes || item.notes,
+            "Inventory": inv,
+            "Package": item.pkg,
+            "Weight/Pkg": item.weight,
+            "Group": item.group,
+            "Last Counted": updatedAt ? new Date(updatedAt).toLocaleDateString() : "",
+        });
+    }
+    const ws = XLSX.utils.json_to_sheet(rows);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Inventory");
+    XLSX.writeFile(wb, "Inventory_" + new Date().toISOString().slice(0, 10) + ".xlsx");
+}
+
+document.getElementById("inv-add-save").addEventListener("click", saveNewInventoryItem);
+document.getElementById("inv-add-cancel").addEventListener("click", () => {
+    document.getElementById("inv-add-overlay").classList.add("hidden");
+});
+document.getElementById("inv-add-overlay").addEventListener("click", (e) => {
+    if (e.target.id === "inv-add-overlay") document.getElementById("inv-add-overlay").classList.add("hidden");
 });
 
 function onInventoryData(snapshot) {
