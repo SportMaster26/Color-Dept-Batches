@@ -18,6 +18,11 @@
       ".write": "auth != null && (auth.token.email === 'master@colordept.local' || auth.token.email === 'admin@colordept.local' || auth.token.email === 'tmahl@colordept.local' || auth.token.email === 'kherrin@colordept.local' || auth.token.email === 'matt@colordept.local' || auth.token.email === 'ajolly@colordept.local' || auth.token.email === 'jeff@colordept.local' || auth.token.email === 'floor@colordept.local' || auth.token.email === 'platform@colordept.local' || auth.token.email === 'cwood@colordept.local')"
     },
 
+    "inventory": {
+      ".read": "auth != null",
+      ".write": "auth != null && (auth.token.email === 'master@colordept.local' || auth.token.email === 'hhudak@colordept.local' || auth.token.email === 'ajolly@colordept.local')"
+    },
+
     "meta": {
       "batchCounter": {
         ".read": "auth != null",

@@ -1583,6 +1583,214 @@ header h1 {
     box-shadow: 0 0 0 3px rgba(212, 149, 43, 0.2);
 }
 
+/* ── Inventory Board ───────────────────────────────────────────────── */
+.inventory-board {
+    padding: 20px;
+}
+
+.inv-group {
+    margin-bottom: 28px;
+}
+
+.inv-group-header {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #0065A1;
+    padding: 8px 4px;
+    border-bottom: 2px solid #d0d5dd;
+    margin-bottom: 12px;
+}
+
+.inv-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+    gap: 12px;
+}
+
+.inv-card {
+    background: #f5f7fa;
+    border: 1px solid #e0e4ea;
+    border-left: 5px solid #e0e4ea;
+    border-radius: 10px;
+    padding: 12px 10px 10px;
+    cursor: pointer;
+    transition: box-shadow 0.15s, transform 0.1s;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.inv-card:hover {
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.1);
+    transform: translateY(-2px);
+}
+
+.inv-card.status-red {
+    border-left-color: #dc3545;
+    background: #fde8e8;
+}
+
+.inv-card.status-yellow {
+    border-left-color: #ffc107;
+    background: #fef3cd;
+}
+
+.inv-card.status-green {
+    border-left-color: #28a745;
+    background: #d4edda;
+}
+
+.inv-card-code {
+    font-size: 0.7rem;
+    color: #888;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+}
+
+.inv-card-name {
+    font-weight: 700;
+    font-size: 0.85rem;
+    color: #333;
+    line-height: 1.2;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.inv-card-qty {
+    font-size: 1.1rem;
+    font-weight: 800;
+    color: #222;
+    margin-top: 2px;
+}
+
+.inv-card-qty-unit {
+    font-weight: 500;
+    font-size: 0.7rem;
+    color: #667788;
+}
+
+.inv-card-pkg {
+    font-size: 0.75rem;
+    color: #556677;
+}
+
+.inv-card-date {
+    font-size: 0.6rem;
+    color: #aaa;
+    margin-top: 2px;
+}
+
+/* Inventory Detail Modal */
+.inventory-detail-modal {
+    max-width: 440px;
+    width: 90vw;
+}
+
+.inv-detail-title {
+    font-size: 1.2rem;
+    color: #0065A1;
+    margin: 0 0 2px;
+}
+
+.inv-detail-code {
+    font-size: 0.8rem;
+    color: #888;
+    font-weight: 600;
+    margin-bottom: 16px;
+}
+
+.inv-detail-rows {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-bottom: 20px;
+}
+
+.inv-detail-row {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+}
+
+.inv-detail-label {
+    font-weight: 700;
+    font-size: 0.85rem;
+    color: #555;
+    min-width: 110px;
+    flex-shrink: 0;
+}
+
+.inv-detail-value {
+    font-size: 0.9rem;
+    color: #333;
+}
+
+.inv-detail-qty-value {
+    font-size: 1.1rem;
+    font-weight: 800;
+}
+
+.inv-detail-stock-wrap {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.inv-detail-stock-input {
+    width: 100px;
+    padding: 6px 8px;
+    border: 2px solid #0065A1;
+    border-radius: 6px;
+    font-size: 0.95rem;
+    font-weight: 700;
+    text-align: center;
+    color: #333;
+    background: #fff;
+}
+
+.inv-detail-stock-input:focus {
+    outline: none;
+    border-color: #D4952B;
+    box-shadow: 0 0 0 3px rgba(212, 149, 43, 0.2);
+}
+
+.inv-detail-pkg-type {
+    font-size: 0.85rem;
+    color: #667788;
+}
+
+.inv-status-badge {
+    display: inline-block;
+    padding: 4px 12px;
+    border-radius: 12px;
+    font-size: 0.8rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.inv-status-badge.status-red {
+    background: #dc3545;
+    color: #fff;
+}
+
+.inv-status-badge.status-yellow {
+    background: #ffc107;
+    color: #333;
+}
+
+.inv-status-badge.status-green {
+    background: #28a745;
+    color: #fff;
+}
+
+.inv-detail-date {
+    font-size: 0.75rem;
+    color: #999;
+    margin-top: 4px;
+}
+
 /* ── Responsive ────────────────────────────────────────────────────── */
 @media (max-width: 600px) {
     header {
@@ -1622,6 +1830,15 @@ header h1 {
     }
 
     .latex-board {
+        padding: 12px;
+    }
+
+    .inv-grid {
+        grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+        gap: 8px;
+    }
+
+    .inventory-board {
         padding: 12px;
     }
 }
