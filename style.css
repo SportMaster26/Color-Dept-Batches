@@ -15,6 +15,13 @@ body {
 }
 
 /* ── Header ────────────────────────────────────────────────────────── */
+.sticky-top {
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    background: #f0f2f5;
+}
+
 header {
     background: #f0f2f5;
     padding: 16px 24px;
@@ -22,9 +29,6 @@ header {
     align-items: center;
     justify-content: space-between;
     border-bottom: 3px solid #d0d5dd;
-    position: sticky;
-    top: 0;
-    z-index: 10;
 }
 
 header h1 {
@@ -84,6 +88,8 @@ header h1 {
     background: #f0f2f5;
     padding: 0 24px;
     border-bottom: 2px solid #d0d5dd;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
 }
 
 
@@ -1586,6 +1592,8 @@ header h1 {
 /* ── Inventory Board ───────────────────────────────────────────────── */
 .inventory-board {
     padding: 20px;
+    overflow-x: hidden;
+    max-width: 100vw;
 }
 
 .inv-group {
@@ -1685,6 +1693,8 @@ header h1 {
 .inventory-detail-modal {
     max-width: 440px;
     width: 90vw;
+    max-height: 85vh;
+    overflow-y: auto;
 }
 
 .inv-detail-title {
@@ -1834,11 +1844,24 @@ header h1 {
     }
 
     .inv-grid {
-        grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+        grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
         gap: 8px;
     }
 
     .inventory-board {
-        padding: 12px;
+        padding: 8px;
+    }
+
+    .inv-card {
+        padding: 8px 6px 6px;
+        font-size: 0.85rem;
+    }
+
+    .inv-card-name {
+        font-size: 0.85rem;
+    }
+
+    .inv-card-qty {
+        font-size: 0.95rem;
     }
 }
