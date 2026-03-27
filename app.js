@@ -1408,10 +1408,15 @@ function showInventoryDetailModal(item) {
 function saveInventoryItem() {
     if (!currentInvItem) return;
     const user = auth.currentUser;
-    if (!user || !canEditInventory(user.email)) return;
+    if (!user || !canEditInventory(user.email)) {
+        alert("You do not have permission to edit inventory.");
+        return;
+    }
     const val = parseFloat(document.getElementById("inv-detail-stock").value) || 0;
-    inventoryRef.child(currentInvItem.id).set({ inv: val, dateCounted: new Date().toISOString() });
-    closeInventoryModal();
+    const itemId = currentInvItem.id.replace(/[.#$/\[\]]/g, "_");
+    inventoryRef.child(itemId).set({ inv: val, dateCounted: new Date().toISOString() })
+        .then(() => closeInventoryModal())
+        .catch((err) => alert("Save failed: " + err.message));
 }
 
 function closeInventoryModal() {
