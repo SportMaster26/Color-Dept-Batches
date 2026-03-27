@@ -1338,7 +1338,7 @@ function renderInventoryBoard() {
     undoBtn.addEventListener("click", undoInventoryAction);
     const addBtn = document.createElement("button");
     addBtn.className = "btn btn-primary btn-sm";
-    addBtn.textContent = "+ Add Row";
+    addBtn.textContent = "+ Add Raw";
     addBtn.addEventListener("click", showAddInventoryModal);
     const exportBtn = document.createElement("button");
     exportBtn.className = "btn btn-primary btn-sm btn-export";
