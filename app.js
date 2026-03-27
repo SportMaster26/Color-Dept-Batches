@@ -1326,11 +1326,28 @@ function updateInvUndoBtn() {
 }
 
 function renderInventoryBoard() {
-    // Preserve the toolbar, clear only the rendered groups
-    const toolbar = inventoryBoard.querySelector(".inv-toolbar");
     inventoryBoard.innerHTML = "";
-    if (toolbar) inventoryBoard.appendChild(toolbar);
-    updateInvUndoBtn();
+    // Rebuild toolbar
+    const toolbar = document.createElement("div");
+    toolbar.className = "inv-toolbar";
+    const undoBtn = document.createElement("button");
+    undoBtn.id = "inv-undo-btn";
+    undoBtn.className = "btn btn-undo btn-undo-inv" + (invUndoStack.length === 0 ? " hidden" : "");
+    undoBtn.textContent = "Undo";
+    undoBtn.title = "Undo last inventory action";
+    undoBtn.addEventListener("click", undoInventoryAction);
+    const addBtn = document.createElement("button");
+    addBtn.className = "btn btn-primary btn-sm";
+    addBtn.textContent = "+ Add Row";
+    addBtn.addEventListener("click", showAddInventoryModal);
+    const exportBtn = document.createElement("button");
+    exportBtn.className = "btn btn-primary btn-sm btn-export";
+    exportBtn.textContent = "Export to Excel";
+    exportBtn.addEventListener("click", exportInventoryToExcel);
+    toolbar.appendChild(undoBtn);
+    toolbar.appendChild(addBtn);
+    toolbar.appendChild(exportBtn);
+    inventoryBoard.appendChild(toolbar);
     const groups = {};
     for (const item of INVENTORY_ITEMS) {
         if (!groups[item.group]) groups[item.group] = [];
