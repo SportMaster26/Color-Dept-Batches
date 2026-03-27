@@ -62,6 +62,7 @@
         <button id="tab-completed" class="tab-btn">Completed <span id="completed-count" class="tab-badge hidden">0</span></button>
         <button id="tab-notes" class="tab-btn">Notes</button>
         <button id="tab-inventory" class="tab-btn hidden">Inventory</button>
+        <button id="tab-test-inv" class="tab-btn hidden">Test Inventory</button>
     </div>
     </div><!-- end .sticky-top -->
 
@@ -488,6 +489,107 @@
         <!-- Toolbar + cards rendered by JS -->
     </div>
 
+    <!-- Test Inventory Board (separate from real inventory) -->
+    <div id="test-inv-board" class="inventory-board hidden">
+        <!-- Toolbar + cards rendered by JS -->
+    </div>
+
+    <!-- Test Inventory Detail Modal -->
+    <div id="test-inv-detail-overlay" class="modal-overlay hidden">
+        <div class="modal inventory-detail-modal">
+            <h2 id="test-inv-detail-title" class="inv-detail-title"></h2>
+            <div id="test-inv-detail-code" class="inv-detail-code"></div>
+            <div class="inv-detail-rows">
+                <div class="inv-detail-row inv-detail-notes-row">
+                    <span class="inv-detail-label">Notes:</span>
+                    <textarea id="test-inv-detail-notes" class="inv-detail-notes-input" rows="2" placeholder="Add notes..."></textarea>
+                </div>
+                <div class="inv-detail-row">
+                    <span class="inv-detail-label">Lead Time:</span>
+                    <input type="text" id="test-inv-detail-leadtime" class="inv-detail-stock-input" placeholder="e.g. 7 Days">
+                </div>
+                <div class="inv-detail-row">
+                    <span class="inv-detail-label">Re-order Level:</span>
+                    <span id="test-inv-detail-reorder" class="inv-detail-value"></span>
+                </div>
+                <div class="inv-detail-row">
+                    <span class="inv-detail-label">Current Stock:</span>
+                    <div class="inv-detail-stock-wrap">
+                        <input type="number" id="test-inv-detail-stock" class="inv-detail-stock-input" min="0" step="0.25">
+                        <span id="test-inv-detail-pkg-type" class="inv-detail-pkg-type"></span>
+                    </div>
+                </div>
+                <div class="inv-detail-row">
+                    <span class="inv-detail-label">Quantity:</span>
+                    <span id="test-inv-detail-qty" class="inv-detail-value inv-detail-qty-value"></span>
+                </div>
+                <div id="test-inv-detail-status" class="inv-status-badge"></div>
+                <div id="test-inv-detail-date" class="inv-detail-date"></div>
+            </div>
+            <div class="modal-actions">
+                <button id="test-inv-detail-save" class="btn btn-primary">Save</button>
+                <button id="test-inv-detail-cancel" class="btn btn-admin">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Test Inventory Add Modal -->
+    <div id="test-inv-add-overlay" class="modal-overlay hidden">
+        <div class="modal inventory-detail-modal">
+            <h2 class="inv-detail-title">Add Test Inventory Item</h2>
+            <div class="inv-detail-rows">
+                <div class="inv-detail-row">
+                    <span class="inv-detail-label">Name:</span>
+                    <input type="text" id="test-inv-add-name" class="inv-detail-stock-input" placeholder="Product name">
+                </div>
+                <div class="inv-detail-row">
+                    <span class="inv-detail-label">Item Code:</span>
+                    <input type="text" id="test-inv-add-code" class="inv-detail-stock-input" placeholder="e.g. T1234">
+                </div>
+                <div class="inv-detail-row">
+                    <span class="inv-detail-label">Group:</span>
+                    <select id="test-inv-add-group" class="inv-detail-stock-input">
+                        <option value="Test Raw Materials">Test Raw Materials</option>
+                        <option value="Test Pigments">Test Pigments</option>
+                        <option value="Test Containers">Test Containers</option>
+                    </select>
+                </div>
+                <div class="inv-detail-row">
+                    <span class="inv-detail-label">Unit:</span>
+                    <input type="text" id="test-inv-add-unit" class="inv-detail-stock-input" value="Each">
+                </div>
+                <div class="inv-detail-row">
+                    <span class="inv-detail-label">Package Type:</span>
+                    <input type="text" id="test-inv-add-pkg" class="inv-detail-stock-input" value="each">
+                </div>
+                <div class="inv-detail-row">
+                    <span class="inv-detail-label">Weight/Pkg:</span>
+                    <input type="number" id="test-inv-add-weight" class="inv-detail-stock-input" value="1" min="0" step="0.01">
+                </div>
+                <div class="inv-detail-row">
+                    <span class="inv-detail-label">Re-order Level:</span>
+                    <input type="number" id="test-inv-add-reorder" class="inv-detail-stock-input" placeholder="0" min="0">
+                </div>
+                <div class="inv-detail-row">
+                    <span class="inv-detail-label">Lead Time:</span>
+                    <input type="text" id="test-inv-add-leadtime" class="inv-detail-stock-input" placeholder="e.g. 7 Days">
+                </div>
+                <div class="inv-detail-row">
+                    <span class="inv-detail-label">Stock Count:</span>
+                    <input type="number" id="test-inv-add-stock" class="inv-detail-stock-input" value="0" min="0" step="0.25">
+                </div>
+                <div class="inv-detail-row inv-detail-notes-row">
+                    <span class="inv-detail-label">Notes:</span>
+                    <textarea id="test-inv-add-notes" class="inv-detail-notes-input" rows="2" placeholder="Add notes..."></textarea>
+                </div>
+            </div>
+            <div class="modal-actions">
+                <button id="test-inv-add-save" class="btn btn-primary">Add Item</button>
+                <button id="test-inv-add-cancel" class="btn btn-admin">Cancel</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Add Inventory Item Modal -->
     <div id="inv-add-overlay" class="modal-overlay hidden">
         <div class="modal inventory-detail-modal">
@@ -560,7 +662,7 @@
                 </div>
                 <div class="inv-detail-row">
                     <span class="inv-detail-label">Lead Time:</span>
-                    <span id="inv-detail-leadtime" class="inv-detail-value"></span>
+                    <input type="text" id="inv-detail-leadtime" class="inv-detail-stock-input" placeholder="e.g. 7 Days">
                 </div>
                 <div class="inv-detail-row">
                     <span class="inv-detail-label">Re-order Level:</span>
