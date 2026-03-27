@@ -288,6 +288,7 @@ const notesRef = db.ref("notes");
 const customProductsRef = db.ref("meta/customProducts");
 const latexTanksRef = db.ref("latexTanks");
 const inventoryRef = db.ref("inventory");
+const testInvRef = db.ref("testInventory");
 const lockedAccountsRef = db.ref("meta/lockedAccounts");
 const failedAttemptsRef = db.ref("meta/failedAttempts");
 const loginAuditRef = db.ref("meta/loginAudit");
@@ -394,6 +395,8 @@ const LATEX_TANKS = [
 
 let latexTankLevels = {}; // { tankId: gallons }
 let inventoryData = {}; // { itemId: { inv, dateCounted, ... } }
+let testInvData = {};
+let testInvItems = [];
 
 // Firebase listeners — started after auth, stopped on logout
 let listenersActive = false;
@@ -409,6 +412,7 @@ function startFirebaseListeners() {
     notesRef.on("value", onNotes);
     inventoryRef.on("value", onInventoryData);
     inventoryRef.once("value", onInventorySeed);
+    testInvRef.on("value", onTestInvData);
 }
 
 function stopFirebaseListeners() {
@@ -417,6 +421,7 @@ function stopFirebaseListeners() {
     customProductsRef.off("value", onCustomProducts);
     batchesRef.off("value", onBatches);
     latexTanksRef.off("value", onLatexTanks);
+    testInvRef.off("value", onTestInvData);
     notesRef.off("value", onNotes);
     inventoryRef.off("value", onInventoryData);
     // Remove error banner if present
@@ -460,6 +465,8 @@ const tabNotes = document.getElementById("tab-notes");
 const notesBoard = document.getElementById("notes-board");
 const tabInventory = document.getElementById("tab-inventory");
 const inventoryBoard = document.getElementById("inventory-board");
+const tabTestInv = document.getElementById("tab-test-inv");
+const testInvBoard = document.getElementById("test-inv-board");
 
 // Users allowed to see the Latex Department tab
 const LATEX_TAB_USERS = [
@@ -477,6 +484,12 @@ const LATEX_TAB_USERS = [
 const INVENTORY_TAB_USERS = [
     "master@colordept.local",
     "hhudak@colordept.local",
+    "paul@colordept.local",
+    "ajolly@colordept.local",
+];
+
+const TEST_INV_USERS = [
+    "master@colordept.local",
     "paul@colordept.local",
     "ajolly@colordept.local",
 ];
@@ -554,6 +567,7 @@ function updateAdminUI() {
 
     // Inventory tab: only visible to specific users
     tabInventory.classList.toggle("hidden", !INVENTORY_TAB_USERS.includes(userEmail));
+    tabTestInv.classList.toggle("hidden", !TEST_INV_USERS.includes(userEmail));
 
     // Only TJ (tmahl) and Kevin (kherrin) can add notes
     const canPostNotes = NOTES_POST_USERS.includes(userEmail);
@@ -676,11 +690,13 @@ function selectTab(tab) {
     tabCompleted.classList.toggle("tab-selected", tab === "completed");
     tabNotes.classList.toggle("tab-selected", tab === "notes");
     tabInventory.classList.toggle("tab-selected", tab === "inventory");
+    tabTestInv.classList.toggle("tab-selected", tab === "test-inv");
     board.classList.toggle("hidden", tab !== "active");
     latexBoard.classList.toggle("hidden", tab !== "latex");
     completedBoard.classList.toggle("hidden", tab !== "completed");
     notesBoard.classList.toggle("hidden", tab !== "notes");
     inventoryBoard.classList.toggle("hidden", tab !== "inventory");
+    testInvBoard.classList.toggle("hidden", tab !== "test-inv");
 }
 
 tabActive.addEventListener("click", () => {
@@ -714,6 +730,11 @@ tabNotes.addEventListener("click", () => {
 tabInventory.addEventListener("click", () => {
     selectTab("inventory");
     renderInventoryBoard();
+});
+
+tabTestInv.addEventListener("click", () => {
+    selectTab("test-inv");
+    renderTestInvBoard();
 });
 
 function updateCompletedCount() {
@@ -1423,7 +1444,8 @@ function showInventoryDetailModal(item) {
     document.getElementById("inv-detail-title").textContent = item.name;
     document.getElementById("inv-detail-code").textContent = item.id;
     document.getElementById("inv-detail-notes").value = userNotes || item.notes || "";
-    document.getElementById("inv-detail-leadtime").textContent = item.leadTime || "\u2014";
+    const userLeadTime = (raw && typeof raw === "object") ? (raw.userLeadTime || "") : "";
+    document.getElementById("inv-detail-leadtime").value = userLeadTime || item.leadTime || "";
     document.getElementById("inv-detail-reorder").textContent = item.reorderLevel ? item.reorderLevel.toLocaleString() + " " + item.unit : "\u2014";
     const stockInput = document.getElementById("inv-detail-stock");
     stockInput.value = inv;
@@ -1455,13 +1477,14 @@ function saveInventoryItem() {
     }
     const val = parseFloat(document.getElementById("inv-detail-stock").value) || 0;
     const userNotes = document.getElementById("inv-detail-notes").value.trim();
+    const userLeadTime = document.getElementById("inv-detail-leadtime").value.trim();
     const itemId = currentInvItem.id.replace(/[.#$/\[\]]/g, "_");
     const savedScrollPos = invScrollPos;
     // Save previous state for undo
     const prevRaw = inventoryData[itemId];
     const prevData = prevRaw && typeof prevRaw === "object" ? { ...prevRaw } : { inv: prevRaw || 0 };
     pushInvUndo("edit", itemId, prevData);
-    inventoryRef.child(itemId).set({ inv: val, userNotes: userNotes, dateCounted: new Date().toISOString() })
+    inventoryRef.child(itemId).set({ inv: val, userNotes: userNotes, userLeadTime: userLeadTime, dateCounted: new Date().toISOString() })
         .then(() => {
             closeInventoryModal();
             requestAnimationFrame(() => window.scrollTo(0, savedScrollPos));
@@ -1595,6 +1618,232 @@ function onInventorySeed(snapshot) {
     }
     inventoryRef.set(seed);
 }
+
+// ── Test Inventory Tab (separate sandbox) ────────────────────────────
+
+const TEST_INV_ITEMS_DEFAULT = [
+    { id: "T0001", name: "Test Raw A", unit: "lbs", reorderLevel: 500, maxQty: null, leadTime: "7 Days", notes: "Sample test item", pkg: "drums", weight: 100, group: "Test Raw Materials" },
+    { id: "T0002", name: "Test Raw B", unit: "lbs", reorderLevel: 200, maxQty: null, leadTime: "14 Days", notes: "Another test item", pkg: "totes", weight: 500, group: "Test Raw Materials" },
+    { id: "T0003", name: "Test Pigment", unit: "lbs", reorderLevel: 1000, maxQty: null, leadTime: "30 Days", notes: "Test pigment", pkg: "skids", weight: 2000, group: "Test Pigments" },
+    { id: "T0004", name: "Test Container", unit: "Each", reorderLevel: 50, maxQty: null, leadTime: "5 Days", notes: "Test container", pkg: "each", weight: 1, group: "Test Containers" },
+];
+
+let currentTestInvItem = null;
+let testInvScrollPos = 0;
+
+function onTestInvData(snapshot) {
+    testInvData = snapshot.val() || {};
+    // Rebuild testInvItems from Firebase _meta
+    testInvItems = [...TEST_INV_ITEMS_DEFAULT];
+    for (const [id, raw] of Object.entries(testInvData)) {
+        if (raw && raw._meta && !testInvItems.find(i => i.id === id)) {
+            testInvItems.push({ id, ...raw._meta, initialCount: raw.inv || 0 });
+        }
+    }
+    if (activeTab === "test-inv") {
+        const scrollY = window.scrollY;
+        renderTestInvBoard();
+        requestAnimationFrame(() => window.scrollTo(0, scrollY));
+    }
+}
+
+function renderTestInvBoard() {
+    testInvBoard.innerHTML = "";
+    // Toolbar
+    const toolbar = document.createElement("div");
+    toolbar.className = "inv-toolbar";
+    const addBtn = document.createElement("button");
+    addBtn.className = "btn btn-primary btn-sm";
+    addBtn.textContent = "+ Add Raw";
+    addBtn.addEventListener("click", showTestInvAddModal);
+    const exportBtn = document.createElement("button");
+    exportBtn.className = "btn btn-primary btn-sm btn-export";
+    exportBtn.textContent = "Export to Excel";
+    exportBtn.addEventListener("click", exportTestInvToExcel);
+    toolbar.appendChild(addBtn);
+    toolbar.appendChild(exportBtn);
+    testInvBoard.appendChild(toolbar);
+
+    const groups = {};
+    for (const item of testInvItems) {
+        if (!groups[item.group]) groups[item.group] = [];
+        groups[item.group].push(item);
+    }
+    for (const [groupName, items] of Object.entries(groups)) {
+        const section = document.createElement("div");
+        section.className = "inv-group";
+        const header = document.createElement("h3");
+        header.className = "inv-group-header";
+        header.textContent = groupName;
+        section.appendChild(header);
+        const grid = document.createElement("div");
+        grid.className = "inv-grid";
+        for (const item of items) {
+            const raw = testInvData[item.id];
+            const inv = (raw && typeof raw === "object") ? (raw.inv || 0) : (raw || 0);
+            const userNotes = (raw && typeof raw === "object") ? (raw.userNotes || "") : "";
+            const qty = inv * item.weight;
+            const status = getInventoryStatus(qty, item.reorderLevel);
+            const updatedAt = (raw && typeof raw === "object") ? raw.dateCounted : null;
+            const dateStr = updatedAt ? new Date(updatedAt).toLocaleDateString("en-US", { month: "short", day: "numeric" }) : "";
+            const displayNotes = userNotes || item.notes;
+            const card = document.createElement("div");
+            card.className = "inv-card" + (status !== "none" ? " status-" + status : "");
+            card.innerHTML = `
+                <div class="inv-card-date">${dateStr}</div>
+                <div class="inv-card-name">${escapeHtml(item.name)}</div>
+                <div class="inv-card-code">${escapeHtml(item.id)}</div>
+                <div class="inv-card-qty">${qty.toLocaleString()} <span class="inv-card-qty-unit">${escapeHtml(item.unit)}</span></div>
+                <div class="inv-card-pkg">${inv} ${escapeHtml(item.pkg)}</div>
+                ${displayNotes ? `<div class="inv-card-notes">${escapeHtml(displayNotes)}</div>` : ""}
+            `;
+            const deleteBtn = document.createElement("button");
+            deleteBtn.className = "inv-card-delete";
+            deleteBtn.innerHTML = "&times;";
+            deleteBtn.addEventListener("click", (e) => {
+                e.stopPropagation();
+                if (confirm(`Remove "${item.name}" from test inventory?`)) {
+                    testInvRef.child(item.id).remove();
+                    const idx = testInvItems.findIndex(i => i.id === item.id);
+                    if (idx !== -1) testInvItems.splice(idx, 1);
+                }
+            });
+            card.appendChild(deleteBtn);
+            card.addEventListener("click", () => showTestInvDetailModal(item));
+            grid.appendChild(card);
+        }
+        section.appendChild(grid);
+        testInvBoard.appendChild(section);
+    }
+}
+
+function showTestInvDetailModal(item) {
+    currentTestInvItem = item;
+    testInvScrollPos = window.scrollY;
+    const raw = testInvData[item.id];
+    const inv = (raw && typeof raw === "object") ? (raw.inv || 0) : (raw || 0);
+    const userNotes = (raw && typeof raw === "object") ? (raw.userNotes || "") : "";
+    const userLeadTime = (raw && typeof raw === "object") ? (raw.userLeadTime || "") : "";
+    const qty = inv * item.weight;
+    const status = getInventoryStatus(qty, item.reorderLevel);
+    const updatedAt = (raw && typeof raw === "object") ? raw.dateCounted : null;
+    const dateStr = updatedAt ? new Date(updatedAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "Never";
+
+    document.getElementById("test-inv-detail-title").textContent = item.name;
+    document.getElementById("test-inv-detail-code").textContent = item.id;
+    document.getElementById("test-inv-detail-notes").value = userNotes || item.notes || "";
+    document.getElementById("test-inv-detail-leadtime").value = userLeadTime || item.leadTime || "";
+    document.getElementById("test-inv-detail-reorder").textContent = item.reorderLevel ? item.reorderLevel.toLocaleString() + " " + item.unit : "\u2014";
+    document.getElementById("test-inv-detail-stock").value = inv;
+    document.getElementById("test-inv-detail-pkg-type").textContent = item.pkg;
+    document.getElementById("test-inv-detail-qty").textContent = qty.toLocaleString() + " " + item.unit;
+    const badge = document.getElementById("test-inv-detail-status");
+    badge.className = "inv-status-badge" + (status !== "none" ? " status-" + status : "");
+    badge.textContent = status === "red" ? "BELOW REORDER" : status === "yellow" ? "LOW STOCK" : status === "green" ? "IN STOCK" : "";
+    document.getElementById("test-inv-detail-date").textContent = "Last counted: " + dateStr;
+
+    const stockInput = document.getElementById("test-inv-detail-stock");
+    stockInput.oninput = () => {
+        const val = parseFloat(stockInput.value) || 0;
+        const newQty = val * item.weight;
+        const newStatus = getInventoryStatus(newQty, item.reorderLevel);
+        document.getElementById("test-inv-detail-qty").textContent = newQty.toLocaleString() + " " + item.unit;
+        badge.className = "inv-status-badge" + (newStatus !== "none" ? " status-" + newStatus : "");
+        badge.textContent = newStatus === "red" ? "BELOW REORDER" : newStatus === "yellow" ? "LOW STOCK" : newStatus === "green" ? "IN STOCK" : "";
+    };
+
+    document.getElementById("test-inv-detail-overlay").classList.remove("hidden");
+}
+
+function saveTestInvItem() {
+    if (!currentTestInvItem) return;
+    const val = parseFloat(document.getElementById("test-inv-detail-stock").value) || 0;
+    const userNotes = document.getElementById("test-inv-detail-notes").value.trim();
+    const userLeadTime = document.getElementById("test-inv-detail-leadtime").value.trim();
+    const savedPos = testInvScrollPos;
+    testInvRef.child(currentTestInvItem.id).set({ inv: val, userNotes, userLeadTime, dateCounted: new Date().toISOString() })
+        .then(() => {
+            document.getElementById("test-inv-detail-overlay").classList.add("hidden");
+            currentTestInvItem = null;
+            requestAnimationFrame(() => window.scrollTo(0, savedPos));
+        })
+        .catch((err) => alert("Save failed: " + err.message));
+}
+
+function showTestInvAddModal() {
+    document.getElementById("test-inv-add-overlay").classList.remove("hidden");
+    document.getElementById("test-inv-add-name").value = "";
+    document.getElementById("test-inv-add-code").value = "";
+    document.getElementById("test-inv-add-unit").value = "Each";
+    document.getElementById("test-inv-add-reorder").value = "";
+    document.getElementById("test-inv-add-leadtime").value = "";
+    document.getElementById("test-inv-add-notes").value = "";
+    document.getElementById("test-inv-add-pkg").value = "each";
+    document.getElementById("test-inv-add-weight").value = "1";
+    document.getElementById("test-inv-add-stock").value = "0";
+    document.getElementById("test-inv-add-group").value = "Test Raw Materials";
+    document.getElementById("test-inv-add-name").focus();
+}
+
+function saveNewTestInvItem() {
+    const name = document.getElementById("test-inv-add-name").value.trim();
+    const code = document.getElementById("test-inv-add-code").value.trim();
+    if (!name || !code) { alert("Name and Item Code are required."); return; }
+    const newItem = {
+        id: code, name, unit: document.getElementById("test-inv-add-unit").value.trim() || "Each",
+        reorderLevel: parseInt(document.getElementById("test-inv-add-reorder").value) || 0,
+        leadTime: document.getElementById("test-inv-add-leadtime").value.trim(),
+        notes: document.getElementById("test-inv-add-notes").value.trim(),
+        pkg: document.getElementById("test-inv-add-pkg").value.trim() || "each",
+        weight: parseFloat(document.getElementById("test-inv-add-weight").value) || 1,
+        group: document.getElementById("test-inv-add-group").value,
+    };
+    const stock = parseFloat(document.getElementById("test-inv-add-stock").value) || 0;
+    testInvItems.push(newItem);
+    testInvRef.child(code).set({ inv: stock, userNotes: newItem.notes, dateCounted: new Date().toISOString(),
+        _meta: { name: newItem.name, unit: newItem.unit, reorderLevel: newItem.reorderLevel, leadTime: newItem.leadTime, pkg: newItem.pkg, weight: newItem.weight, group: newItem.group }
+    }).then(() => {
+        document.getElementById("test-inv-add-overlay").classList.add("hidden");
+        renderTestInvBoard();
+    }).catch((err) => alert("Save failed: " + err.message));
+}
+
+function exportTestInvToExcel() {
+    if (typeof XLSX === "undefined") { alert("Export library not loaded."); return; }
+    const rows = [];
+    for (const item of testInvItems) {
+        const raw = testInvData[item.id];
+        const inv = (raw && typeof raw === "object") ? (raw.inv || 0) : (raw || 0);
+        const userNotes = (raw && typeof raw === "object") ? (raw.userNotes || "") : "";
+        const qty = inv * item.weight;
+        rows.push({ "Item Code": item.id, "Product": item.name, "QTY": qty, "Unit": item.unit, "Re-order Level": item.reorderLevel || "", "Lead Time": item.leadTime, "Notes": userNotes || item.notes, "Inventory": inv, "Package": item.pkg, "Weight/Pkg": item.weight, "Group": item.group });
+    }
+    const ws = XLSX.utils.json_to_sheet(rows);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Test Inventory");
+    XLSX.writeFile(wb, "Test_Inventory_" + new Date().toISOString().slice(0, 10) + ".xlsx");
+}
+
+document.getElementById("test-inv-detail-save").addEventListener("click", saveTestInvItem);
+document.getElementById("test-inv-detail-cancel").addEventListener("click", () => {
+    document.getElementById("test-inv-detail-overlay").classList.add("hidden");
+    currentTestInvItem = null;
+    requestAnimationFrame(() => window.scrollTo(0, testInvScrollPos));
+});
+document.getElementById("test-inv-detail-overlay").addEventListener("click", (e) => {
+    if (e.target.id === "test-inv-detail-overlay") {
+        document.getElementById("test-inv-detail-overlay").classList.add("hidden");
+        currentTestInvItem = null;
+        requestAnimationFrame(() => window.scrollTo(0, testInvScrollPos));
+    }
+});
+document.getElementById("test-inv-add-save").addEventListener("click", saveNewTestInvItem);
+document.getElementById("test-inv-add-cancel").addEventListener("click", () => {
+    document.getElementById("test-inv-add-overlay").classList.add("hidden");
+});
+document.getElementById("test-inv-add-overlay").addEventListener("click", (e) => {
+    if (e.target.id === "test-inv-add-overlay") document.getElementById("test-inv-add-overlay").classList.add("hidden");
+});
 
 // ── Completed Tab: Table / Chart / Export ────────────────────────────
 let completedView = "table"; // "table" or "chart"
