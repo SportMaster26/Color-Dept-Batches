@@ -60,6 +60,7 @@
         <button id="tab-latex" class="tab-btn hidden">Latex Dept</button>
         <button id="tab-completed" class="tab-btn">Completed <span id="completed-count" class="tab-badge hidden">0</span></button>
         <button id="tab-notes" class="tab-btn">Notes</button>
+        <button id="tab-inventory" class="tab-btn hidden">Inventory</button>
     </div>
 
 
@@ -478,6 +479,50 @@
     <!-- Latex Department — Tank Level Tracker -->
     <div id="latex-board" class="latex-board hidden">
         <!-- Rendered by JS — tank cards with fill visuals -->
+    </div>
+
+    <!-- Inventory — Raw Material & Packaging Tracker -->
+    <div id="inventory-board" class="inventory-board hidden">
+        <!-- Rendered by JS — inventory cards with color coding -->
+    </div>
+
+    <!-- Inventory Detail Modal -->
+    <div id="inventory-detail-overlay" class="modal-overlay hidden">
+        <div class="modal inventory-detail-modal">
+            <h2 id="inv-detail-title" class="inv-detail-title"></h2>
+            <div id="inv-detail-code" class="inv-detail-code"></div>
+            <div class="inv-detail-rows">
+                <div class="inv-detail-row">
+                    <span class="inv-detail-label">Notes:</span>
+                    <span id="inv-detail-notes" class="inv-detail-value"></span>
+                </div>
+                <div class="inv-detail-row">
+                    <span class="inv-detail-label">Lead Time:</span>
+                    <span id="inv-detail-leadtime" class="inv-detail-value"></span>
+                </div>
+                <div class="inv-detail-row">
+                    <span class="inv-detail-label">Re-order Level:</span>
+                    <span id="inv-detail-reorder" class="inv-detail-value"></span>
+                </div>
+                <div class="inv-detail-row">
+                    <span class="inv-detail-label">Current Stock:</span>
+                    <div class="inv-detail-stock-wrap">
+                        <input type="number" id="inv-detail-stock" class="inv-detail-stock-input" min="0" step="0.25">
+                        <span id="inv-detail-pkg-type" class="inv-detail-pkg-type"></span>
+                    </div>
+                </div>
+                <div class="inv-detail-row">
+                    <span class="inv-detail-label">Quantity:</span>
+                    <span id="inv-detail-qty" class="inv-detail-value inv-detail-qty-value"></span>
+                </div>
+                <div id="inv-detail-status" class="inv-status-badge"></div>
+                <div id="inv-detail-date" class="inv-detail-date"></div>
+            </div>
+            <div class="modal-actions">
+                <button id="inv-detail-save" class="btn btn-primary">Save</button>
+                <button id="inv-detail-cancel" class="btn btn-admin">Cancel</button>
+            </div>
+        </div>
     </div>
 
     <!-- Completed batches board -->

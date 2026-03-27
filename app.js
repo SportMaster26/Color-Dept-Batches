@@ -287,6 +287,7 @@ const batchesRef = db.ref("batches");
 const notesRef = db.ref("notes");
 const customProductsRef = db.ref("meta/customProducts");
 const latexTanksRef = db.ref("latexTanks");
+const inventoryRef = db.ref("inventory");
 const lockedAccountsRef = db.ref("meta/lockedAccounts");
 const failedAttemptsRef = db.ref("meta/failedAttempts");
 const loginAuditRef = db.ref("meta/loginAudit");
@@ -392,6 +393,7 @@ const LATEX_TANKS = [
 ];
 
 let latexTankLevels = {}; // { tankId: gallons }
+let inventoryData = {}; // { itemId: { inv, dateCounted, ... } }
 
 // Firebase listeners — started after auth, stopped on logout
 let listenersActive = false;
@@ -405,6 +407,8 @@ function startFirebaseListeners() {
     latexTanksRef.on("value", onLatexTanks);
     latexTanksRef.once("value", onLatexTanksSeed);
     notesRef.on("value", onNotes);
+    inventoryRef.on("value", onInventoryData);
+    inventoryRef.once("value", onInventorySeed);
 }
 
 function stopFirebaseListeners() {
@@ -414,6 +418,7 @@ function stopFirebaseListeners() {
     batchesRef.off("value", onBatches);
     latexTanksRef.off("value", onLatexTanks);
     notesRef.off("value", onNotes);
+    inventoryRef.off("value", onInventoryData);
     // Remove error banner if present
     const errBanner = document.getElementById("firebase-error-banner");
     if (errBanner) errBanner.remove();
@@ -453,6 +458,8 @@ const tabCompleted = document.getElementById("tab-completed");
 const completedBoard = document.getElementById("completed-board");
 const tabNotes = document.getElementById("tab-notes");
 const notesBoard = document.getElementById("notes-board");
+const tabInventory = document.getElementById("tab-inventory");
+const inventoryBoard = document.getElementById("inventory-board");
 
 // Users allowed to see the Latex Department tab
 const LATEX_TAB_USERS = [
@@ -463,6 +470,13 @@ const LATEX_TAB_USERS = [
     "cwood@colordept.local",
     "hhudak@colordept.local",
     "jeff@colordept.local",
+];
+
+// Users allowed to see and edit the Inventory tab
+const INVENTORY_TAB_USERS = [
+    "master@colordept.local",
+    "hhudak@colordept.local",
+    "ajolly@colordept.local",
 ];
 const loginScreen = document.getElementById("login-screen");
 const appContainer = document.getElementById("app-container");
@@ -535,6 +549,9 @@ function updateAdminUI() {
 
     // Notes tab: hide from platform only (floor can post notes)
     tabNotes.classList.toggle("hidden", userEmail === "platform@colordept.local");
+
+    // Inventory tab: only visible to specific users
+    tabInventory.classList.toggle("hidden", !INVENTORY_TAB_USERS.includes(userEmail));
 
     // Only TJ (tmahl) and Kevin (kherrin) can add notes
     const canPostNotes = NOTES_POST_USERS.includes(userEmail);
@@ -656,10 +673,12 @@ function selectTab(tab) {
     tabLatex.classList.toggle("tab-selected", tab === "latex");
     tabCompleted.classList.toggle("tab-selected", tab === "completed");
     tabNotes.classList.toggle("tab-selected", tab === "notes");
+    tabInventory.classList.toggle("tab-selected", tab === "inventory");
     board.classList.toggle("hidden", tab !== "active");
     latexBoard.classList.toggle("hidden", tab !== "latex");
     completedBoard.classList.toggle("hidden", tab !== "completed");
     notesBoard.classList.toggle("hidden", tab !== "notes");
+    inventoryBoard.classList.toggle("hidden", tab !== "inventory");
 }
 
 tabActive.addEventListener("click", () => {
@@ -688,6 +707,11 @@ tabCompleted.addEventListener("click", () => {
 tabNotes.addEventListener("click", () => {
     selectTab("notes");
     renderNotes();
+});
+
+tabInventory.addEventListener("click", () => {
+    selectTab("inventory");
+    renderInventoryBoard();
 });
 
 function updateCompletedCount() {
@@ -782,6 +806,66 @@ function onBatches(snapshot) {
     if (activeTab === "completed") renderCompleted();
 }
 
+// Auto-assign batch numbers to the top 2 batches in each bowl lane.
+// This is the ONLY place that assigns numbers (besides advanceStatus for queued→mixing).
+// Only ONE assignment runs at a time per client. Uses Firebase transaction on the
+// batch's batchNumber field so multiple clients don't double-assign.
+let _autoAssignInFlight = false;
+let _autoAssignStartedAt = 0;
+function assignNumbersToTopBatches() {
+    // Safety net: if the flag has been stuck for >10 seconds, force-reset it.
+    // This catches edge cases where a Firebase callback is never invoked.
+    if (_autoAssignInFlight && (Date.now() - _autoAssignStartedAt > 10000)) {
+        console.warn("Auto-assign was stuck for >10s — force-resetting");
+        _autoAssignInFlight = false;
+    }
+    if (_autoAssignInFlight) return;
+    for (const bowlKey of BOWL_ORDER) {
+        const laneBatches = batches
+            .filter((b) => b.bowl === bowlKey && b.status !== "batch_complete")
+            .sort((a, b) => {
+                const orderA = a.sortOrder != null ? a.sortOrder : a.createdAt;
+                const orderB = b.sortOrder != null ? b.sortOrder : b.createdAt;
+                return orderA - orderB;
+            });
+
+        // Check top 2 batches in each lane
+        for (let i = 0; i < Math.min(2, laneBatches.length); i++) {
+            if (!laneBatches[i].batchNumber) {
+                const batchId = laneBatches[i].id;
+                _autoAssignInFlight = true;
+                _autoAssignStartedAt = Date.now();
+                assignBatchNumber((batchNumber) => {
+                    // Use transaction so only ONE client can set the batch number.
+                    // If another client already set it, recycle our number.
+                    batchesRef.child(batchId).child("batchNumber").transaction(
+                        (current) => {
+                            if (current) return; // Already set by another client — abort
+                            return batchNumber;
+                        },
+                        (error, committed) => {
+                            _autoAssignInFlight = false;
+                            if (!committed && !error) {
+                                // Another client won the race — recycle our number
+                                const num = parseInt(batchNumber.slice(1), 10);
+                                if (!isNaN(num) && num >= MIN_BATCH_NUMBER) {
+                                    recycledNumbersRef.push(num);
+                                }
+                            }
+                            // Firebase on("value") will fire → onBatchesChanged →
+                            // assignNumbersToTopBatches picks up the next batch
+                        }
+                    );
+                }, () => {
+                    // Error getting batch number — reset flag so we can try again
+                    _autoAssignInFlight = false;
+                    console.error("Failed to assign batch number, will retry on next Firebase update");
+                });
+                return; // Only one at a time per client
+            }
+        }
+    }
+}
 
 function onBatchesError(error) {
     console.error("Firebase connection error:", error);
@@ -1079,6 +1163,280 @@ function onLatexTanksSeed(snapshot) {
         CB: 1, T1: 6, T2: 15, T3: 16, T4: 29, T5: 13, T6: 9,
     };
     latexTanksRef.set(seed);
+}
+
+const INVENTORY_ITEMS = [
+    { id: "R1100", name: "Rovace 661 - Totes", unit: "gal", reorderLevel: 0, maxQty: null, leadTime: "7 Days", notes: "6000 Gal TT", initialCount: 0, pkg: "gal", weight: 8.87, group: "Raw Materials" },
+    { id: "R1010", name: "80M", unit: "lbs", reorderLevel: 50000, maxQty: null, leadTime: "2 weeks", notes: "40/50# bags per pallet", initialCount: 42.0, pkg: "skids", weight: 2000.0, group: "Raw Materials" },
+    { id: "R1020", name: "7080 Bag", unit: "skid", reorderLevel: 0, maxQty: null, leadTime: "2 weeks", notes: "Covia", initialCount: 10.0, pkg: "skids", weight: 2800.0, group: "Raw Materials" },
+    { id: "R1117", name: "Tamol 901", unit: "tote", reorderLevel: 1100, maxQty: null, leadTime: "2 weeks", notes: "", initialCount: 0.75, pkg: "totes", weight: 2205.0, group: "Raw Materials" },
+    { id: "R1941", name: "Tamol 851", unit: "lbs", reorderLevel: 2601, maxQty: null, leadTime: "10 Days", notes: "2601/Tote", initialCount: 3.0, pkg: "totes", weight: 2601.0, group: "Raw Materials" },
+    { id: "R1250", name: "Ammonium", unit: "lbs", reorderLevel: 2250, maxQty: 5000, leadTime: "7 Days", notes: "2250 LB Tote", initialCount: 1.0, pkg: "totes", weight: 2250.0, group: "Raw Materials" },
+    { id: "R1270", name: "Troy", unit: "lbs", reorderLevel: 450, maxQty: null, leadTime: "15 Days", notes: "450 lbs per drum", initialCount: 2.0, pkg: "drums", weight: 450.0, group: "Raw Materials" },
+    { id: "R1315", name: "Supersperse", unit: "lbs", reorderLevel: 4100, maxQty: null, leadTime: "10 Days", notes: "2,050 lbs per tote", initialCount: 6.0, pkg: "totes", weight: 2050.0, group: "Raw Materials" },
+    { id: "R1985", name: "FoamMaster", unit: "lbs", reorderLevel: 8000, maxQty: null, leadTime: "30 Days", notes: "1,900 lbs per tote", initialCount: 6.0, pkg: "totes", weight: 1900.0, group: "Raw Materials" },
+    { id: "R1391", name: "Bio", unit: "lbs", reorderLevel: 1760, maxQty: null, leadTime: "7 Days", notes: "440 lbs per drum", initialCount: 6.0, pkg: "drums", weight: 440.0, group: "Raw Materials" },
+    { id: "R1395", name: "D7", unit: "lbs", reorderLevel: 6600, maxQty: null, leadTime: "10 days", notes: "2204#Totes-was R1340", initialCount: 5.0, pkg: "totes", weight: 2204.0, group: "Raw Materials" },
+    { id: "R1398", name: "Rocima BT 2S TOTES-Replaced Proxel", unit: "lbs", reorderLevel: 2050, maxQty: null, leadTime: "10 Days", notes: "2204 lbs/tote 5Roc/3Prx", initialCount: 0, pkg: "totes", weight: 2204.0, group: "Raw Materials" },
+    { id: "R1393", name: "Polyph", unit: "lbs", reorderLevel: 440, maxQty: null, leadTime: "1 Month", notes: "441 lbs per drum", initialCount: 2.0, pkg: "drums", weight: 440.0, group: "Raw Materials" },
+    { id: "R1500", name: "20", unit: "lbs", reorderLevel: 10000, maxQty: null, leadTime: "10 Days", notes: "50/30# bags per plt", initialCount: 22.0, pkg: "skids", weight: 1500.0, group: "Raw Materials" },
+    { id: "R1505", name: "14-30", unit: "lbs", reorderLevel: 20000, maxQty: null, leadTime: "15 Days", notes: "40/50lb Bags/Pallet", initialCount: 21.0, pkg: "Skids", weight: 2000.0, group: "Raw Materials" },
+    { id: "R1870", name: "Foamt", unit: "lbs", reorderLevel: 0, maxQty: null, leadTime: "", notes: "440# per drum", initialCount: 5.0, pkg: "drums", weight: 440.0, group: "Raw Materials" },
+    { id: "R8050", name: "V100", unit: "lbs", reorderLevel: 600, maxQty: null, leadTime: "7 Days", notes: "600 lbs per drum", initialCount: 5.0, pkg: "drums", weight: 600.0, group: "Raw Materials" },
+    { id: "R1555", name: "Glo", unit: "lbs", reorderLevel: 2750, maxQty: null, leadTime: "7 Days", notes: "2500/Skid(50/50#Bags)", initialCount: 2.0, pkg: "skids", weight: 2500.0, group: "Raw Materials" },
+    { id: "R9060", name: "Ben", unit: "jug", reorderLevel: 0, maxQty: null, leadTime: "", notes: "5 Gal Jug", initialCount: 2.0, pkg: "jug", weight: 1.0, group: "Raw Materials" },
+    { id: "R2610", name: "Triton", unit: "lbs", reorderLevel: 4000, maxQty: null, leadTime: "30 Days", notes: "480 lbs per drum", initialCount: 2.25, pkg: "skids", weight: 1920.0, group: "Raw Materials" },
+    { id: "R2620", name: "Methan", unit: "gal", reorderLevel: 220, maxQty: null, leadTime: "5 Days", notes: "55 gal per drum", initialCount: 4.0, pkg: "skids", weight: 220.0, group: "Raw Materials" },
+    { id: "R5035", name: "EB", unit: "lbs", reorderLevel: 3200, maxQty: null, leadTime: "10 Days", notes: "415 lbs per drum", initialCount: 6.0, pkg: "skids", weight: 1660.0, group: "Raw Materials" },
+    { id: "R6096", name: "Bermocoll EBS481FQ", unit: "lbs", reorderLevel: 15000, maxQty: null, leadTime: "60 Days", notes: "50/44# bags per pallet", initialCount: 0, pkg: "skids", weight: 2200.0, group: "Raw Materials" },
+    { id: "R8020", name: "Dispex", unit: "lbs", reorderLevel: 6613, maxQty: null, leadTime: "120 Days", notes: "2204.6 # per tote", initialCount: 22.0, pkg: "totes", weight: 2204.6, group: "Raw Materials" },
+    { id: "R8020_2", name: "Dispex CX 4230", unit: "lbs", reorderLevel: 1760, maxQty: null, leadTime: "100 Days", notes: "440 lbs per drum", initialCount: 0, pkg: "drums", weight: 440.0, group: "Raw Materials" },
+    { id: "R8020_3", name: "Dispex CX 4230 Drums", unit: "lbs", reorderLevel: 0, maxQty: null, leadTime: "30 Days", notes: "", initialCount: 0, pkg: "drums", weight: 450.0, group: "Raw Materials" },
+    { id: "R8022", name: "Coadis", unit: "tote", reorderLevel: 0, maxQty: null, leadTime: "", notes: "", initialCount: 1.0, pkg: "totes", weight: 2205.0, group: "Raw Materials" },
+    { id: "R8060", name: "Tomak", unit: "lbs", reorderLevel: 474, maxQty: null, leadTime: "7 Days", notes: "474 lbs/Drum", initialCount: 3.0, pkg: "drums", weight: 474.0, group: "Raw Materials" },
+    { id: "R1240", name: "TKP", unit: "lbs", reorderLevel: 2750, maxQty: null, leadTime: "7 Days", notes: "2000/Skid(40/50#Bags)", initialCount: 1.0, pkg: "skids", weight: 2000.0, group: "Raw Materials" },
+    { id: "R1723", name: "COLANYL BLUE-B2G 131 GemSeal", unit: "lbs", reorderLevel: 33, maxQty: null, leadTime: "7 Days", notes: "33 lbs Per pail/5Gal Pail", initialCount: 0, pkg: "Pails", weight: 33.0, group: "Raw Materials" },
+    { id: "R1560", name: "IMSI", unit: "lbs", reorderLevel: 40000, maxQty: null, leadTime: "15 Days", notes: "50/50# bags per pallet", initialCount: 11.75, pkg: "skids", weight: 2500.0, group: "Pigments" },
+    { id: "R1565", name: "Silica Flour 140", unit: "lbs", reorderLevel: 40000, maxQty: null, leadTime: "15 Days", notes: "60/50# bags per pallet", initialCount: 0, pkg: "skids", weight: 3000.0, group: "Pigments" },
+    { id: "R1621", name: "Deqing Tongchem TIO2", unit: "lbs", reorderLevel: 0, maxQty: null, leadTime: "75 Days", notes: "40/55# bags per pallet", initialCount: 0, pkg: "skids", weight: 2200.0, group: "Pigments" },
+    { id: "R1820", name: "Natr.", unit: "lbs", reorderLevel: 20000, maxQty: null, leadTime: "35 Days", notes: "40/55 lb Bags 32,000 T/L", initialCount: 12.0, pkg: "Skids", weight: 2204.0, group: "Pigments" },
+    { id: "R1619", name: "Whte", unit: "lbs", reorderLevel: 40000, maxQty: null, leadTime: "2 months", notes: "40 -25KG bags per skid", initialCount: 33.0, pkg: "skids", weight: 2204.0, group: "Pigments" },
+    { id: "R1695", name: "Red", unit: "lbs", reorderLevel: 18000, maxQty: null, leadTime: "3 months", notes: "38/55# (7NW)", initialCount: 25.0, pkg: "skids", weight: 2090.0, group: "Pigments" },
+    { id: "R8071", name: "Cal", unit: "lbs", reorderLevel: 2000, maxQty: null, leadTime: "15 Days", notes: "44 lbs Per pail/5Gal Pail", initialCount: 4.0, pkg: "Pails", weight: 44.0, group: "Pigments" },
+    { id: "R1721", name: "Pht B", unit: "lbs", reorderLevel: 2000, maxQty: null, leadTime: "15 Days", notes: "450 lbs per drum", initialCount: 5.5, pkg: "skids", weight: 1800.0, group: "Pigments" },
+    { id: "R1730", name: "Chrom Green Oxide L359", unit: "lbs", reorderLevel: 40000, maxQty: null, leadTime: "75 Days", notes: "55/40# bags per pallet", initialCount: 0, pkg: "skids", weight: 2200.0, group: "Pigments" },
+    { id: "R1722", name: "RS", unit: "lbs", reorderLevel: 450, maxQty: null, leadTime: "2 Weeks", notes: "450 lbs per drum", initialCount: 0.25, pkg: "skids", weight: 1800.0, group: "Pigments" },
+    { id: "R1735", name: "Green", unit: "lbs", reorderLevel: 60000, maxQty: null, leadTime: "3 months", notes: "(19NW) 40/55 bags pallet", initialCount: 30.0, pkg: "skids", weight: 2204.0, group: "Pigments" },
+    { id: "R1735_2", name: "Lansco L359", unit: "Each", reorderLevel: 0, maxQty: null, leadTime: "", notes: "", initialCount: 0, pkg: "each", weight: 1, group: "Pigments" },
+    { id: "R1736", name: "SG359 Chrome Green Oxide", unit: "lbs", reorderLevel: 40000, maxQty: null, leadTime: "60 Days", notes: "25 KG Bags", initialCount: 0, pkg: "skids", weight: 2200.0, group: "Pigments" },
+    { id: "R1737", name: "Bike", unit: "lbs", reorderLevel: 450, maxQty: null, leadTime: "5 Days", notes: "450 lbs/drum (plus 2-5-pails)", initialCount: 0.5, pkg: "skids", weight: 1800.0, group: "Pigments" },
+    { id: "R1684", name: "Firelane", unit: "lbs", reorderLevel: 450, maxQty: null, leadTime: "5 Days", notes: "450 lbs per drum", initialCount: 0, pkg: "skids", weight: 1800.0, group: "Pigments" },
+    { id: "R1675", name: "Orange Drums", unit: "lbs", reorderLevel: 225, maxQty: null, leadTime: "5 Days", notes: "450 lbs per drum", initialCount: 0.5, pkg: "skids", weight: 1800.0, group: "Pigments" },
+    { id: "R1715", name: "Orange Bags", unit: "skid", reorderLevel: 1, maxQty: null, leadTime: "30 Days", notes: "", initialCount: 1.0, pkg: "skids", weight: 661.0, group: "Pigments" },
+    { id: "R1733", name: "Green Barn Paint", unit: "lbs", reorderLevel: 450, maxQty: null, leadTime: "5 Days", notes: "450 lbs per drum", initialCount: 0.25, pkg: "skids", weight: 1800.0, group: "Pigments" },
+    { id: "R1732", name: "Viloet", unit: "lbs", reorderLevel: 450, maxQty: null, leadTime: "5 Days", notes: "450 lbs per drum", initialCount: 0.5, pkg: "skids", weight: 1800.0, group: "Pigments" },
+    { id: "R8034", name: "Napth Red", unit: "lbs", reorderLevel: 450, maxQty: null, leadTime: "5 Days", notes: "450 lbs per drum", initialCount: 1.0, pkg: "skids", weight: 1800.0, group: "Pigments" },
+    { id: "R1685", name: "DPP", unit: "lbs", reorderLevel: 900, maxQty: 3250, leadTime: "5 Days", notes: "450 lbs per drum", initialCount: 1.75, pkg: "skids", weight: 1800.0, group: "Pigments" },
+    { id: "R1745", name: "Black", unit: "lbs", reorderLevel: 10000, maxQty: null, leadTime: "4 months", notes: "40/55# bags (0-NW)", initialCount: 11.0, pkg: "skids", weight: 2204.0, group: "Pigments" },
+    { id: "R8004", name: "BISM", unit: "skids", reorderLevel: 0, maxQty: null, leadTime: "", notes: "25 KG Bags", initialCount: 1.0, pkg: "skids", weight: 750.0, group: "Pigments" },
+    { id: "R8005", name: "YELLOW 3", unit: "lbs", reorderLevel: 881, maxQty: null, leadTime: "2 months", notes: "Trust Chem_New 10/2024", initialCount: 2.5, pkg: "skids", weight: 881.4, group: "Pigments" },
+    { id: "R8001", name: "65", unit: "Each", reorderLevel: 0, maxQty: null, leadTime: "", notes: "Trust Chem_New 5/2026", initialCount: 0, pkg: "skids", weight: 1, group: "Pigments" },
+    { id: "R8001_2", name: "65", unit: "lbs", reorderLevel: 12000, maxQty: null, leadTime: "4 months", notes: "20/44.09 # per pallet", initialCount: 6.5, pkg: "skids", weight: 881.14, group: "Pigments" },
+    { id: "R1700", name: "YLO", unit: "lbs", reorderLevel: 2000, maxQty: null, leadTime: "14 Days", notes: "30/50# bags/pallet", initialCount: 1.0, pkg: "skids", weight: 1500.0, group: "Pigments" },
+    { id: "R7095", name: "Yellow Bayf", unit: "lbs", reorderLevel: 2500, maxQty: null, leadTime: "14 Days", notes: "50/50# bags/pallet", initialCount: 0.5, pkg: "skids", weight: 2500.0, group: "Pigments" },
+    { id: "R1750", name: "Maroon", unit: "lbs", reorderLevel: 2000, maxQty: null, leadTime: "15 Days", notes: "44/50lb Bags", initialCount: 2.0, pkg: "Skids", weight: 2200.0, group: "Pigments" },
+    { id: "R9240", name: "PT 12", unit: "tons", reorderLevel: 30, maxQty: null, leadTime: "7 Days", notes: "60/50# bags per pallet", initialCount: 10.0, pkg: "skids", weight: 3000.0, group: "Pigments" },
+    { id: "R7500", name: "OMYA", unit: "tons", reorderLevel: 25, maxQty: null, leadTime: "7 Days", notes: "55/50# Bags per pallet", initialCount: 14.0, pkg: "Skids", weight: 2750.0, group: "Pigments" },
+    { id: "R6020", name: "Silica Flour", unit: "tons", reorderLevel: 8, maxQty: null, leadTime: "20 Days", notes: "56/50# bags/plt-21 ton/T/L", initialCount: 3.0, pkg: "skids", weight: 2800.0, group: "Pigments" },
+    { id: "R1630", name: "Brown", unit: "lbs", reorderLevel: 2000, maxQty: null, leadTime: "10 Days", notes: "40/50lb Bags", initialCount: 1.0, pkg: "Skids", weight: 2000.0, group: "Pigments" },
+    { id: "R2152", name: "1 gal balck", unit: "Each", reorderLevel: 9000, maxQty: null, leadTime: "45 Days", notes: "90/Box 10bx/Plt", initialCount: 20.0, pkg: "skids", weight: 900.0, group: "1 Gal Pails & Lids" },
+    { id: "R2153", name: "1 gal gray", unit: "Each", reorderLevel: 8000, maxQty: null, leadTime: "45 Days", notes: "540/layer x 2 = 1080", initialCount: 30.0, pkg: "skids", weight: 1080.0, group: "1 Gal Pails & Lids" },
+    { id: "R2154", name: "1 gal white", unit: "Each", reorderLevel: 8000, maxQty: null, leadTime: "45 Days", notes: "1 Gallon(900/PLT)", initialCount: 21.0, pkg: "skids", weight: 900.0, group: "1 Gal Pails & Lids" },
+    { id: "R2210R", name: "1 gal lid", unit: "Each", reorderLevel: 6000, maxQty: null, leadTime: "45 Days", notes: "300/Bx 15 bx/skid = 4,500", initialCount: 7.0, pkg: "skids", weight: 4500.0, group: "1 Gal Pails & Lids" },
+    { id: "R2211", name: "1 gal navy lid", unit: "Each", reorderLevel: 10000, maxQty: null, leadTime: "45 Days", notes: "270/bx 15 bx/skid=4,050", initialCount: 9.0, pkg: "skids", weight: 4050.0, group: "1 Gal Pails & Lids" },
+    { id: "R2212", name: "1 gal light blue lid", unit: "Each", reorderLevel: 5000, maxQty: null, leadTime: "45 Days", notes: "270/bx 15 bx/skid=4,050", initialCount: 3.0, pkg: "skids", weight: 4050.0, group: "1 Gal Pails & Lids" },
+    { id: "R2214", name: "1 gal white lid", unit: "Each", reorderLevel: 2000, maxQty: null, leadTime: "45 Days", notes: "270/bx 15 bx/skid=4,050", initialCount: 0.25, pkg: "skids", weight: 4050.0, group: "1 Gal Pails & Lids" },
+    { id: "R2216", name: "One Gallon Green Lid", unit: "Each", reorderLevel: 2000, maxQty: null, leadTime: "45 Days", notes: "Berry Plastics", initialCount: 0, pkg: "skids", weight: 1800.0, group: "1 Gal Pails & Lids" },
+    { id: "R2217", name: "1 gal Red Lid", unit: "Each", reorderLevel: 1000, maxQty: null, leadTime: "45 Days", notes: "270/bx 15 bx/skid=4,050", initialCount: 0.75, pkg: "skids", weight: 4050.0, group: "1 Gal Pails & Lids" },
+    { id: "R2244", name: "10yr R Coat", unit: "Each", reorderLevel: 5000, maxQty: null, leadTime: "45 Days", notes: "1 Gal. Printed(1120/PLT)", initialCount: 12.0, pkg: "skids", weight: 1120.0, group: "1 Gal Pails & Lids" },
+    { id: "R2245", name: "R patch pails", unit: "Each", reorderLevel: 3000, maxQty: null, leadTime: "45 Days", notes: "1 Gal. Printed(1120/PLT)", initialCount: 3.0, pkg: "skids", weight: 1120.0, group: "1 Gal Pails & Lids" },
+    { id: "R2140", name: "5 Gal Gray", unit: "Each", reorderLevel: 2600, maxQty: null, leadTime: "10-14 Days", notes: "Century", initialCount: 26.0, pkg: "skids", weight: 336.0, group: "5 & 3.5 Gal Pails & Lids" },
+    { id: "R2160", name: "5 Gal White", unit: "Each", reorderLevel: 6000, maxQty: null, leadTime: "15 Days", notes: "Century pails", initialCount: 25.0, pkg: "stacks", weight: 336.0, group: "5 & 3.5 Gal Pails & Lids" },
+    { id: "R2200", name: "5 Gallon Black lid", unit: "Each", reorderLevel: 6000, maxQty: null, leadTime: "10-14 Days", notes: "Keep 20,000 lids on Color End.", initialCount: 1.0, pkg: "each", weight: 1440.0, group: "5 & 3.5 Gal Pails & Lids" },
+    { id: "R2030", name: "Black Recon 55G Drums", unit: "Each", reorderLevel: 0, maxQty: null, leadTime: "30-45 DAYS", notes: "Mauser/531408/black/Paint dept", initialCount: 0, pkg: "each", weight: 1.0, group: "Misc Containers" },
+    { id: "R2065", name: "Green Recon 55G Drums", unit: "Each", reorderLevel: 0, maxQty: null, leadTime: "30-45 DAYS", notes: "Mauser/w40795/green full/ /", initialCount: 324.0, pkg: "each", weight: 1.0, group: "Misc Containers" },
+    { id: "R2120", name: "Blue KEGS", unit: "Each", reorderLevel: 600, maxQty: 600, leadTime: "14- DAYS", notes: "32.5 A.C. Gal Kegs//Mauser Drop TL #2/ 38081-LP", initialCount: 600.0, pkg: "each", weight: 1.0, group: "Misc Containers" },
+    { id: "R2120_2", name: "Blue KEGS", unit: "Each", reorderLevel: 600, maxQty: 600, leadTime: "14- DAYS", notes: "Mauser/1 st drop trailer/ W00973", initialCount: 620.0, pkg: "each", weight: 1.0, group: "Misc Containers" },
+    { id: "R2330", name: "Totes", unit: "Each", reorderLevel: 120, maxQty: 300, leadTime: "7 Days", notes: "Vendor-Fiber Drum Sales", initialCount: 259.0, pkg: "each", weight: 1.0, group: "Misc Containers" },
+    { id: "R2474", name: "10oz. Jetcoat Wht Roof Patch Tube", unit: "Each", reorderLevel: 4608, maxQty: null, leadTime: "2 Weeks", notes: "4608 per Pallet", initialCount: 0, pkg: "each", weight: 1.0, group: "Misc Containers" },
+    { id: "A2446", name: "Sleeve Top Tuff 4.75g", unit: "Each", reorderLevel: 1000, maxQty: null, leadTime: "2 Weeks", notes: "Sleeves", initialCount: 0, pkg: "each", weight: 1.0, group: "Labels & Sleeves" },
+    { id: "A2290", name: "Acry Resurf w/ Sand 4.75g", unit: "Each", reorderLevel: 1000, maxQty: null, leadTime: "2 Weeks", notes: "CML-23", initialCount: 0, pkg: "each", weight: 1.0, group: "Labels & Sleeves" },
+    { id: "A2030", name: "Ready Mix 4.75g", unit: "Each", reorderLevel: 1000, maxQty: null, leadTime: "2 Weeks", notes: "CML-3", initialCount: 0, pkg: "each", weight: 1.0, group: "Labels & Sleeves" },
+    { id: "A2032", name: "Color Plus .9g", unit: "Each", reorderLevel: 1000, maxQty: null, leadTime: "2 Weeks", notes: "CML-28", initialCount: 0, pkg: "each", weight: 1.0, group: "Labels & Sleeves" },
+    { id: "A2034", name: "Acrylic Crack Filler .9g  \"JUG\"", unit: "Each", reorderLevel: 1000, maxQty: null, leadTime: "2 Weeks", notes: "SML-50", initialCount: 0, pkg: "each", weight: 1.0, group: "Labels & Sleeves" },
+    { id: "A2036", name: "Dust Suppressant 4.75g", unit: "Each", reorderLevel: 1000, maxQty: null, leadTime: "2 Weeks", notes: "SML-314", initialCount: 0, pkg: "each", weight: 1.0, group: "Labels & Sleeves" },
+    { id: "A2038", name: "Textured T/C Line .9g", unit: "Each", reorderLevel: 1000, maxQty: null, leadTime: "2 Weeks", notes: "CML-26S", initialCount: 0, pkg: "each", weight: 1.0, group: "Labels & Sleeves" },
+    { id: "A2270", name: "T/C Line Stripe .9g", unit: "Each", reorderLevel: 1000, maxQty: null, leadTime: "2 Weeks", notes: "CML-11S", initialCount: 0, pkg: "each", weight: 1.0, group: "Labels & Sleeves" },
+    { id: "A2090", name: "PrepSeal .9g", unit: "Each", reorderLevel: 1000, maxQty: null, leadTime: "2 Weeks", notes: "SML-34", initialCount: 0, pkg: "each", weight: 1.0, group: "Labels & Sleeves" },
+    { id: "A2100", name: "Line Block Out 4.75g", unit: "Each", reorderLevel: 1000, maxQty: null, leadTime: "2 Weeks", notes: "SML-17", initialCount: 0, pkg: "each", weight: 1.0, group: "Labels & Sleeves" },
+    { id: "A2310", name: "Acrylic Crack Patch .9g", unit: "Each", reorderLevel: 1000, maxQty: null, leadTime: "2 Weeks", notes: "CML-8", initialCount: 0, pkg: "each", weight: 1.0, group: "Labels & Sleeves" },
+    { id: "A2048", name: "ZETAC 4.75g", unit: "Each", reorderLevel: 1000, maxQty: null, leadTime: "2 Weeks", notes: "SML-35", initialCount: 0, pkg: "each", weight: 1.0, group: "Labels & Sleeves" },
+    { id: "A2052", name: "Color Pave Neutral Ready Mix 4.75g", unit: "Each", reorderLevel: 1000, maxQty: null, leadTime: "2 Weeks", notes: "SML-67", initialCount: 0, pkg: "each", weight: 1.0, group: "Labels & Sleeves" },
+    { id: "A2215", name: "Traffic Paint 4.75g", unit: "Each", reorderLevel: 1000, maxQty: null, leadTime: "2 Weeks", notes: "SML-24", initialCount: 0, pkg: "each", weight: 1.0, group: "Labels & Sleeves" },
+    { id: "A2054", name: "Color Pave Neutral Conc 4.75g", unit: "Each", reorderLevel: 1000, maxQty: null, leadTime: "2 Weeks", notes: "SML-64", initialCount: 0, pkg: "each", weight: 1.0, group: "Labels & Sleeves" },
+    { id: "A2080", name: "PetroSeal 4.75g", unit: "Each", reorderLevel: 1000, maxQty: null, leadTime: "2 Weeks", notes: "SML-33", initialCount: 0, pkg: "each", weight: 1.0, group: "Labels & Sleeves" },
+    { id: "A2320", name: "Acrylic Patch Binder 4.75g", unit: "Each", reorderLevel: 1000, maxQty: null, leadTime: "2 Weeks", notes: "SML-7", initialCount: 0, pkg: "each", weight: 1.0, group: "Labels & Sleeves" },
+    { id: "A2300", name: "Sportmaster Acrylic Resurf.w/o Sand 4.75g", unit: "Each", reorderLevel: 1000, maxQty: null, leadTime: "2 Weeks", notes: "CML-4", initialCount: 0, pkg: "each", weight: 1.0, group: "Labels & Sleeves" },
+    { id: "A2056", name: "ColorPave HD 500 4.75g", unit: "Each", reorderLevel: 1000, maxQty: null, leadTime: "2 Weeks", notes: "SML-43", initialCount: 0, pkg: "each", weight: 1.0, group: "Labels & Sleeves" },
+    { id: "A2058", name: "ColorPave HD Clear Coat 4.75g", unit: "Each", reorderLevel: 1000, maxQty: null, leadTime: "2 Weeks", notes: "SML-46", initialCount: 0, pkg: "each", weight: 1.0, group: "Labels & Sleeves" },
+    { id: "A2355", name: "SB Front&Back Concrete Sealer .9g", unit: "Each", reorderLevel: 1000, maxQty: null, leadTime: "2 Weeks", notes: "Fronts and Backs", initialCount: 0, pkg: "each", weight: 1.0, group: "Labels & Sleeves" },
+    { id: "A2358", name: "SB Roof Cleaner .9g", unit: "Each", reorderLevel: 1000, maxQty: null, leadTime: "2 Weeks", notes: "", initialCount: 0, pkg: "each", weight: 1.0, group: "Labels & Sleeves" },
+    { id: "A2357", name: "SB Front&Back Ultra Gloss .9g", unit: "Each", reorderLevel: 1000, maxQty: null, leadTime: "2 Weeks", notes: "Fronts and Backs", initialCount: 0, pkg: "each", weight: 1.0, group: "Labels & Sleeves" },
+    { id: "A2359", name: "SB Oil Spot Primer .9QT", unit: "Each", reorderLevel: 1000, maxQty: null, leadTime: "2 Weeks", notes: "", initialCount: 0, pkg: "each", weight: 1.0, group: "Labels & Sleeves" },
+    { id: "AJR666201", name: "JC 7yr. Front&Back Wht.Reflec elast rc .9g", unit: "Each", reorderLevel: 1000, maxQty: null, leadTime: "2 Weeks", notes: "Fronts/Backs 2k in 2013", initialCount: 0, pkg: "each", weight: 1.0, group: "Labels & Sleeves" },
+    { id: "AJR666221", name: "JC 7yr. Front&Back Wht.elasto R.Patch .9g", unit: "Each", reorderLevel: 1000, maxQty: null, leadTime: "2 Weeks", notes: "Fronts/Backs 3k in 2013", initialCount: 0, pkg: "each", weight: 1.0, group: "Labels & Sleeves" },
+    { id: "A2478", name: "Sleeves SB 15 Yr.Roof Ctg. 4.75g", unit: "Each", reorderLevel: 1000, maxQty: null, leadTime: "2 Weeks", notes: "Sleeves", initialCount: 0, pkg: "each", weight: 1.0, group: "Labels & Sleeves" },
+    { id: "A2431", name: "Sleeves SB Ultra Gloss 4.75g", unit: "Each", reorderLevel: 1000, maxQty: null, leadTime: "2 Weeks", notes: "Sleeves", initialCount: 0, pkg: "each", weight: 1.0, group: "Labels & Sleeves" },
+    { id: "A2476", name: "Sleeves SB 10 Yr. Roof Ctg. 4.75g", unit: "Each", reorderLevel: 1000, maxQty: null, leadTime: "2 Weeks", notes: "Sleeves", initialCount: 0, pkg: "each", weight: 1.0, group: "Labels & Sleeves" },
+    { id: "A2360", name: "FP 300 Label 4.75g", unit: "Each", reorderLevel: 1000, maxQty: null, leadTime: "2 Weeks", notes: "Farm Paint", initialCount: 0, pkg: "each", weight: 1.0, group: "Labels & Sleeves" },
+    { id: "A2363WF", name: "FP SemiGloss White/Front Label", unit: "Each", reorderLevel: 1000, maxQty: null, leadTime: "2 Weeks", notes: "FarmPaint.com", initialCount: 0, pkg: "each", weight: 1.0, group: "Labels & Sleeves" },
+    { id: "A2363WB", name: "FP SemiGloss White/Back Label", unit: "Each", reorderLevel: 1000, maxQty: null, leadTime: "2 Weeks", notes: "FarmPaint.com", initialCount: 0, pkg: "each", weight: 1.0, group: "Labels & Sleeves" },
+    { id: "A2361RB", name: "FP SemiGloss Red/Back Label", unit: "Each", reorderLevel: 1000, maxQty: null, leadTime: "2 Weeks", notes: "FarmPaint.com", initialCount: 0, pkg: "each", weight: 1.0, group: "Labels & Sleeves" },
+    { id: "A2361RF", name: "FP SemiGloss Red/Front Label", unit: "Each", reorderLevel: 1000, maxQty: null, leadTime: "2 Weeks", notes: "FarmPaint.com", initialCount: 0, pkg: "each", weight: 1.0, group: "Labels & Sleeves" },
+    { id: "A2369", name: "JC Concrete Crack Sealant .9qt", unit: "Each", reorderLevel: 1000, maxQty: null, leadTime: "2 Weeks", notes: "sold 11k in 2013", initialCount: 0, pkg: "each", weight: 1.0, group: "Labels & Sleeves" },
+    { id: "R2330_2", name: "Totes", unit: "Each", reorderLevel: 120, maxQty: 300, leadTime: "7 Days", notes: "No trailer on site", initialCount: 0, pkg: "each", weight: 1, group: "Labels & Sleeves" },
+    { id: "R2296", name: "Jar", unit: "Each", reorderLevel: 10000, maxQty: 40000, leadTime: "6 wks", notes: "205 Per Box / 12 box per skid", initialCount: 11.0, pkg: "skid", weight: 2460.0, group: "Labels & Sleeves" },
+    { id: "R2297", name: "jar lid", unit: "Each", reorderLevel: 10000, maxQty: 40000, leadTime: "4 wks", notes: "624 per box/ 20 box per skid", initialCount: 0.5, pkg: "each", weight: 12480.0, group: "Labels & Sleeves" },
+    { id: "R2295", name: "Pints Empty 28-410", unit: "Each", reorderLevel: 0, maxQty: null, leadTime: "", notes: "OBSOLETE? LM", initialCount: 8100.0, pkg: "each", weight: 1.0, group: "Misc Items" },
+    { id: "R2407", name: "48 x 36 paint use", unit: "Each", reorderLevel: 300, maxQty: null, leadTime: "7 Days", notes: "For traffic paints", initialCount: 720.0, pkg: "each", weight: 1, group: "Misc Items" },
+    { id: "R2270", name: "Caps White", unit: "Each", reorderLevel: 0, maxQty: null, leadTime: "", notes: "Uses:Paint: Roof Cleane/ Sealer: Maint INC-56250 per pallet", initialCount: 111600.0, pkg: "each", weight: 1.0, group: "Misc Items" },
+    { id: "R2306", name: "Sprayer", unit: "Each", reorderLevel: 4000, maxQty: null, leadTime: "5 Months", notes: "135 per box", initialCount: 5280.0, pkg: "each", weight: 1.0, group: "Misc Items" },
+    { id: "R2490", name: "Pint Boxes 9-Pack", unit: "Each", reorderLevel: 0, maxQty: null, leadTime: "", notes: "OBSOLETE?", initialCount: 0, pkg: "each", weight: 1.0, group: "Misc Items" },
+    { id: "R2305", name: "Bottle 32oz White F Style", unit: "Each", reorderLevel: 1500, maxQty: null, leadTime: "12 weeks", notes: "120 per box", initialCount: 11520.0, pkg: "each", weight: 1.0, group: "Misc Items" },
+    { id: "R2500", name: "12 Pack Quart Bottle Boxes", unit: "Each", reorderLevel: 0, maxQty: null, leadTime: "", notes: "", initialCount: 250.0, pkg: "each", weight: 1.0, group: "Misc Items" },
+    { id: "R2501", name: "6 Pack Quart Bottle Boxes", unit: "Each", reorderLevel: 1000, maxQty: null, leadTime: "14 days", notes: "", initialCount: 2250.0, pkg: "each", weight: 1.0, group: "Misc Items" },
+    { id: "R2502", name: "12 Pack Spray Roof Boxes", unit: "Each", reorderLevel: 150, maxQty: null, leadTime: "14 days", notes: "", initialCount: 100.0, pkg: "each", weight: 1.0, group: "Misc Items" },
+    { id: "R2503", name: "Box - 4 pk Quart Bottle's", unit: "Each", reorderLevel: 500, maxQty: null, leadTime: "14 days", notes: "", initialCount: 1296.0, pkg: "each", weight: 1.0, group: "Misc Items" },
+    { id: "R2507", name: "12 PACK MASTER BOX", unit: "Each", reorderLevel: 1000, maxQty: null, leadTime: "14 Days", notes: "RSC 14 5/8 X 11 X 5 9/16 GLUED ONE COLOR 32 ECTc", initialCount: 2500.0, pkg: "each", weight: 1, group: "Misc Items" },
+    { id: "R2510", name: "4 Pack Gallon Pail Box", unit: "Each", reorderLevel: 1000, maxQty: null, leadTime: "14 days", notes: "", initialCount: 2672.0, pkg: "each", weight: 1.0, group: "Misc Items" },
+    { id: "R2515", name: "6 Pack Gallon Pail Boxes", unit: "Each", reorderLevel: 800, maxQty: null, leadTime: "14 days", notes: "1", initialCount: 3562.0, pkg: "each", weight: 1.0, group: "Misc Items" },
+    { id: "R2144", name: "FSA 5 Gal Pail Litho", unit: "EACH", reorderLevel: 0, maxQty: null, leadTime: "", notes: "", initialCount: 8.0, pkg: "skid", weight: 336.0, group: "Misc Items" },
+    { id: "R2146", name: "FSA", unit: "EACH", reorderLevel: 0, maxQty: null, leadTime: "", notes: "", initialCount: 0, pkg: "skid", weight: 336.0, group: "Misc Items" },
+    { id: "R2147", name: "Fass Dri 2 Gal Pail", unit: "EACH", reorderLevel: 0, maxQty: null, leadTime: "", notes: "", initialCount: 4.0, pkg: "skid", weight: 702.0, group: "Misc Items" },
+    { id: "R2080", name: "Drum Tops", unit: "EACH", reorderLevel: 0, maxQty: null, leadTime: "", notes: "", initialCount: 1.25, pkg: "skid", weight: 250.0, group: "Misc Items" },
+    { id: "R2143", name: "Fass Dri", unit: "EACH", reorderLevel: 0, maxQty: null, leadTime: "", notes: "", initialCount: 9.0, pkg: "skid", weight: 336.0, group: "Misc Items" },
+    { id: "R2222", name: "2 Gallon Royal Blue Lid", unit: "EACH", reorderLevel: 0, maxQty: null, leadTime: "", notes: "", initialCount: 1.5, pkg: "skid", weight: 2340.0, group: "Misc Items" },
+    { id: "R2393", name: "40x40 Pallets", unit: "Each", reorderLevel: 0, maxQty: null, leadTime: "", notes: "2 Gallon Fass Dri Pallets", initialCount: 52.0, pkg: "each", weight: 1, group: "Misc Items" }
+];
+
+// ── Inventory Tab: Raw Material & Packaging Tracker ──────────────────
+
+const INVENTORY_EDIT_USERS = [
+    "master@colordept.local",
+    "hhudak@colordept.local",
+    "ajolly@colordept.local",
+];
+
+function canEditInventory(email) {
+    return INVENTORY_EDIT_USERS.includes(email);
+}
+
+function getInventoryStatus(qty, reorderLevel) {
+    if (!reorderLevel || reorderLevel <= 0) return "none";
+    if (qty < reorderLevel) return "red";
+    if (qty < reorderLevel * 1.5) return "yellow";
+    return "green";
+}
+
+function renderInventoryBoard() {
+    inventoryBoard.innerHTML = "";
+    const groups = {};
+    for (const item of INVENTORY_ITEMS) {
+        if (!groups[item.group]) groups[item.group] = [];
+        groups[item.group].push(item);
+    }
+    for (const [groupName, items] of Object.entries(groups)) {
+        const section = document.createElement("div");
+        section.className = "inv-group";
+        const header = document.createElement("h3");
+        header.className = "inv-group-header";
+        header.textContent = groupName;
+        section.appendChild(header);
+        const grid = document.createElement("div");
+        grid.className = "inv-grid";
+        for (const item of items) {
+            const raw = inventoryData[item.id];
+            const inv = (raw && typeof raw === "object") ? (raw.inv || 0) : (raw || 0);
+            const qty = inv * item.weight;
+            const status = getInventoryStatus(qty, item.reorderLevel);
+            const updatedAt = (raw && typeof raw === "object") ? raw.dateCounted : null;
+            const dateStr = updatedAt ? new Date(updatedAt).toLocaleDateString("en-US", { month: "short", day: "numeric" }) : "";
+            const card = document.createElement("div");
+            card.className = "inv-card" + (status !== "none" ? " status-" + status : "");
+            card.innerHTML = `
+                <div class="inv-card-date">${dateStr}</div>
+                <div class="inv-card-name">${escapeHtml(item.name)}</div>
+                <div class="inv-card-code">${escapeHtml(item.id)}</div>
+                <div class="inv-card-qty">${qty.toLocaleString()} <span class="inv-card-qty-unit">${escapeHtml(item.unit)}</span></div>
+                <div class="inv-card-pkg">${inv} ${escapeHtml(item.pkg)}</div>
+            `;
+            card.addEventListener("click", () => showInventoryDetailModal(item));
+            grid.appendChild(card);
+        }
+        section.appendChild(grid);
+        inventoryBoard.appendChild(section);
+    }
+}
+
+let currentInvItem = null;
+
+function showInventoryDetailModal(item) {
+    currentInvItem = item;
+    const raw = inventoryData[item.id];
+    const inv = (raw && typeof raw === "object") ? (raw.inv || 0) : (raw || 0);
+    const qty = inv * item.weight;
+    const status = getInventoryStatus(qty, item.reorderLevel);
+    const updatedAt = (raw && typeof raw === "object") ? raw.dateCounted : null;
+    const dateStr = updatedAt ? new Date(updatedAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "Never";
+
+    document.getElementById("inv-detail-title").textContent = item.name;
+    document.getElementById("inv-detail-code").textContent = item.id;
+    document.getElementById("inv-detail-notes").textContent = item.notes || "\u2014";
+    document.getElementById("inv-detail-leadtime").textContent = item.leadTime || "\u2014";
+    document.getElementById("inv-detail-reorder").textContent = item.reorderLevel ? item.reorderLevel.toLocaleString() + " " + item.unit : "\u2014";
+    const stockInput = document.getElementById("inv-detail-stock");
+    stockInput.value = inv;
+    document.getElementById("inv-detail-pkg-type").textContent = item.pkg;
+    document.getElementById("inv-detail-qty").textContent = qty.toLocaleString() + " " + item.unit;
+    const badge = document.getElementById("inv-detail-status");
+    badge.className = "inv-status-badge" + (status !== "none" ? " status-" + status : "");
+    badge.textContent = status === "red" ? "BELOW REORDER" : status === "yellow" ? "LOW STOCK" : status === "green" ? "IN STOCK" : "";
+    document.getElementById("inv-detail-date").textContent = "Last counted: " + dateStr;
+
+    stockInput.oninput = () => {
+        const val = parseFloat(stockInput.value) || 0;
+        const newQty = val * item.weight;
+        const newStatus = getInventoryStatus(newQty, item.reorderLevel);
+        document.getElementById("inv-detail-qty").textContent = newQty.toLocaleString() + " " + item.unit;
+        badge.className = "inv-status-badge" + (newStatus !== "none" ? " status-" + newStatus : "");
+        badge.textContent = newStatus === "red" ? "BELOW REORDER" : newStatus === "yellow" ? "LOW STOCK" : newStatus === "green" ? "IN STOCK" : "";
+    };
+
+    document.getElementById("inventory-detail-overlay").classList.remove("hidden");
+}
+
+function saveInventoryItem() {
+    if (!currentInvItem) return;
+    const user = auth.currentUser;
+    if (!user || !canEditInventory(user.email)) return;
+    const val = parseFloat(document.getElementById("inv-detail-stock").value) || 0;
+    inventoryRef.child(currentInvItem.id).set({ inv: val, dateCounted: new Date().toISOString() });
+    closeInventoryModal();
+}
+
+function closeInventoryModal() {
+    document.getElementById("inventory-detail-overlay").classList.add("hidden");
+    currentInvItem = null;
+}
+
+document.getElementById("inv-detail-save").addEventListener("click", saveInventoryItem);
+document.getElementById("inv-detail-cancel").addEventListener("click", closeInventoryModal);
+document.getElementById("inventory-detail-overlay").addEventListener("click", (e) => {
+    if (e.target.id === "inventory-detail-overlay") closeInventoryModal();
+});
+
+function onInventoryData(snapshot) {
+    inventoryData = snapshot.val() || {};
+    if (activeTab === "inventory") renderInventoryBoard();
+}
+
+function onInventorySeed(snapshot) {
+    if (snapshot.exists()) return;
+    const seed = {};
+    for (const item of INVENTORY_ITEMS) {
+        seed[item.id] = { inv: item.initialCount || 0, dateCounted: new Date().toISOString() };
+    }
+    inventoryRef.set(seed);
 }
 
 // ── Completed Tab: Table / Chart / Export ────────────────────────────
@@ -2691,16 +3049,93 @@ function duplicateBatch(id) {
         return Math.max(max, order);
     }, -1);
 
-    // Batch number is assigned manually (not auto-assigned).
-    const newBatch = buildNewBatch({
-        product: batch.product,
-        bowl: batch.bowl,
-        packaging: batch.packaging,
-        unitCount: batch.unitCount,
-        notes: batch.notes,
-        sortOrder: maxOrder + 1,
+    function createDuplicate(batchNumber) {
+        const newBatch = {
+            id: generateId(),
+            batchNumber: batchNumber || null,
+            product: batch.product,
+            bowl: batch.bowl,
+            packaging: batch.packaging || null,
+            unitCount: batch.unitCount || null,
+            notes: batch.notes || null,
+            status: "queued",
+            sortOrder: maxOrder + 1,
+            createdAt: Date.now(),
+            startedAt: null,
+            mixingCompleteAt: null,
+            pouringAt: null,
+            completedAt: null,
+            viscosity: null,
+            initials: null,
+            initials2: null,
+            pouredBy: null,
+        };
+        batchesRef.child(newBatch.id).set(newBatch);
+    }
+
+    // Always create without a number — assignNumbersToTopBatches() will
+    // assign one when the Firebase listener fires (prevents race conditions
+    // where both this function and assignNumbersToTopBatches try to assign).
+    createDuplicate(null);
+}
+
+// Reusable helper: assign a batch number (recycled first, then counter).
+// Uses Firebase transaction on counter for atomic increment across multiple clients.
+// onError is called if assignment fails — callers MUST handle it to reset state.
+function assignBatchNumber(callback, onError) {
+    if (!onError) onError = function () { alert("Failed to generate batch number. Please try again."); };
+
+    // Build set of all batch numbers currently in use
+    const usedNumbers = new Set();
+    for (const b of batches) {
+        if (b.batchNumber) {
+            const n = parseInt(b.batchNumber.slice(1), 10);
+            if (!isNaN(n)) usedNumbers.add(n);
+        }
+    }
+
+    recycledNumbersRef.once("value", (snap) => {
+        const recycled = snap.val();
+        const validEntries = recycled ? Object.entries(recycled).filter(([, val]) => val >= MIN_BATCH_NUMBER && !usedNumbers.has(val)) : [];
+        // Remove any recycled entries that conflict with existing batches
+        if (recycled) {
+            for (const [key, val] of Object.entries(recycled)) {
+                if (val < MIN_BATCH_NUMBER || usedNumbers.has(val)) {
+                    recycledNumbersRef.child(key).remove();
+                }
+            }
+        }
+        if (validEntries.length > 0) {
+            let minKey = validEntries[0][0], minNum = validEntries[0][1];
+            for (const [key, val] of validEntries) {
+                if (val < minNum) { minKey = key; minNum = val; }
+            }
+            recycledNumbersRef.child(minKey).remove();
+            callback("A" + String(minNum).padStart(4, "0"));
+        } else {
+            // Find the highest batch number currently in use
+            let maxUsed = 0;
+            for (const num of usedNumbers) {
+                if (num > maxUsed) maxUsed = num;
+            }
+            const floor = Math.max(maxUsed + 1, MIN_BATCH_NUMBER);
+            // Atomic transaction: if counter drifted past actual usage, snap it back
+            batchCounterRef.transaction((current) => {
+                const cur = current || 0;
+                if (cur >= floor) {
+                    return cur + 1;
+                }
+                return floor;
+            }, (error, committed, snapshot) => {
+                if (error || !committed) { onError(); return; }
+                callback("A" + String(snapshot.val()).padStart(4, "0"));
+            });
+        }
+    }, (error) => {
+        // Firebase read for recycled numbers failed — call onError so caller can reset
+        console.error("Failed to read recycled numbers:", error);
+        onError();
     });
-    batchesRef.child(newBatch.id).set(newBatch);
 }
 
 
@@ -2710,6 +3145,32 @@ function advanceStatus(id) {
 
     const nextAction = STATUS_NEXT_ACTION[batch.status];
     if (!nextAction) return;
+
+    // If advancing from queued → mixing and batch has no number yet, assign one first
+    if (batch.status === "queued" && !batch.batchNumber) {
+        assignBatchNumber((batchNumber) => {
+            // Use transaction so only one client sets the number; recycle if we lose the race
+            batchesRef.child(batch.id).child("batchNumber").transaction(
+                (current) => {
+                    if (current) return; // Already set by another client — abort
+                    return batchNumber;
+                },
+                (error, committed) => {
+                    if (!committed && !error) {
+                        const num = parseInt(batchNumber.slice(1), 10);
+                        if (!isNaN(num) && num >= MIN_BATCH_NUMBER) {
+                            recycledNumbersRef.push(num);
+                        }
+                    }
+                    if (committed || error) {
+                        batch.batchNumber = batchNumber;
+                    }
+                    applyStatusAdvance(batch, nextAction.next);
+                }
+            );
+        });
+        return;
+    }
 
     // If advancing from mixing → mixing_complete, show the viscosity/initials modal
     if (batch.status === "mixing" && nextAction.next === "mixing_complete") {
