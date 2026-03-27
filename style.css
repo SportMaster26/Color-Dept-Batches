@@ -1683,6 +1683,38 @@ header h1 {
     color: #556677;
 }
 
+.inv-card-notes {
+    font-size: 0.7rem;
+    color: #667788;
+    font-style: italic;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    margin-top: 2px;
+}
+
+.inv-detail-notes-row {
+    flex-direction: column !important;
+    gap: 4px !important;
+}
+
+.inv-detail-notes-input {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid #d0d5dd;
+    border-radius: 6px;
+    font-family: inherit;
+    font-size: 0.9rem;
+    resize: vertical;
+    min-height: 44px;
+}
+
+.inv-detail-notes-input:focus {
+    outline: none;
+    border-color: #0065A1;
+    box-shadow: 0 0 0 2px rgba(0, 101, 161, 0.15);
+}
+
 .inv-card-date {
     font-size: 0.6rem;
     color: #aaa;

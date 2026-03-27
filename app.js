@@ -1249,44 +1249,9 @@ const INVENTORY_ITEMS = [
     { id: "R2120_2", name: "Blue KEGS", unit: "Each", reorderLevel: 600, maxQty: 600, leadTime: "14- DAYS", notes: "Mauser/1 st drop trailer/ W00973", initialCount: 620.0, pkg: "each", weight: 1.0, group: "Misc Containers" },
     { id: "R2330", name: "Totes", unit: "Each", reorderLevel: 120, maxQty: 300, leadTime: "7 Days", notes: "Vendor-Fiber Drum Sales", initialCount: 259.0, pkg: "each", weight: 1.0, group: "Misc Containers" },
     { id: "R2474", name: "10oz. Jetcoat Wht Roof Patch Tube", unit: "Each", reorderLevel: 4608, maxQty: null, leadTime: "2 Weeks", notes: "4608 per Pallet", initialCount: 0, pkg: "each", weight: 1.0, group: "Misc Containers" },
-    { id: "A2446", name: "Sleeve Top Tuff 4.75g", unit: "Each", reorderLevel: 1000, maxQty: null, leadTime: "2 Weeks", notes: "Sleeves", initialCount: 0, pkg: "each", weight: 1.0, group: "Labels & Sleeves" },
-    { id: "A2290", name: "Acry Resurf w/ Sand 4.75g", unit: "Each", reorderLevel: 1000, maxQty: null, leadTime: "2 Weeks", notes: "CML-23", initialCount: 0, pkg: "each", weight: 1.0, group: "Labels & Sleeves" },
-    { id: "A2030", name: "Ready Mix 4.75g", unit: "Each", reorderLevel: 1000, maxQty: null, leadTime: "2 Weeks", notes: "CML-3", initialCount: 0, pkg: "each", weight: 1.0, group: "Labels & Sleeves" },
-    { id: "A2032", name: "Color Plus .9g", unit: "Each", reorderLevel: 1000, maxQty: null, leadTime: "2 Weeks", notes: "CML-28", initialCount: 0, pkg: "each", weight: 1.0, group: "Labels & Sleeves" },
-    { id: "A2034", name: "Acrylic Crack Filler .9g  \"JUG\"", unit: "Each", reorderLevel: 1000, maxQty: null, leadTime: "2 Weeks", notes: "SML-50", initialCount: 0, pkg: "each", weight: 1.0, group: "Labels & Sleeves" },
-    { id: "A2036", name: "Dust Suppressant 4.75g", unit: "Each", reorderLevel: 1000, maxQty: null, leadTime: "2 Weeks", notes: "SML-314", initialCount: 0, pkg: "each", weight: 1.0, group: "Labels & Sleeves" },
-    { id: "A2038", name: "Textured T/C Line .9g", unit: "Each", reorderLevel: 1000, maxQty: null, leadTime: "2 Weeks", notes: "CML-26S", initialCount: 0, pkg: "each", weight: 1.0, group: "Labels & Sleeves" },
-    { id: "A2270", name: "T/C Line Stripe .9g", unit: "Each", reorderLevel: 1000, maxQty: null, leadTime: "2 Weeks", notes: "CML-11S", initialCount: 0, pkg: "each", weight: 1.0, group: "Labels & Sleeves" },
-    { id: "A2090", name: "PrepSeal .9g", unit: "Each", reorderLevel: 1000, maxQty: null, leadTime: "2 Weeks", notes: "SML-34", initialCount: 0, pkg: "each", weight: 1.0, group: "Labels & Sleeves" },
-    { id: "A2100", name: "Line Block Out 4.75g", unit: "Each", reorderLevel: 1000, maxQty: null, leadTime: "2 Weeks", notes: "SML-17", initialCount: 0, pkg: "each", weight: 1.0, group: "Labels & Sleeves" },
-    { id: "A2310", name: "Acrylic Crack Patch .9g", unit: "Each", reorderLevel: 1000, maxQty: null, leadTime: "2 Weeks", notes: "CML-8", initialCount: 0, pkg: "each", weight: 1.0, group: "Labels & Sleeves" },
-    { id: "A2048", name: "ZETAC 4.75g", unit: "Each", reorderLevel: 1000, maxQty: null, leadTime: "2 Weeks", notes: "SML-35", initialCount: 0, pkg: "each", weight: 1.0, group: "Labels & Sleeves" },
-    { id: "A2052", name: "Color Pave Neutral Ready Mix 4.75g", unit: "Each", reorderLevel: 1000, maxQty: null, leadTime: "2 Weeks", notes: "SML-67", initialCount: 0, pkg: "each", weight: 1.0, group: "Labels & Sleeves" },
-    { id: "A2215", name: "Traffic Paint 4.75g", unit: "Each", reorderLevel: 1000, maxQty: null, leadTime: "2 Weeks", notes: "SML-24", initialCount: 0, pkg: "each", weight: 1.0, group: "Labels & Sleeves" },
-    { id: "A2054", name: "Color Pave Neutral Conc 4.75g", unit: "Each", reorderLevel: 1000, maxQty: null, leadTime: "2 Weeks", notes: "SML-64", initialCount: 0, pkg: "each", weight: 1.0, group: "Labels & Sleeves" },
-    { id: "A2080", name: "PetroSeal 4.75g", unit: "Each", reorderLevel: 1000, maxQty: null, leadTime: "2 Weeks", notes: "SML-33", initialCount: 0, pkg: "each", weight: 1.0, group: "Labels & Sleeves" },
-    { id: "A2320", name: "Acrylic Patch Binder 4.75g", unit: "Each", reorderLevel: 1000, maxQty: null, leadTime: "2 Weeks", notes: "SML-7", initialCount: 0, pkg: "each", weight: 1.0, group: "Labels & Sleeves" },
-    { id: "A2300", name: "Sportmaster Acrylic Resurf.w/o Sand 4.75g", unit: "Each", reorderLevel: 1000, maxQty: null, leadTime: "2 Weeks", notes: "CML-4", initialCount: 0, pkg: "each", weight: 1.0, group: "Labels & Sleeves" },
-    { id: "A2056", name: "ColorPave HD 500 4.75g", unit: "Each", reorderLevel: 1000, maxQty: null, leadTime: "2 Weeks", notes: "SML-43", initialCount: 0, pkg: "each", weight: 1.0, group: "Labels & Sleeves" },
-    { id: "A2058", name: "ColorPave HD Clear Coat 4.75g", unit: "Each", reorderLevel: 1000, maxQty: null, leadTime: "2 Weeks", notes: "SML-46", initialCount: 0, pkg: "each", weight: 1.0, group: "Labels & Sleeves" },
-    { id: "A2355", name: "SB Front&Back Concrete Sealer .9g", unit: "Each", reorderLevel: 1000, maxQty: null, leadTime: "2 Weeks", notes: "Fronts and Backs", initialCount: 0, pkg: "each", weight: 1.0, group: "Labels & Sleeves" },
-    { id: "A2358", name: "SB Roof Cleaner .9g", unit: "Each", reorderLevel: 1000, maxQty: null, leadTime: "2 Weeks", notes: "", initialCount: 0, pkg: "each", weight: 1.0, group: "Labels & Sleeves" },
-    { id: "A2357", name: "SB Front&Back Ultra Gloss .9g", unit: "Each", reorderLevel: 1000, maxQty: null, leadTime: "2 Weeks", notes: "Fronts and Backs", initialCount: 0, pkg: "each", weight: 1.0, group: "Labels & Sleeves" },
-    { id: "A2359", name: "SB Oil Spot Primer .9QT", unit: "Each", reorderLevel: 1000, maxQty: null, leadTime: "2 Weeks", notes: "", initialCount: 0, pkg: "each", weight: 1.0, group: "Labels & Sleeves" },
-    { id: "AJR666201", name: "JC 7yr. Front&Back Wht.Reflec elast rc .9g", unit: "Each", reorderLevel: 1000, maxQty: null, leadTime: "2 Weeks", notes: "Fronts/Backs 2k in 2013", initialCount: 0, pkg: "each", weight: 1.0, group: "Labels & Sleeves" },
-    { id: "AJR666221", name: "JC 7yr. Front&Back Wht.elasto R.Patch .9g", unit: "Each", reorderLevel: 1000, maxQty: null, leadTime: "2 Weeks", notes: "Fronts/Backs 3k in 2013", initialCount: 0, pkg: "each", weight: 1.0, group: "Labels & Sleeves" },
-    { id: "A2478", name: "Sleeves SB 15 Yr.Roof Ctg. 4.75g", unit: "Each", reorderLevel: 1000, maxQty: null, leadTime: "2 Weeks", notes: "Sleeves", initialCount: 0, pkg: "each", weight: 1.0, group: "Labels & Sleeves" },
-    { id: "A2431", name: "Sleeves SB Ultra Gloss 4.75g", unit: "Each", reorderLevel: 1000, maxQty: null, leadTime: "2 Weeks", notes: "Sleeves", initialCount: 0, pkg: "each", weight: 1.0, group: "Labels & Sleeves" },
-    { id: "A2476", name: "Sleeves SB 10 Yr. Roof Ctg. 4.75g", unit: "Each", reorderLevel: 1000, maxQty: null, leadTime: "2 Weeks", notes: "Sleeves", initialCount: 0, pkg: "each", weight: 1.0, group: "Labels & Sleeves" },
-    { id: "A2360", name: "FP 300 Label 4.75g", unit: "Each", reorderLevel: 1000, maxQty: null, leadTime: "2 Weeks", notes: "Farm Paint", initialCount: 0, pkg: "each", weight: 1.0, group: "Labels & Sleeves" },
-    { id: "A2363WF", name: "FP SemiGloss White/Front Label", unit: "Each", reorderLevel: 1000, maxQty: null, leadTime: "2 Weeks", notes: "FarmPaint.com", initialCount: 0, pkg: "each", weight: 1.0, group: "Labels & Sleeves" },
-    { id: "A2363WB", name: "FP SemiGloss White/Back Label", unit: "Each", reorderLevel: 1000, maxQty: null, leadTime: "2 Weeks", notes: "FarmPaint.com", initialCount: 0, pkg: "each", weight: 1.0, group: "Labels & Sleeves" },
-    { id: "A2361RB", name: "FP SemiGloss Red/Back Label", unit: "Each", reorderLevel: 1000, maxQty: null, leadTime: "2 Weeks", notes: "FarmPaint.com", initialCount: 0, pkg: "each", weight: 1.0, group: "Labels & Sleeves" },
-    { id: "A2361RF", name: "FP SemiGloss Red/Front Label", unit: "Each", reorderLevel: 1000, maxQty: null, leadTime: "2 Weeks", notes: "FarmPaint.com", initialCount: 0, pkg: "each", weight: 1.0, group: "Labels & Sleeves" },
-    { id: "A2369", name: "JC Concrete Crack Sealant .9qt", unit: "Each", reorderLevel: 1000, maxQty: null, leadTime: "2 Weeks", notes: "sold 11k in 2013", initialCount: 0, pkg: "each", weight: 1.0, group: "Labels & Sleeves" },
-    { id: "R2330_2", name: "Totes", unit: "Each", reorderLevel: 120, maxQty: 300, leadTime: "7 Days", notes: "No trailer on site", initialCount: 0, pkg: "each", weight: 1, group: "Labels & Sleeves" },
-    { id: "R2296", name: "Jar", unit: "Each", reorderLevel: 10000, maxQty: 40000, leadTime: "6 wks", notes: "205 Per Box / 12 box per skid", initialCount: 11.0, pkg: "skid", weight: 2460.0, group: "Labels & Sleeves" },
-    { id: "R2297", name: "jar lid", unit: "Each", reorderLevel: 10000, maxQty: 40000, leadTime: "4 wks", notes: "624 per box/ 20 box per skid", initialCount: 0.5, pkg: "each", weight: 12480.0, group: "Labels & Sleeves" },
+    { id: "R2330_2", name: "Totes", unit: "Each", reorderLevel: 120, maxQty: 300, leadTime: "7 Days", notes: "No trailer on site", initialCount: 0, pkg: "each", weight: 1, group: "Misc Containers" },
+    { id: "R2296", name: "Jar", unit: "Each", reorderLevel: 10000, maxQty: 40000, leadTime: "6 wks", notes: "205 Per Box / 12 box per skid", initialCount: 11.0, pkg: "skid", weight: 2460.0, group: "Misc Containers" },
+    { id: "R2297", name: "jar lid", unit: "Each", reorderLevel: 10000, maxQty: 40000, leadTime: "4 wks", notes: "624 per box/ 20 box per skid", initialCount: 0.5, pkg: "each", weight: 12480.0, group: "Misc Containers" },
     { id: "R2295", name: "Pints Empty 28-410", unit: "Each", reorderLevel: 0, maxQty: null, leadTime: "", notes: "OBSOLETE? LM", initialCount: 8100.0, pkg: "each", weight: 1.0, group: "Misc Items" },
     { id: "R2407", name: "48 x 36 paint use", unit: "Each", reorderLevel: 300, maxQty: null, leadTime: "7 Days", notes: "For traffic paints", initialCount: 720.0, pkg: "each", weight: 1, group: "Misc Items" },
     { id: "R2270", name: "Caps White", unit: "Each", reorderLevel: 0, maxQty: null, leadTime: "", notes: "Uses:Paint: Roof Cleane/ Sealer: Maint INC-56250 per pallet", initialCount: 111600.0, pkg: "each", weight: 1.0, group: "Misc Items" },
@@ -1347,18 +1312,22 @@ function renderInventoryBoard() {
         for (const item of items) {
             const raw = inventoryData[item.id];
             const inv = (raw && typeof raw === "object") ? (raw.inv || 0) : (raw || 0);
+            const userNotes = (raw && typeof raw === "object") ? (raw.userNotes || "") : "";
             const qty = inv * item.weight;
             const status = getInventoryStatus(qty, item.reorderLevel);
             const updatedAt = (raw && typeof raw === "object") ? raw.dateCounted : null;
             const dateStr = updatedAt ? new Date(updatedAt).toLocaleDateString("en-US", { month: "short", day: "numeric" }) : "";
+            const displayNotes = userNotes || item.notes;
             const card = document.createElement("div");
             card.className = "inv-card" + (status !== "none" ? " status-" + status : "");
+            card.dataset.itemId = item.id;
             card.innerHTML = `
                 <div class="inv-card-date">${dateStr}</div>
                 <div class="inv-card-name">${escapeHtml(item.name)}</div>
                 <div class="inv-card-code">${escapeHtml(item.id)}</div>
                 <div class="inv-card-qty">${qty.toLocaleString()} <span class="inv-card-qty-unit">${escapeHtml(item.unit)}</span></div>
                 <div class="inv-card-pkg">${inv} ${escapeHtml(item.pkg)}</div>
+                ${displayNotes ? `<div class="inv-card-notes">${escapeHtml(displayNotes)}</div>` : ""}
             `;
             card.addEventListener("click", () => showInventoryDetailModal(item));
             grid.appendChild(card);
@@ -1370,10 +1339,14 @@ function renderInventoryBoard() {
 
 let currentInvItem = null;
 
+let invScrollPos = 0;
+
 function showInventoryDetailModal(item) {
     currentInvItem = item;
+    invScrollPos = window.scrollY;
     const raw = inventoryData[item.id];
     const inv = (raw && typeof raw === "object") ? (raw.inv || 0) : (raw || 0);
+    const userNotes = (raw && typeof raw === "object") ? (raw.userNotes || "") : "";
     const qty = inv * item.weight;
     const status = getInventoryStatus(qty, item.reorderLevel);
     const updatedAt = (raw && typeof raw === "object") ? raw.dateCounted : null;
@@ -1381,7 +1354,7 @@ function showInventoryDetailModal(item) {
 
     document.getElementById("inv-detail-title").textContent = item.name;
     document.getElementById("inv-detail-code").textContent = item.id;
-    document.getElementById("inv-detail-notes").textContent = item.notes || "\u2014";
+    document.getElementById("inv-detail-notes").value = userNotes || item.notes || "";
     document.getElementById("inv-detail-leadtime").textContent = item.leadTime || "\u2014";
     document.getElementById("inv-detail-reorder").textContent = item.reorderLevel ? item.reorderLevel.toLocaleString() + " " + item.unit : "\u2014";
     const stockInput = document.getElementById("inv-detail-stock");
@@ -1413,15 +1386,21 @@ function saveInventoryItem() {
         return;
     }
     const val = parseFloat(document.getElementById("inv-detail-stock").value) || 0;
+    const userNotes = document.getElementById("inv-detail-notes").value.trim();
     const itemId = currentInvItem.id.replace(/[.#$/\[\]]/g, "_");
-    inventoryRef.child(itemId).set({ inv: val, dateCounted: new Date().toISOString() })
-        .then(() => closeInventoryModal())
+    const savedScrollPos = invScrollPos;
+    inventoryRef.child(itemId).set({ inv: val, userNotes: userNotes, dateCounted: new Date().toISOString() })
+        .then(() => {
+            closeInventoryModal();
+            requestAnimationFrame(() => window.scrollTo(0, savedScrollPos));
+        })
         .catch((err) => alert("Save failed: " + err.message));
 }
 
 function closeInventoryModal() {
     document.getElementById("inventory-detail-overlay").classList.add("hidden");
     currentInvItem = null;
+    requestAnimationFrame(() => window.scrollTo(0, invScrollPos));
 }
 
 document.getElementById("inv-detail-save").addEventListener("click", saveInventoryItem);
@@ -1432,7 +1411,11 @@ document.getElementById("inventory-detail-overlay").addEventListener("click", (e
 
 function onInventoryData(snapshot) {
     inventoryData = snapshot.val() || {};
-    if (activeTab === "inventory") renderInventoryBoard();
+    if (activeTab === "inventory") {
+        const scrollY = window.scrollY;
+        renderInventoryBoard();
+        requestAnimationFrame(() => window.scrollTo(0, scrollY));
+    }
 }
 
 function onInventorySeed(snapshot) {
