@@ -1326,7 +1326,11 @@ function updateInvUndoBtn() {
 }
 
 function renderInventoryBoard() {
+    // Preserve the toolbar, clear only the rendered groups
+    const toolbar = inventoryBoard.querySelector(".inv-toolbar");
     inventoryBoard.innerHTML = "";
+    if (toolbar) inventoryBoard.appendChild(toolbar);
+    updateInvUndoBtn();
     const groups = {};
     for (const item of INVENTORY_ITEMS) {
         if (!groups[item.group]) groups[item.group] = [];
